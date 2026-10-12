@@ -442,3 +442,18 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
   .tr-list .c-next{display:none}
   .tr-list .c-from::before{content:"เดิม: ";color:var(--muted)}
 }
+/* ย้ายสถานศึกษา: ตัวกรองพื้นที่ + ชื่อสถานศึกษาเดิม/ใหม่เด่นเท่ากัน */
+.tr-filters{grid-template-columns:2fr 1fr 1fr 1fr}
+.tr-area{grid-template-columns:repeat(4,1fr)}
+.tr-list .tlist-head,.tr-list .trow{grid-template-columns:52px minmax(180px,1.2fr) minmax(200px,1.5fr) minmax(200px,1.5fr) 150px}
+.tr-list .sch{font-weight:600;display:block}
+.tr-list .c-round small{margin-top:2px}
+.tr-side{width:max-content}
+@media (max-width:900px){
+  .tr-area{grid-template-columns:1fr 1fr}
+  .tr-list .trow{grid-template-areas:"n name" "n from" "n to" "n round"}
+  .tr-list .c-round{grid-area:round}
+  .tr-list .c-to::before{content:"ใหม่: ";color:var(--muted)}
+  .tr-list .c-from .sch,.tr-list .c-to .sch{display:inline}
+}
+@media (max-width:900px){.tr-filters{grid-template-columns:1fr 1fr}.tr-filters>.field:first-child{grid-column:1/-1}}

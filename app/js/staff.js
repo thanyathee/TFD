@@ -392,9 +392,15 @@ App.on('staff-decide', function (form) {
 });
 
 /* ---------- ย้ายสถานศึกษา ---------- */
+/* รอบพิจารณาของนักเรียนที่ย้าย: ป.6 / ม.3 ที่ส่งหลักฐานภายในวันตัดรอบแรก → รอบ 1, นอกนั้น → รอบ 2 */
+function transferRound(s, t) {
+  if (!['ป.6', 'ม.3'].includes(s.class)) return {r: 2, why: 'ระดับชั้นนี้พิจารณารอบที่ 2'};
+  if (!t) return {r: 1, why: `ถ้าส่งหลักฐานภายใน ${thDate(this.db.cycle.first_cutoff)}`, pending: true};
+  return t.date <= this.db.cycle.first_cutoff ? {r: 1, why: `ส่งหลักฐาน ${thDate(t.date)}`} : {r: 2, why: `ส่งหลักฐานหลัง ${thDate(this.db.cycle.first_cutoff)}`};
+}
 App.views['staff-transfer'] = function (p) {
   if (p.code) return transferForm.call(this, p);
-  const f = p.f || this._trF || {state: 'todo'};
+  const f = p.f || this._trF || {state: 'todo', side: 'from'};
   this._trF = f;
   const th = (a, b) => a.localeCompare(b, 'th');
   const lastTr = code => this.db.transfers.filter(t => t.code === code).slice(-1)[0];
@@ -402,37 +408,56 @@ App.views['staff-transfer'] = function (p) {
   /* ตั้งต้นจากนักเรียนที่ติ๊กย้าย + คนที่บันทึกการย้ายไปแล้ว */
   const base = this.db.students.filter(s => s.school_next === 'transfer' || lastTr(s.code));
   const origin = s => { const t = lastTr(s.code); return this.schoolById[t ? t.from : s.school] || {}; };
-  const list = base.filter(s => {
-    const t = lastTr(s.code), sc = origin(s);
-    return (f.state === 'all' || (f.state === 'done' ? !!t : !t)) && (!f.province || sc.province === f.province)
-      && (!f.cls || s.class === f.cls) && (!q || (s.code + fullName(s) + (sc.name || '')).toLowerCase().includes(q));
-  }).sort((a, b) => th(origin(a).province || '', origin(b).province || '') || th(a.code, b.code));
-  const provinces = [...new Set(base.map(s => origin(s).province).filter(Boolean))].sort(th);
+  const dest = s => { const t = lastTr(s.code); return t ? this.schoolById[t.to] || {} : null; };
+  const side = f.side === 'to' ? dest : origin;
+  /* ภาค → จังหวัด → อำเภอ → สถานศึกษา จากสถานศึกษาเดิมหรือใหม่ (เลือกได้) พร้อมจำนวนคน */
+  const pool = base.filter(s => f.state === 'all' || (f.state === 'done' ? !!lastTr(s.code) : !lastTr(s.code))).filter(s => side(s));
+  const cnt = (arr, fn) => arr.reduce((m, s) => { const k = fn(s); if (k) m[k] = (m[k] || 0) + 1; return m; }, {});
+  const opts = (c, label = k => k) => Object.keys(c).sort((a, b) => th(label(a), label(b))).map(k => [k, `${label(k)} (${c[k]})`]);
+  const inRg = pool.filter(s => !f.region || side(s).region === f.region);
+  const inPv = inRg.filter(s => !f.province || side(s).province === f.province);
+  const inDs = inPv.filter(s => !f.district || side(s).district === f.district);
+  const list = inDs.filter(s => (!f.school || side(s).id === f.school) && (!f.cls || s.class === f.cls) && (!f.round || String(transferRound.call(this, s, lastTr(s.code)).r) === f.round)
+    && (!q || (s.code + fullName(s) + (origin(s).name || '') + ((dest(s) || {}).name || '')).toLowerCase().includes(q)))
+    .sort((a, b) => th(side(a).province || '', side(b).province || '') || th(side(a).name || '', side(b).name || '') || th(a.code, b.code));
   const classes = Object.values(CLASS_GROUPS).flat().filter(c => base.some(s => s.class === c));
   const nDone = base.filter(s => lastTr(s.code)).length;
+  const sch = (x, extra = '') => x ? `<b class="sch">${esc(x.name || '-')}</b><small>${esc(x.district || '')} · จ.${esc(x.province || '')}${extra}</small>` : '';
   return {nav: this.staffNav(), html: `${this.roleBar()}
     <div class="page-head"><div><h1>ย้ายสถานศึกษา</h1><p class="sub">บันทึกว่านักเรียนย้ายไปเรียนที่ไหน หลังเจ้าหน้าที่ตรวจหลักฐานการย้ายภายนอกระบบแล้ว</p></div></div>
     <div class="stats">${[['todo', 'ยังไม่บันทึกที่เรียนใหม่', base.length - nDone], ['done', 'บันทึกแล้ว', nDone], ['all', 'แจ้งย้ายทั้งหมด', base.length]].map(([k, t, n]) =>
       `<button class="stat" data-action="transfer-state" data-state="${k}" aria-pressed="${f.state === k}"><span>${t}</span><b>${n}</b></button>`).join('')}</div>
-    <div class="filters tr-filters">
-      ${field('tq', 'ค้นหา', input('tq', f.q || '', 'autocomplete="off" placeholder="รหัส / ชื่อ–นามสกุล / สถานศึกษาเดิม" data-oninput="transfer-search"'))}
-      ${field('t_state', 'การบันทึก', select('t_state', [['todo', 'ยังไม่บันทึก'], ['done', 'บันทึกแล้ว'], ['all', 'ทั้งหมด']], f.state, null, 'data-onchange="transfer-filter"'))}
-      ${field('t_prov', 'จังหวัด (สถานศึกษาเดิม)', select('t_prov', provinces, f.province, 'ทุกจังหวัด', 'data-onchange="transfer-filter"'))}
-      ${field('t_cls', 'ชั้นปัจจุบัน', select('t_cls', classes, f.cls, 'ทุกชั้น', 'data-onchange="transfer-filter"'))}
-    </div>
-    <div class="small muted">พบ <b>${list.length}</b> คน · กดที่รายชื่อเพื่อบันทึกหรือแก้ไขสถานศึกษาใหม่ · นักเรียนที่ไม่ได้ติ๊กย้ายแต่ย้ายจริง ค้นหาด้วยรหัสในช่องค้นหาได้</div>
+    <section class="card stack">
+      <div class="filters tr-filters">
+        ${field('tq', 'ค้นหา', input('tq', f.q || '', 'autocomplete="off" placeholder="รหัส / ชื่อ–นามสกุล / ชื่อสถานศึกษา" data-oninput="transfer-search"'))}
+        ${field('t_state', 'การบันทึก', select('t_state', [['todo', 'ยังไม่บันทึก'], ['done', 'บันทึกแล้ว'], ['all', 'ทั้งหมด']], f.state, null, 'data-onchange="transfer-filter"'))}
+        ${field('t_round', 'รอบพิจารณา', select('t_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], f.round, 'ทุกรอบ', 'data-onchange="transfer-filter"'))}
+        ${field('t_cls', 'ชั้นปัจจุบัน', select('t_cls', classes, f.cls, 'ทุกชั้น', 'data-onchange="transfer-filter"'))}
+      </div>
+      <div class="field"><span class="label">พื้นที่ของ</span><div class="seg tr-side">${[['from', 'สถานศึกษาเดิม'], ['to', 'สถานศึกษาใหม่']].map(([k, t]) =>
+        `<button type="button" data-action="transfer-side" data-side="${k}" aria-pressed="${(f.side || 'from') === k}">${t}</button>`).join('')}</div>
+        ${f.side === 'to' && f.state === 'todo' ? '<div class="hint">คนที่ยังไม่บันทึกยังไม่มีสถานศึกษาใหม่ — เลือก “บันทึกแล้ว” หรือ “ทั้งหมด”</div>' : ''}</div>
+      <div class="filters tr-area">
+        ${field('t_rg', 'ภาค', select('t_rg', opts(cnt(pool, s => side(s).region), k => this.regionName(k)), f.region, 'ทุกภาค', 'data-onchange="transfer-filter" data-level="rg"'))}
+        ${field('t_pv', 'จังหวัด', select('t_pv', opts(cnt(inRg, s => side(s).province)), f.province, 'ทุกจังหวัด', 'data-onchange="transfer-filter" data-level="pv"'))}
+        ${field('t_ds', 'อำเภอ / เขต', select('t_ds', opts(cnt(inPv, s => side(s).district)), f.district, f.province ? 'ทุกอำเภอ' : 'เลือกจังหวัดก่อน', `data-onchange="transfer-filter" data-level="ds" ${f.province ? '' : 'disabled'}`))}
+        ${field('t_sc', 'สถานศึกษา', select('t_sc', opts(cnt(inDs, s => side(s).id), k => this.schoolName(k)), f.school, f.district ? 'ทุกสถานศึกษา' : 'เลือกอำเภอก่อน', `data-onchange="transfer-filter" data-level="sc" ${f.district ? '' : 'disabled'}`))}
+      </div>
+    </section>
+    <div class="small muted">พบ <b>${list.length}</b> คน · กดที่รายชื่อเพื่อบันทึกหรือแก้ไข · นักเรียนที่ไม่ได้ติ๊กย้ายแต่ย้ายจริง พิมพ์รหัสผู้สมัครในช่องค้นหา</div>
     <div class="tlist tr-list" role="table" aria-label="นักเรียนแจ้งย้ายสถานศึกษา">
-      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>ชื่อ–นามสกุล</span><span>สถานศึกษาเดิม</span><span>ชั้นปีหน้า</span><span>ย้ายไปที่</span></div>
-      ${list.length ? list.map((s, i) => { const t = lastTr(s.code), sc = origin(s), to = t && (this.schoolById[t.to] || {});
+      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>ชื่อ–นามสกุล</span><span>สถานศึกษาเดิม</span><span>สถานศึกษาใหม่</span><span>รอบ</span></div>
+      ${list.length ? list.map((s, i) => { const t = lastTr(s.code), rd = transferRound.call(this, s, t);
         return `<button class="trow" role="row" data-go="staff-transfer" data-code="${s.code}">
           <span class="n">${i + 1}</span>
-          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code} · ชั้น ${esc(s.class || '-')}</small></span>
-          <span class="c-from">${esc(sc.name || '-')}<small>จ.${esc(sc.province || '')}</small></span>
-          <span class="c-next">${esc((t && t.cls) || s.next_class || '-')}</span>
-          <span class="c-to">${t ? `${esc(to.name || '-')}<small>จ.${esc(to.province || '')} · แจ้ง ${thDate(t.date)}</small>`
-            : `<span class="badge t-warn">ยังไม่บันทึก</span>${s.next_school_text ? `<small>นักเรียนแจ้ง: ${esc(s.next_school_text)}</small>` : ''}`}</span></button>`; }).join('')
+          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code} · ${esc(s.class || '-')} → ${esc((t && t.cls) || s.next_class || '-')}</small></span>
+          <span class="c-from">${sch(origin(s))}</span>
+          <span class="c-to">${t ? sch(dest(s), ` · แจ้ง ${thDate(t.date)}`)
+            : `<span class="badge t-warn">ยังไม่บันทึก</span>${s.next_school_text ? `<small>นักเรียนแจ้ง: ${esc(s.next_school_text)}</small>` : ''}`}</span>
+          <span class="c-round"><span class="badge ${rd.r === 1 ? 't-info' : 't-violet'}">รอบ ${rd.r}${rd.pending ? '*' : ''}</span><small>${esc(rd.why)}</small></span></button>`; }).join('')
         : '<div class="empty">ไม่พบนักเรียนตามเงื่อนไขนี้</div>'}
-    </div>`,
+    </div>
+    <p class="tiny muted">* ป.6 / ม.3 ที่ยังไม่บันทึก: ได้รอบ 1 ถ้าส่งหลักฐานภายใน ${thDate(this.db.cycle.first_cutoff)} ถ้าส่งหลังจากนั้นถึง ${thDate(this.db.cycle.transfer_close)} เป็นรอบ 2</p>`,
     after() { const el = document.getElementById('tq'); if (p.focusQ && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }};
 };
 /* ฟอร์มบันทึกการย้ายของนักเรียน 1 คน */
@@ -477,10 +502,20 @@ function transferForm(p) {
       </aside>
     </div>`};
 }
-const transferFilters = q => ({state: document.getElementById('t_state').value, province: document.getElementById('t_prov').value,
-  cls: document.getElementById('t_cls').value, q: q != null ? q : document.getElementById('tq').value});
-App.on('transfer-filter', function () { this.go('staff-transfer', {f: transferFilters()}); });
+const transferFilters = (q, level) => {
+  const v = id => (document.getElementById(id) || {}).value || '';
+  /* เปลี่ยนระดับบน ล้างระดับล่าง */
+  const lv = ['rg', 'pv', 'ds', 'sc'].indexOf(level);
+  return {state: v('t_state'), round: v('t_round'), cls: v('t_cls'), side: (App._trF || {}).side || 'from', q: q != null ? q : v('tq'),
+    region: v('t_rg'), province: lv === 0 ? '' : v('t_pv'), district: lv >= 0 && lv < 2 ? '' : v('t_ds'), school: lv >= 0 && lv < 3 ? '' : v('t_sc')};
+};
+App.on('transfer-filter', function (el) { this.go('staff-transfer', {f: transferFilters(null, el.dataset.level)}); });
 App.on('transfer-state', function (el) { this.go('staff-transfer', {f: {...transferFilters(), state: el.dataset.state}}); });
+App.on('transfer-side', function (el) {
+  const f = {...transferFilters(null, 'rg'), region: '', side: el.dataset.side};
+  if (f.side === 'to' && f.state === 'todo') f.state = 'done';
+  this.go('staff-transfer', {f});
+});
 App.on('transfer-search', function (el) {
   clearTimeout(this._tq);
   /* ค้นหาด้วยรหัสหรือชื่อ: ถ้าไม่เจอในกลุ่มแจ้งย้าย ให้หาจากนักเรียนทั้งหมด */
