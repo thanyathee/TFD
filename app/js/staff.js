@@ -471,12 +471,12 @@ App.views['staff-schools'] = function (p) {
     </div>
     <div class="small muted"><b>${esc(area)}</b> · พบ <b>${list.length}</b> แห่ง</div>
     <div class="tlist sch-list" role="table" aria-label="รายชื่อสถานศึกษา">
-      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>สถานศึกษา</span><span>อำเภอ / จังหวัด</span><span>บัญชีครู</span><span>สถานะ</span></div>
+      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>สถานศึกษา</span><span>จังหวัด / อำเภอ</span><span>บัญชีครู</span><span>สถานะ</span></div>
       ${list.length ? list.map((s, i) => { const t = this.teacherOf(s.id);
         return `<button class="trow" role="row" data-go="staff-school" data-id="${s.id}">
           <span class="n">${i + 1}</span>
           <span class="c-name">${esc(s.name)}<small>${s.id} · ${(s.levels || []).map(l => GROUP_SHORT[l]).join(', ')}</small></span>
-          <span class="c-area">${esc(s.district)}<small>จ.${esc(s.province)} · ${esc(this.regionName(s.region))}</small></span>
+          <span class="c-area">จ.${esc(s.province)}<small>${esc(s.district)} · ${esc(this.regionName(s.region))}</small></span>
           <span class="c-acc">${t ? `${esc(t.username)}<small>${esc(t.name)}</small>` : '<span class="muted">ยังไม่มีบัญชีครู</span>'}</span>
           <span class="c-status">${t ? `<span class="badge ${t.active === false ? 't-bad' : 't-ok'}">${t.active === false ? 'ปิดใช้งาน' : 'ใช้งาน'}</span>` : ''}</span></button>`; }).join('')
         : '<div class="empty">ไม่พบสถานศึกษาตามเงื่อนไขนี้</div>'}
