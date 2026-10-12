@@ -106,13 +106,12 @@ function applicantSections(s, o = {}) {
       <dl class="kv"><div><dt>ที่อยู่ตามภูมิลำเนา</dt><dd>${esc(s.home_address || '-')}</dd></div><div><dt>ที่อยู่ปัจจุบัน</dt><dd>${s.same_address ? 'เหมือนที่อยู่ตามภูมิลำเนา' : esc(s.current_address || '-')}</dd></div></dl></section>
     <section class="card"><h3>${n(2)}ข้อมูลการศึกษา</h3><dl class="kv">
       <div><dt>สถานศึกษา</dt><dd>${esc(sc.name || '-')}</dd></div><div><dt>พื้นที่</dt><dd>${esc(this.regionName(sc.region))} / จังหวัด${esc(sc.province || '')} / ${esc(sc.district || '')}</dd></div>
-      <div><dt>สถานศึกษาเปิดสอนถึง</dt><dd>${esc(lab(TOP_LEVELS, s.school_top))}</dd></div>
       <div><dt>ระดับชั้นปัจจุบัน</dt><dd>${esc(s.class || '-')}</dd></div>
       ${s.faculty ? `<div><dt>คณะ / สาขา</dt><dd>${esc(s.faculty)}${s.program_years ? ` · หลักสูตร ${esc(s.program_years)} ปี` : ''}</dd></div>` : ''}
       ${s.pvs_type ? `<div><dt>ประเภทวิชา</dt><dd>${esc(lab(PVS_TYPES, s.pvs_type))}</dd></div>` : ''}
       ${s.study_mode ? `<div><dt>รูปแบบการเรียน</dt><dd>${esc(lab(STUDY_MODES_PAPER, s.study_mode))}${s.study_mode_other ? ' — ' + esc(s.study_mode_other) : ''}</dd></div>` : ''}
       <div><dt>ปีหน้าศึกษาต่อระดับชั้น</dt><dd>${esc(s.next_class || '-')}${s.next_faculty ? ' · ' + esc(s.next_faculty) : ''}</dd></div>
-      <div><dt>สถานศึกษาปีหน้า</dt><dd>${s.school_next === 'same' ? 'ศึกษาต่อสถานศึกษาเดิม' : s.school_next === 'transfer' ? `ย้ายสถานศึกษาใหม่${s.next_school_text ? ' ไป ' + esc(s.next_school_text) : ''}` : '-'}</dd></div>
+      <div><dt>สถานศึกษาปีหน้า</dt><dd>${s.school_next === 'same' ? 'ศึกษาต่อสถานศึกษาเดิม' : s.school_next === 'transfer' ? `<span class="badge t-warn">ย้ายสถานศึกษาใหม่</span>${s.next_school_text ? ' ไป ' + esc(s.next_school_text) : ''}<div class="small muted">ต้องส่งหลักฐานการย้ายภายใน ${thDate(transferDeadline.call(this, s))}</div>` : '-'}</dd></div>
       <div><dt>ประเภททุน</dt><dd>${TYPE[s.type]}${s.type === 'CONT' && s.cont_since ? ` · ได้รับตั้งแต่ปี ${esc(s.cont_since)} รวม ${esc(s.cont_years || '-')} ปี` : ''}</dd></div>
       <div><dt>อัตราทุน</dt><dd>${baht(this.rateAmount(s.rate))}</dd></div>
       ${s.teacher_review ? `<div><dt>ผลการเรียนจากครู</dt><dd>${gradeText(s.teacher_review)}</dd></div>` : ''}

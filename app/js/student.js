@@ -13,7 +13,6 @@ const STORY_Q = [
   ['เรื่องอื่น ๆ ที่อยากบอกเล่าให้มูลนิธิฯ ทราบ', ''],
 ];
 const STEPS = ['ข้อมูลผู้ขอทุนและการศึกษา', 'ข้อมูลครอบครัว', 'ข้อมูลเพิ่มเติมและเขียนเล่าประวัติ', 'ส่งใบสมัครเรียบร้อย'];
-const TOP_LEVELS = [['p6', 'ป.6'], ['m3', 'ม.3'], ['m6', 'ม.6'], ['voc', 'ปวช.'], ['highvoc', 'ปวส.'], ['bachelor', 'ปริญญาตรี']];
 const STUDY_MODES_PAPER = [['regular', 'ภาคปกติ'], ['special', 'ภาคพิเศษ (เรียนวันเสาร์–อาทิตย์ หรือภาคค่ำ)'],
   ['dual', 'ทวิภาคี (เรียนวันธรรมดาและมีการฝึกงานตามหลักสูตร)'], ['other', 'อื่น ๆ (ระบุ)']];
 
@@ -111,10 +110,8 @@ function stepStudent(s, e) {
       ${e.current_address ? `<div class="err">${esc(e.current_address)}</div>` : ''}</div>
   </section>
   <section class="card"><div class="card-head"><h3>สถานศึกษาปัจจุบัน</h3><span class="sub">เลือกภาค → จังหวัด → อำเภอ / เขต → ชื่อสถานศึกษา</span></div>
-    <div class="grid-2" data-area='${JSON.stringify({school: true, required: true})}' data-after="student-school-info">${this.areaPicker('st', area, {school: true, required: true,
+    <div class="grid-2" data-area='${JSON.stringify({school: true, required: true})}'>${this.areaPicker('st', area, {school: true, required: true,
       err: e.school ? {region: area.region ? '' : 'กรุณาเลือกภาค', province: area.province ? '' : 'กรุณาเลือกจังหวัด', district: area.district ? '' : 'กรุณาเลือกอำเภอ / เขต', school: e.school} : {}})}</div>
-    <div id="school_info">${schoolInfo.call(this, sc)}</div>
-    ${radioField('school_top', 'สถานศึกษานี้เปิดสอนถึงระดับชั้นสูงสุดคือ', TOP_LEVELS, s.school_top, {req: 1, err: e.school_top})}
   </section>
   <section class="card"><h3>ระดับชั้นเรียน</h3>
     <div id="class_box" class="stack">${classFields.call(this, s, e)}</div>
@@ -123,23 +120,18 @@ function stepStudent(s, e) {
     <div id="next_box" class="stack">${nextFields.call(this, s, e)}</div>
     ${radioField('school_next', 'สถานศึกษาในปีการศึกษาหน้า', [['same', 'ศึกษาต่อสถานศึกษาเดิม'], ['transfer', 'ย้ายสถานศึกษาใหม่']], s.school_next, {req: 1, err: e.school_next})}
     <div class="stack" data-when="school_next=transfer">
+      <div class="note bad"><b>⚠ ต้องส่งหลักฐานยืนยันการย้ายสถานศึกษาให้มูลนิธิฯ ทุกกรณี</b><br>
+        ระดับ ป.6 และ ม.3 ส่งภายใน <b>${thDate(this.db.cycle.first_cutoff)}</b> · ระดับ ม.6 ปวช.3 และ ปวส.2 ส่งภายใน <b>${thDate(this.db.cycle.transfer_close)}</b><br>
+        <b>หากไม่ส่งภายในกำหนด ถือว่าสละสิทธิ์การรับทุน</b> (ตามระเบียบการขอรับทุนเพื่อการศึกษา ข้อ 7 กรณีมีการเปลี่ยนสถานศึกษาของผู้ขอทุน)</div>
       ${field('next_school_text', 'ไปศึกษาต่อที่', input('next_school_text', s.next_school_text, 'placeholder="ชื่อสถานศึกษาใหม่ (ถ้ายังไม่ทราบ ให้เว้นว่างไว้)"'))}
-      <div class="note warn small"><b>สำคัญ:</b> กรณีที่เลือก <b>ย้ายสถานศึกษาใหม่</b> ผู้ขอรับทุนจะต้องส่งหลักฐานยืนยันการย้ายสถานศึกษาให้มูลนิธิฯ ทราบทุกกรณี
-        โดยระดับ ป.6 ม.3 ต้องส่งภายใน ${thDate(this.db.cycle.first_cutoff)} และ ม.6 ปวช.3 ปวส.2 ต้องส่งภายใน ${thDate(this.db.cycle.transfer_close)} มิฉะนั้นถือว่าสละสิทธิ์</div>
+      <label class="check ${e.transfer_ack ? 'invalid' : ''}"><input type="checkbox" name="transfer_ack" ${s.transfer_ack ? 'checked' : ''}> <span>ข้าพเจ้ารับทราบว่าต้องส่งหลักฐานยืนยันการย้ายสถานศึกษาให้มูลนิธิฯ ภายในกำหนด มิฉะนั้นถือว่าสละสิทธิ์ <span class="req">*</span></span></label>
+      ${e.transfer_ack ? `<div class="err">${e.transfer_ack}</div>` : ''}
     </div>
   </section>
   ${s.type === 'CONT' ? `<section class="card"><h3>ประวัติการได้รับทุนมูลนิธิฯ</h3><div class="grid-2">
     ${field('cont_since', 'ได้รับทุนมูลนิธิฯ ตั้งแต่ปี พ.ศ.', input('cont_since', s.cont_since, 'type="number" inputmode="numeric" placeholder="เช่น 2566"'), {req: 1, err: e.cont_since})}
     ${field('cont_years', 'รวม (ปี)', input('cont_years', s.cont_years, 'type="number" min="1" inputmode="numeric"'), {req: 1, err: e.cont_years})}</div></section>` : ''}`;
 }
-function schoolInfo(sc) {
-  if (!sc) return '';
-  return `<div class="subcard small"><span class="label">ที่อยู่สถานศึกษา (จากฐานข้อมูลของมูลนิธิฯ)</span>
-    <span>เลขที่ ${esc(sc.address || '-')} ${esc(sc.subdistrict || '')} ${esc(sc.district || '')} จังหวัด${esc(sc.province || '')} ${esc(sc.postcode || '')}</span></div>`;
-}
-App.on('student-school-info', function () {
-  document.getElementById('school_info').innerHTML = schoolInfo.call(this, this.schoolById[this.readArea('st').school]);
-});
 /* ช่วงชั้น → ระดับชั้นปัจจุบัน → คณะ/สาขา, หลักสูตรกี่ปี, รูปแบบการเรียน (ปวช. / ปวส. / ปริญญาตรี) */
 function classFields(v, e = {}) {
   const g = v.group || groupOfClass(v.class);
@@ -162,14 +154,13 @@ function nextFields(v, e = {}) {
   const nexts = nextOptions(v.class);
   const next = NEXT_BRANCH[v.class] ? (nexts.includes(v.next_class) ? v.next_class : '') : (nexts[0] || '');
   const nextHigher = /^(ปวช|ปวส|ปริญญาตรี)/.test(next);
-  const rate = rateOf(next, /^ปวส/.test(next) ? (v.next_pvs_type || v.pvs_type) : '');
   return `<div class="grid-2">
       ${field('next_class', 'ผู้ขอทุนจะศึกษาต่อในระดับชั้น', select('next_class', nexts, next, v.class ? (NEXT_BRANCH[v.class] ? 'กรุณาเลือกระดับชั้นปีหน้า' : 'กรุณาเลือก') : 'กรุณาเลือกระดับชั้นปัจจุบันก่อน', 'data-onchange="student-next"'),
         {req: 1, err: e.next_class, hint: 'ระบบคำนวณให้ในกรณีทั่วไป ส่วน ม.3 / ม.6 / ปวช.3 / ปวส.2 ให้เลือกเอง'})}
       ${nextHigher ? field('next_faculty', 'คณะ / สาขา (ปีหน้า)', input('next_faculty', v.next_faculty, 'placeholder="ถ้าทราบแล้ว"')) : ''}
     </div>
     ${/^ปวส/.test(next) && v.group !== 'highvoc' ? field('next_pvs_type', 'ประเภทวิชา ปวส. ที่จะศึกษา', select('next_pvs_type', PVS_TYPES, v.next_pvs_type, 'กรุณาเลือก', 'data-onchange="student-next"'), {req: 1, err: e.next_pvs_type}) : ''}
-    ${rate ? `<div class="note info small">อัตราทุนปีการศึกษา ${this.db.cycle.year}: <b>${baht(this.rateAmount(rate))}</b> (${esc(this.rateName(rate))}) — อ้างอิงระดับชั้นปีที่ได้รับทุน</div>` : ''}`;
+`;
 }
 App.on('student-class', function (el) {
   const val = id => (document.getElementById(id) || {}).value || '';
@@ -493,10 +484,10 @@ App.on('student-step', function (form, ev) {
     const higher = ['voc', 'highvoc', 'bachelor'].includes(g);
     Object.assign(s, {title: v.title, first_name: v.first_name, last_name: v.last_name, gender: v.gender, email: v.email || '',
       home_address: v.home_address, same_address: !!v.same_address, current_address: v.same_address ? v.home_address : v.current_address,
-      school: area.school, school_top: v.school_top, group: g, class: v.class, faculty: higher ? v.faculty : '', program_years: higher ? v.program_years : '',
+      school: area.school, group: g, class: v.class, faculty: higher ? v.faculty : '', program_years: higher ? v.program_years : '',
       pvs_type: g === 'highvoc' ? v.pvs_type : '', study_mode: higher ? v.study_mode || '' : '', study_mode_other: v.study_mode === 'other' ? v.study_mode_other : '',
       next_class: v.next_class, next_faculty: v.next_faculty || '', next_pvs_type: v.next_pvs_type || '',
-      school_next: v.school_next, next_school_text: v.school_next === 'transfer' ? v.next_school_text || '' : '',
+      school_next: v.school_next, next_school_text: v.school_next === 'transfer' ? v.next_school_text || '' : '', transfer_ack: v.school_next === 'transfer' && !!v.transfer_ack,
       cont_since: v.cont_since || '', cont_years: v.cont_years || ''});
     s.rate = rateOf(s.next_class, /^ปวส/.test(s.next_class) ? (s.next_pvs_type || s.pvs_type) : '');
     ['title', 'gender'].forEach(k => need(k, 'กรุณาเลือก'));
@@ -504,7 +495,6 @@ App.on('student-step', function (form, ev) {
     if (!s.current_address) e.current_address = 'กรุณากรอกข้อมูล';
     if (v.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.email)) e.email = 'รูปแบบอีเมลไม่ถูกต้อง';
     if (!area.school) e.school = 'กรุณาเลือกสถานศึกษา';
-    need('school_top', 'กรุณาเลือกระดับชั้นสูงสุดที่สถานศึกษาเปิดสอน');
     need('group', 'กรุณาเลือกช่วงชั้น');
     need('class', 'กรุณาเลือกระดับชั้น');
     if (higher) { need('faculty'); need('program_years', 'กรุณาเลือก'); need('study_mode', 'กรุณาเลือกรูปแบบการเรียน'); }
@@ -513,6 +503,7 @@ App.on('student-step', function (form, ev) {
     need('next_class', 'กรุณาเลือกระดับชั้นปีหน้า');
     if (/^ปวส/.test(v.next_class) && g !== 'highvoc') need('next_pvs_type', 'กรุณาเลือกประเภทวิชา');
     need('school_next', 'กรุณาเลือกคำตอบ');
+    if (v.school_next === 'transfer' && !v.transfer_ack) e.transfer_ack = 'กรุณารับทราบเงื่อนไขการส่งหลักฐานการย้ายสถานศึกษา';
     if (s.type === 'CONT') { need('cont_since'); need('cont_years'); }
   } else if (step === 2) {
     const fam = {father: readPerson(v, 'father'), mother: readPerson(v, 'mother'), live_with: v.live_with || '',
@@ -713,6 +704,11 @@ App.on('student-login', function (form) {
 });
 
 
+/* กำหนดส่งหลักฐานการย้ายสถานศึกษา: ป.6 / ม.3 ส่งรอบแรก ที่เหลือส่งภายในวันสุดท้าย */
+function transferDeadline(s) {
+  return ['ป.6', 'ม.3'].includes(s.class) ? this.db.cycle.first_cutoff : this.db.cycle.transfer_close;
+}
+
 /* ---------- หน้า 5: ส่งเรียบร้อย / สถานะ ---------- */
 App.views['student-status'] = function () {
   const s = this.me();
@@ -735,6 +731,10 @@ App.views['student-status'] = function () {
     ${d && d.result === 'ineligible' ? `<div class="note bad"><b>ไม่เข้าเกณฑ์การพิจารณาทุน</b>${d.reason ? ' — ' + esc(d.reason) : ''}</div>` : ''}
     <div class="split">
       <div class="stack">
+        ${s.school_next === 'transfer' ? `<section class="card" style="outline:2px solid var(--bad)"><h3>⚠ อย่าลืมส่งหลักฐานยืนยันการย้ายสถานศึกษา</h3>
+          <p>คุณแจ้งว่าจะ <b>ย้ายสถานศึกษาใหม่</b>${s.next_school_text ? ` ไปที่ <b>${esc(s.next_school_text)}</b>` : ''} ในปีการศึกษา ${this.db.cycle.year}</p>
+          <div class="note bad">ต้องส่งหลักฐานยืนยันการย้ายสถานศึกษาให้มูลนิธิฯ ภายใน <b>${thDate(transferDeadline.call(this, s))}</b> มิฉะนั้นถือว่าสละสิทธิ์</div>
+          <p class="small muted">หลักฐาน เช่น หนังสือรับรองสถานภาพนักเรียนจากสถานศึกษาใหม่ หรือหลักฐานการมอบตัว</p></section>` : ''}
         ${!editable && !bachelor && s.status === 'waiting_teacher' ? `<section class="card"><h3>ขั้นตอนต่อไป กรุณาติดต่อครูผู้ดูแลทุนของสถานศึกษา</h3>
           <p>เพื่อแจ้งว่ากรอกข้อมูลเรียบร้อยแล้ว และนำเอกสารประกอบการสมัครไปส่งให้ครู</p>
           <div class="subcard"><span class="label">เอกสารที่นักเรียนควรเตรียมส่งให้ครู</span><ul class="small" style="margin:0;padding-left:20px">${docs.map(x => `<li>${x[1]}</li>`).join('')}</ul></div></section>` : ''}
@@ -794,5 +794,6 @@ function applicationPaper(s) {
     ${row('ที่อยู่ตามภูมิลำเนา', esc(s.home_address || '-'))}${row('ที่อยู่ปัจจุบัน', esc(s.current_address || '-'))}
     ${s.family && s.family.father ? row('รายได้ผู้ปกครอง (ประมาณ)', `${baht(personMonthly(s.family.father) + personMonthly(s.family.mother) + (s.family.live_with === 'guardian' ? personMonthly(s.family.guardian) : 0))} / เดือน`) : ''}
     ${s.submitted_at ? row('วันที่ส่งใบสมัคร', thDate(s.submitted_at, true)) : ''}
+    ${s.school_next === 'transfer' ? `<div class="sr"><b>หมายเหตุ</b><div><b>ต้องส่งหลักฐานยืนยันการย้ายสถานศึกษาภายใน ${thDate(transferDeadline.call(this, s))} มิฉะนั้นถือว่าสละสิทธิ์</b></div></div>` : ''}
     <div class="foot">เอกสารฉบับนี้จัดทำจากข้อมูลที่ผู้สมัครกรอกในระบบ เพื่อเก็บไว้เป็นหลักฐาน</div></div>`;
 }
