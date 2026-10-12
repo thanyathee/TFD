@@ -303,7 +303,7 @@ def main():
             'stays_same_school': not transfer, 'email': f'student{n:03d}@example.com' if rng.random() < 0.5 else None,
             'school_top_level': sc['_top'], 'next_faculty': None, 'next_pvs_type': next_pvs,
             'next_school_text': rng.choice(['', 'โรงเรียนประจำจังหวัด', 'วิทยาลัยเทคนิคในจังหวัด']) if transfer else None,
-            'cont_since_year': rng.choice([2566, 2567, 2568]) if cont else None, 'cont_years': None,
+            'cont_since_class': None, 'cont_years': None,
             'daily_allowance': rng.choice([20, 30, 40, 50, 60, 80]),
             'has_student_loan': loan, 'loan_people_count': 1 if loan else None,
             'loan_people_names': (f"{students[-1]['first_name']} {last}" if res == 'ineligible' else f'{rng.choice(GIRL)} {last}') if loan else None,
@@ -327,7 +327,10 @@ def main():
             'locked': status not in ('draft', 'returned_to_student'),
         })
         if cont:
-            apps[-1]['cont_years'] = 2570 - apps[-1]['cont_since_year'] - 1 + 1
+            order = [c for l in CLASS_GROUPS.values() for c in l]
+            back = rng.randint(1, min(3, order.index(cur)))  if order.index(cur) else 0
+            apps[-1]['cont_since_class'] = order[order.index(cur) - back]
+            apps[-1]['cont_years'] = back + 1
         if loan:
             funding.append({'application_id': aid, 'kind': 'loan', 'provider': 'กยศ.', 'borrower_name': apps[-1]['loan_people_names'],
                             'borrower': 'self' if res == 'ineligible' else 'sibling', 'amount': apps[-1]['loan_amount'], 'period': 'ต่อปี'})
@@ -499,7 +502,7 @@ def main():
             'pvs_type': a['pvs_type'] or '', 'next_pvs_type': a['next_pvs_type'] or '', 'faculty': a['faculty'] or '', 'study_mode': a['study_mode'] or '',
             'program_years': str(a['program_years'] or ''), 'next_faculty': '',
             'school_next': 'same' if a['stays_same_school'] else 'transfer', 'next_school_text': a['next_school_text'] or '',
-            'cont_since': str(a['cont_since_year'] or ''), 'cont_years': str(a['cont_years'] or ''),
+            'cont_since': a['cont_since_class'] or '', 'cont_years': str(a['cont_years'] or ''),
             'allowance': str(a['daily_allowance']), 'loan': 'yes' if a['has_student_loan'] else 'no', 'loan_count': str(a['loan_people_count'] or ''),
             'loan_names': a['loan_people_names'] or '', 'loan_amount': str(a['loan_amount'] or ''),
             'loans': [{'name': x['borrower_name'], 'who': x['borrower'], 'fund': x['provider'], 'amount': str(x['amount'] or '')}

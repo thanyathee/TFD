@@ -199,7 +199,7 @@ CREATE TABLE applications (
   next_faculty     text,
   next_pvs_type    text,
   next_school_text text,               -- ย้ายไปศึกษาต่อที่ (ถ้าทราบ)
-  cont_since_year  smallint,           -- ทุนต่อเนื่อง: ได้รับทุนตั้งแต่ปี พ.ศ.
+  cont_since_class text,               -- ทุนต่อเนื่อง: ได้รับทุนครั้งแรกตอนเรียนชั้น (เช่น ม.1)
   cont_years       smallint,           -- รวมกี่ปี
   daily_allowance  integer,            -- ข้อ 9 ได้เงินมาใช้จ่ายวันละ
   loan_people_count smallint,          -- ข้อ 11 ผู้ขอทุนหรือพี่น้องที่กู้ กยศ./กรอ. (คน)

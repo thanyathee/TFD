@@ -135,8 +135,8 @@ function stepStudent(s, e) {
     ${radioField('school_next', 'สถานศึกษาในปีการศึกษาหน้า', [['same', 'ศึกษาต่อสถานศึกษาเดิม'], ['transfer', 'ย้ายสถานศึกษาใหม่']], s.school_next, {req: 1, err: e.school_next})}
     <div class="stack" data-when="school_next=transfer">
       <div class="note bad"><b>⚠ ต้องส่งหลักฐานยืนยันการย้ายสถานศึกษาให้มูลนิธิฯ ทุกกรณี</b><br>
-        ระดับ ป.6 และ ม.3 ควรส่งภายใน <b>${thDate(this.db.cycle.first_cutoff)}</b> หากไม่ทัน ส่งได้ถึง <b>${thDate(this.db.cycle.transfer_close)}</b>
-        · ระดับ ม.6 ปวช.3 และ ปวส.2 ส่งภายใน <b>${thDate(this.db.cycle.transfer_close)}</b><br>
+        ระดับ ป.6 และ ม.3 ควรส่งภายใน <b>${thDate(this.db.cycle.first_cutoff)}</b> หากไม่ทัน ส่งได้ถึง <b>${thDate(this.db.cycle.transfer_close)}</b><br>
+        ระดับ ม.6 ปวช.3 และ ปวส.2 ส่งภายใน <b>${thDate(this.db.cycle.transfer_close)}</b><br>
         <b>หากไม่ส่งภายใน ${thDate(this.db.cycle.transfer_close)} ถือว่าสละสิทธิ์การรับทุน</b> (ตามระเบียบการขอรับทุนเพื่อการศึกษา ข้อ 7 กรณีมีการเปลี่ยนสถานศึกษาของผู้ขอทุน)</div>
       ${field('next_school_text', 'ไปศึกษาต่อที่', input('next_school_text', s.next_school_text, 'placeholder="ชื่อสถานศึกษาใหม่ (ถ้ายังไม่ทราบ ให้เว้นว่างไว้)"'))}
       <label class="check ${e.transfer_ack ? 'invalid' : ''}"><input type="checkbox" name="transfer_ack" ${s.transfer_ack ? 'checked' : ''}> <span>ข้าพเจ้ารับทราบว่าต้องส่งหลักฐานยืนยันการย้ายสถานศึกษาให้มูลนิธิฯ ภายในกำหนด มิฉะนั้นถือว่าสละสิทธิ์ <span class="req">*</span></span></label>
@@ -144,7 +144,7 @@ function stepStudent(s, e) {
     </div>
   </section>
   ${s.type === 'CONT' ? `<section class="card"><h3>ประวัติการได้รับทุนมูลนิธิฯ</h3><div class="grid-2">
-    ${field('cont_since', 'ได้รับทุนมูลนิธิฯ ตั้งแต่ปี พ.ศ.', input('cont_since', s.cont_since, 'type="number" inputmode="numeric" placeholder="เช่น 2566"'), {req: 1, err: e.cont_since})}
+    ${field('cont_since', 'ได้รับทุนมูลนิธิฯ ครั้งแรกตอนเรียนชั้น', select('cont_since', Object.values(CLASS_GROUPS).flat(), s.cont_since, 'เลือกระดับชั้น'), {req: 1, err: e.cont_since})}
     ${field('cont_years', 'รวม (ปี)', input('cont_years', s.cont_years, 'type="number" min="1" inputmode="numeric"'), {req: 1, err: e.cont_years})}</div></section>` : ''}`;
 }
 /* ช่วงชั้น → ระดับชั้นปัจจุบัน → คณะ/สาขา, หลักสูตรกี่ปี, รูปแบบการเรียน (ปวช. / ปวส. / ปริญญาตรี) */
