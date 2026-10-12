@@ -117,6 +117,10 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 .transfer-radio{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
 .transfer-radio label{border:1px solid #ccd8e5;border-radius:10px;padding:9px 11px;background:#fff;cursor:pointer}
 .transfer-radio label:has(input:checked){border-color:#0055b8;background:#eef6ff}
+.transfer-results{margin-top:8px;max-height:240px;overflow:auto;border:1px solid #dce5ef;border-radius:10px;background:#fff}
+.transfer-results button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eef2f6;background:#fff;padding:9px 11px;cursor:pointer;font:inherit}
+.transfer-results button:hover{background:#eef6ff}
+.transfer-results small{display:block;color:var(--muted)}
 .transfer-history{margin-top:12px;font-size:12px}
 .transfer-history-item{padding:8px 0;border-bottom:1px dashed #d8e1ea}
 @media(max-width:1000px){.transfer-layout{grid-template-columns:1fr}.transfer-detail{position:static}.transfer-summary{grid-template-columns:repeat(2,1fr)}}
@@ -702,8 +706,8 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 
         <div class="transfer-step">
           <strong>1. ค้นหานักเรียน <span class="req">*</span></strong>
-          <div class="field" style="margin-top:8px"><input id="transferSearch" list="transferApplicantList" placeholder="เลขใบสมัคร หรือ ชื่อ–นามสกุล" onchange="selectTransferApplicant()"></div>
-          <datalist id="transferApplicantList"></datalist>
+          <div class="field" style="margin-top:8px"><input id="transferSearch" placeholder="เลขใบสมัคร / ชื่อ–นามสกุล / ชื่อสถานศึกษา" oninput="searchTransferApplicants()" autocomplete="off"></div>
+          <div id="transferResults" class="transfer-results hidden"></div>
           <div id="transferStudentInfo" class="info hidden" style="margin-top:10px">
             <strong id="transferStudent"></strong><br>
             สถานศึกษาปัจจุบัน (ก่อนย้าย): <span id="transferOldSchool"></span>
@@ -1291,11 +1295,6 @@ function initTransfers(){
   fillSelect(document.getElementById('transferProvince'),[],'กรุณาเลือกจังหวัด');
   fillSelect(document.getElementById('transferDistrict'),[],'กรุณาเลือกอำเภอ / เขต');
   fillSelect(document.getElementById('transferSchool'),[],'กรุณาเลือกสถานศึกษา');
-  const dl=document.getElementById('transferApplicantList');
-  if(dl){
-    dl.innerHTML='';
-    transferApplicants.forEach(a=>{const o=document.createElement('option');o.value=a.code+' — '+a.name;dl.appendChild(o);});
-  }
   renderTransferTable();
 }
 function renderTransferTable(){
@@ -1311,7 +1310,7 @@ function renderTransferTable(){
     const td=document.createElement('td');
     const btn=document.createElement('button');
     btn.className='btn-outline';btn.textContent='ดู';btn.style.whiteSpace='nowrap';
-    btn.onclick=()=>{document.getElementById('transferSearch').value=r.code;selectTransferApplicant();};
+    btn.onclick=()=>selectTransferApplicant(r.code);
     td.appendChild(btn);tr.appendChild(td);tb.appendChild(tr);
   });
   document.getElementById('transferCount').textContent=transferRecords.length.toLocaleString('th-TH');
@@ -1327,23 +1326,41 @@ function currentSchoolOf(code){
   const moves=transferRecords.filter(r=>r.code===code);
   return moves.length?moves[moves.length-1].to:transferApplicants.find(x=>x.code===code)?.school;
 }
-function selectTransferApplicant(){
+// ค้นหาได้จากเลขใบสมัคร ชื่อ–นามสกุล หรือชื่อสถานศึกษาปัจจุบัน (พิมพ์ชื่อโรงเรียนเพื่อดูนักเรียนทั้งหมดของโรงเรียนนั้น)
+function searchTransferApplicants(){
   const q=(document.getElementById('transferSearch').value||'').trim().toLowerCase();
-  const info=document.getElementById('transferStudentInfo');
-  transferSelected=q?transferApplicants.find(a=>
-    q.startsWith(a.code.toLowerCase())||a.name.toLowerCase()===q||(a.code+' — '+a.name).toLowerCase()===q
-  ):null;
-  if(!transferSelected){
-    info.classList.add('hidden');
-    if(q) alert('ไม่พบนักเรียน กรุณาตรวจสอบเลขใบสมัครหรือชื่ออีกครั้ง');
-    renderTransferHistory();
-    return;
+  const box=document.getElementById('transferResults');
+  box.innerHTML='';
+  if(!q){box.classList.add('hidden');return;}
+  const list=transferApplicants.filter(a=>
+    a.code.toLowerCase().includes(q)||a.name.toLowerCase().includes(q)||schoolName(currentSchoolOf(a.code)).toLowerCase().includes(q)
+  );
+  if(!list.length){
+    box.innerHTML='<div class="help" style="padding:9px 11px">ไม่พบนักเรียน</div>';
   }
+  list.forEach(a=>{
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.textContent=a.code+' — '+a.name;
+    const sm=document.createElement('small');
+    sm.textContent=schoolName(currentSchoolOf(a.code));
+    btn.appendChild(sm);
+    btn.onclick=()=>selectTransferApplicant(a.code);
+    box.appendChild(btn);
+  });
+  box.classList.remove('hidden');
+}
+function selectTransferApplicant(code){
+  transferSelected=transferApplicants.find(a=>a.code===code)||null;
+  document.getElementById('transferResults').classList.add('hidden');
+  const info=document.getElementById('transferStudentInfo');
+  if(!transferSelected){info.classList.add('hidden');renderTransferHistory();return;}
   document.getElementById('transferSearch').value=transferSelected.code+' — '+transferSelected.name;
   document.getElementById('transferStudent').textContent=transferSelected.name+' — '+transferSelected.code;
   document.getElementById('transferOldSchool').textContent=schoolName(currentSchoolOf(transferSelected.code));
   info.classList.remove('hidden');
   renderTransferHistory();
+  document.getElementById('transferDetail')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function renderTransferHistory(){
   const box=document.getElementById('transferHistory');
@@ -1403,6 +1420,7 @@ function resetTransferForm(){
   transferSelected=null;
   ['transferSearch','transferNotifiedDate','transferNote'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('transferStudentInfo').classList.add('hidden');
+  document.getElementById('transferResults').classList.add('hidden');
   initTransfers();
   renderTransferHistory();
 }
