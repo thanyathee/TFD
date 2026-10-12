@@ -428,3 +428,17 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
   .app-list .trow{grid-template-columns:32px 1fr;grid-template-areas:"n name" "n school" "n status";row-gap:4px}
   .app-list .c-status{justify-self:start}
 }
+/* เจ้าหน้าที่: ย้ายสถานศึกษา */
+.tr-filters{grid-template-columns:2fr 1fr 1fr 1fr}
+.tr-list .tlist-head,.tr-list .trow{grid-template-columns:52px minmax(190px,1.4fr) minmax(190px,1.4fr) 130px minmax(220px,1.6fr)}
+.tr-list .n{text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
+.tr-list small{display:block;font-size:12.5px;color:var(--muted);font-weight:500}
+.tr-list .c-name{font-weight:600}
+@media (max-width:900px){
+  .tr-filters{grid-template-columns:1fr 1fr}
+  .tr-filters>.field:first-child{grid-column:1/-1}
+  .tr-list .trow{display:grid;grid-template-columns:32px 1fr;grid-template-areas:"n name" "n from" "n to";row-gap:4px}
+  .tr-list .n{grid-area:n;align-self:start}.tr-list .c-name{grid-area:name}.tr-list .c-from{grid-area:from;font-size:13px}.tr-list .c-to{grid-area:to;font-size:13px}
+  .tr-list .c-next{display:none}
+  .tr-list .c-from::before{content:"เดิม: ";color:var(--muted)}
+}

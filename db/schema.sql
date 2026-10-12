@@ -410,6 +410,7 @@ CREATE TABLE school_transfers (            -- ย้ายสถานศึก�
   application_id  uuid NOT NULL REFERENCES applications(id),
   from_school_id  integer NOT NULL REFERENCES schools(id),
   to_school_id    integer NOT NULL REFERENCES schools(id),
+  new_class       text NOT NULL,             -- ระดับชั้นที่ไปเรียนที่สถานศึกษาใหม่
   notified_date   date NOT NULL,             -- วันที่แจ้งย้ายสถานศึกษา
   recorded_by     uuid NOT NULL REFERENCES staff_users(id),
   note            text,

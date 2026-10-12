@@ -322,7 +322,9 @@ App.views['staff-app'] = function (p) {
   }
   return {nav: this.staffNav(), html: `${this.roleBar()}
     <button class="back" data-go="staff-apps">${icon('back')} รายการใบสมัคร</button>
-    <div class="page-head"><div><h1><span class="num">${s.code}</span> — ${esc(fullName(s))}</h1><p class="sub">หน้าพิจารณาแบบเต็ม: ข้อมูลผู้สมัครทุกส่วน + เอกสาร + ความเห็นครู</p></div>${badge(s)}</div>
+    <div class="page-head"><div><h1><span class="num">${s.code}</span> — ${esc(fullName(s))}</h1><p class="sub">หน้าพิจารณาแบบเต็ม: ข้อมูลผู้สมัครทุกส่วน + เอกสาร + ความเห็นครู</p></div>
+      <div class="row">${badge(s)}${s.school_next === 'transfer' || this.db.transfers.some(t => t.code === s.code)
+        ? `<button class="btn sm" data-go="staff-transfer" data-code="${s.code}">${this.db.transfers.some(t => t.code === s.code) ? 'ดู / แก้ไขการย้ายสถานศึกษา' : 'บันทึกการย้ายสถานศึกษา'}</button>` : ''}</div></div>
     <div class="split">
       <div class="stack">${applicantSections.call(this, s, {numbered: true})}
         <section class="card"><h3>6. ความคิดเห็นของครูผู้ดูแลทุน</h3>${tr ? `<p>${esc(tr.comment)}</p><p class="small">ผลการเรียน: ${gradeText(tr)}</p><p class="small muted">ส่งเมื่อ ${thDate(tr.sent_at, true)}</p>`
@@ -391,45 +393,103 @@ App.on('staff-decide', function (form) {
 
 /* ---------- ย้ายสถานศึกษา ---------- */
 App.views['staff-transfer'] = function (p) {
-  const s = p.code ? this.studentByCode[p.code] : null;
-  const e = p.errors || {};
-  const v = p.values || {};
-  const q = (p.q || '').toLowerCase();
-  const found = q ? this.db.students.filter(x => (x.code + fullName(x) + this.schoolName(x.school)).toLowerCase().includes(q)).slice(0, 30) : [];
-  const recent = this.db.transfers.slice().reverse();
-  const mine = s ? this.db.transfers.filter(t => t.code === s.code) : [];
+  if (p.code) return transferForm.call(this, p);
+  const f = p.f || this._trF || {state: 'todo'};
+  this._trF = f;
+  const th = (a, b) => a.localeCompare(b, 'th');
+  const lastTr = code => this.db.transfers.filter(t => t.code === code).slice(-1)[0];
+  const q = (f.q || '').toLowerCase();
+  /* ตั้งต้นจากนักเรียนที่ติ๊กย้าย + คนที่บันทึกการย้ายไปแล้ว */
+  const base = this.db.students.filter(s => s.school_next === 'transfer' || lastTr(s.code));
+  const origin = s => { const t = lastTr(s.code); return this.schoolById[t ? t.from : s.school] || {}; };
+  const list = base.filter(s => {
+    const t = lastTr(s.code), sc = origin(s);
+    return (f.state === 'all' || (f.state === 'done' ? !!t : !t)) && (!f.province || sc.province === f.province)
+      && (!f.cls || s.class === f.cls) && (!q || (s.code + fullName(s) + (sc.name || '')).toLowerCase().includes(q));
+  }).sort((a, b) => th(origin(a).province || '', origin(b).province || '') || th(a.code, b.code));
+  const provinces = [...new Set(base.map(s => origin(s).province).filter(Boolean))].sort(th);
+  const classes = Object.values(CLASS_GROUPS).flat().filter(c => base.some(s => s.class === c));
+  const nDone = base.filter(s => lastTr(s.code)).length;
   return {nav: this.staffNav(), html: `${this.roleBar()}
-    <div class="page-head"><div><h1>ย้ายสถานศึกษา</h1><p class="sub">เจ้าหน้าที่มูลนิธิฯ บันทึกว่านักเรียนย้ายไปเรียนที่สถานศึกษาใด (ตรวจสอบข้อมูลภายนอกเรียบร้อยแล้วก่อนบันทึก)</p></div></div>
-    <div class="split">
-      <div class="stack">
-        <section class="card"><h3>1. ค้นหานักเรียน</h3>
-          ${field('tq', 'เลขใบสมัคร / ชื่อ–นามสกุล / ชื่อสถานศึกษา', input('tq', p.q || '', 'autocomplete="off" data-oninput="transfer-search" placeholder="พิมพ์อย่างน้อย 2 ตัวอักษร"'))}
-          ${q && !s ? (found.length ? `<div class="results">${found.map(x => `<button type="button" data-go="staff-transfer" data-code="${x.code}">
-            <span class="num">${x.code}</span> — ${esc(fullName(x))}<small>${esc(this.schoolName(x.school))}</small></button>`).join('')}</div>` : '<p class="small muted">ไม่พบนักเรียน</p>') : ''}
-          ${s ? `<div class="subcard"><div class="row between"><div><b>${esc(fullName(s))}</b> · <span class="num">${s.code}</span>
-            <div class="small">สถานศึกษาปัจจุบัน (ก่อนย้าย): ${esc(this.schoolName(s.school))}</div></div><button class="btn sm" data-go="staff-transfer">เปลี่ยนนักเรียน</button></div></div>` : ''}
-        </section>
-        ${s ? `<form class="card" data-submit="transfer-save" data-code="${s.code}" novalidate>
-          <h3>2. ข้อมูลสถานศึกษาใหม่</h3>
-          <div class="grid-2" data-area='{"school":true,"required":true,"schoolLabel":"สถานศึกษาใหม่"}'>${this.areaPicker('tr', v, {school: true, required: true, schoolLabel: 'สถานศึกษาใหม่'})}</div>
-          ${e.school ? `<div class="err">${e.school}</div>` : ''}
-          <p class="small muted">ไม่พบสถานศึกษา? <button class="btn ghost sm" type="button" data-action="transfer-addschool">+ เพิ่มสถานศึกษาใหม่</button></p>
-          <h3>3. รายละเอียดการย้าย</h3>
-          <div class="grid-2">${field('notified', 'วันที่แจ้งย้ายสถานศึกษา', input('notified', v.notified, 'type="date"'), {req: 1, err: e.notified})}</div>
-          ${field('note', 'หมายเหตุของเจ้าหน้าที่', textarea('note', v.note, 'rows="2" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"'))}
-          <button class="btn primary block" type="submit">บันทึกการย้ายสถานศึกษา</button>
-          ${mine.length ? `<details class="more"><summary>ประวัติการย้ายของนักเรียนรายนี้ (${mine.length})</summary><div><ol class="timeline">${mine.map((t, i) =>
-            `<li class="done">ครั้งที่ ${i + 1}: ${esc(this.schoolName(t.from))} → ${esc(this.schoolName(t.to))}<small>แจ้งย้าย ${thDate(t.date)} · บันทึกโดย ${esc(t.by)}${t.note ? ' · ' + esc(t.note) : ''}</small></li>`).join('')}</ol></div></details>` : ''}
-        </form>` : ''}
-      </div>
-      <aside class="stack"><h3>บันทึกล่าสุด (${recent.length})</h3>
-        ${listRows(recent.slice(0, 20).map(t => { const x = this.studentByCode[t.code];
-          return studentRow(x, `data-go="staff-transfer" data-code="${t.code}"`, `→ ${esc(this.schoolName(t.to))} · ${thDate(t.date)}`, ''); }), 'ยังไม่มีการบันทึก')}</aside>
-    </div>`, after() { const el = document.getElementById('tq'); if (p.q != null && !s && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }};
+    <div class="page-head"><div><h1>ย้ายสถานศึกษา</h1><p class="sub">บันทึกว่านักเรียนย้ายไปเรียนที่ไหน หลังเจ้าหน้าที่ตรวจหลักฐานการย้ายภายนอกระบบแล้ว</p></div></div>
+    <div class="stats">${[['todo', 'ยังไม่บันทึกที่เรียนใหม่', base.length - nDone], ['done', 'บันทึกแล้ว', nDone], ['all', 'แจ้งย้ายทั้งหมด', base.length]].map(([k, t, n]) =>
+      `<button class="stat" data-action="transfer-state" data-state="${k}" aria-pressed="${f.state === k}"><span>${t}</span><b>${n}</b></button>`).join('')}</div>
+    <div class="filters tr-filters">
+      ${field('tq', 'ค้นหา', input('tq', f.q || '', 'autocomplete="off" placeholder="รหัส / ชื่อ–นามสกุล / สถานศึกษาเดิม" data-oninput="transfer-search"'))}
+      ${field('t_state', 'การบันทึก', select('t_state', [['todo', 'ยังไม่บันทึก'], ['done', 'บันทึกแล้ว'], ['all', 'ทั้งหมด']], f.state, null, 'data-onchange="transfer-filter"'))}
+      ${field('t_prov', 'จังหวัด (สถานศึกษาเดิม)', select('t_prov', provinces, f.province, 'ทุกจังหวัด', 'data-onchange="transfer-filter"'))}
+      ${field('t_cls', 'ชั้นปัจจุบัน', select('t_cls', classes, f.cls, 'ทุกชั้น', 'data-onchange="transfer-filter"'))}
+    </div>
+    <div class="small muted">พบ <b>${list.length}</b> คน · กดที่รายชื่อเพื่อบันทึกหรือแก้ไขสถานศึกษาใหม่ · นักเรียนที่ไม่ได้ติ๊กย้ายแต่ย้ายจริง ค้นหาด้วยรหัสในช่องค้นหาได้</div>
+    <div class="tlist tr-list" role="table" aria-label="นักเรียนแจ้งย้ายสถานศึกษา">
+      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>ชื่อ–นามสกุล</span><span>สถานศึกษาเดิม</span><span>ชั้นปีหน้า</span><span>ย้ายไปที่</span></div>
+      ${list.length ? list.map((s, i) => { const t = lastTr(s.code), sc = origin(s), to = t && (this.schoolById[t.to] || {});
+        return `<button class="trow" role="row" data-go="staff-transfer" data-code="${s.code}">
+          <span class="n">${i + 1}</span>
+          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code} · ชั้น ${esc(s.class || '-')}</small></span>
+          <span class="c-from">${esc(sc.name || '-')}<small>จ.${esc(sc.province || '')}</small></span>
+          <span class="c-next">${esc((t && t.cls) || s.next_class || '-')}</span>
+          <span class="c-to">${t ? `${esc(to.name || '-')}<small>จ.${esc(to.province || '')} · แจ้ง ${thDate(t.date)}</small>`
+            : `<span class="badge t-warn">ยังไม่บันทึก</span>${s.next_school_text ? `<small>นักเรียนแจ้ง: ${esc(s.next_school_text)}</small>` : ''}`}</span></button>`; }).join('')
+        : '<div class="empty">ไม่พบนักเรียนตามเงื่อนไขนี้</div>'}
+    </div>`,
+    after() { const el = document.getElementById('tq'); if (p.focusQ && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }};
 };
+/* ฟอร์มบันทึกการย้ายของนักเรียน 1 คน */
+function transferForm(p) {
+  const s = this.studentByCode[p.code];
+  const e = p.errors || {};
+  const mine = this.db.transfers.filter(t => t.code === s.code);
+  const last = mine.slice(-1)[0];
+  const lastTo = last && this.schoolById[last.to];
+  const v = p.values || (last ? {region: lastTo && lastTo.region, province: lastTo && lastTo.province, district: lastTo && lastTo.district, school: last.to,
+    cls: last.cls, notified: last.date, note: last.note} : {cls: s.next_class});
+  if (!v.cls && !p.errors) v.cls = (last && last.cls) || s.next_class;
+  const from = this.schoolById[last ? last.from : s.school] || {};
+  const allClasses = Object.values(CLASS_GROUPS).flat();
+  return {nav: this.staffNav(), html: `${this.roleBar()}
+    <button class="back" data-go="staff-transfer">${icon('back')} รายชื่อนักเรียนแจ้งย้าย</button>
+    <div class="page-head"><div><h1>บันทึกการย้ายสถานศึกษา</h1><p class="sub"><span class="num">${s.code}</span> — ${esc(fullName(s))}</p></div>
+      ${last ? '<span class="badge t-ok">บันทึกแล้ว</span>' : '<span class="badge t-warn">ยังไม่บันทึก</span>'}</div>
+    ${errNote(e)}
+    <div class="split">
+      <form class="card stack" data-submit="transfer-save" data-code="${s.code}" novalidate>
+        <h3>สถานศึกษาใหม่</h3>
+        <div class="grid-2" data-area='{"school":true,"required":true,"schoolLabel":"ชื่อสถานศึกษาใหม่"}'>${this.areaPicker('tr', v, {school: true, required: true, schoolLabel: 'ชื่อสถานศึกษาใหม่'})}</div>
+        ${e.school ? `<div class="err">${e.school}</div>` : ''}
+        <p class="small muted">ไม่พบสถานศึกษา? <button class="btn ghost sm" type="button" data-action="transfer-addschool">+ เพิ่มสถานศึกษาใหม่</button></p>
+        <div class="grid-2">
+          ${field('t_class', 'ระดับชั้นที่ไปเรียน', select('t_class', allClasses, v.cls, 'เลือกระดับชั้น'), {req: 1, err: e.cls, hint: `นักเรียนแจ้งไว้: ${esc(s.next_class || '-')}`})}
+          ${field('notified', 'วันที่แจ้งย้ายสถานศึกษา', input('notified', v.notified, 'type="date"'), {req: 1, err: e.notified})}
+        </div>
+        ${field('note', 'หมายเหตุของเจ้าหน้าที่', textarea('note', v.note, 'rows="2" placeholder="เช่น ตรวจหนังสือรับรองจากสถานศึกษาใหม่แล้ว"'))}
+        <button class="btn primary block" type="submit">${last ? 'บันทึกการแก้ไข' : 'บันทึกการย้ายสถานศึกษา'}</button>
+      </form>
+      <aside class="stack">
+        <section class="card"><h3>ข้อมูลนักเรียน</h3><dl class="kv">
+          <div><dt>สถานศึกษาเดิม</dt><dd>${esc(from.name || '-')}<div class="small muted">${esc(from.district || '')} จ.${esc(from.province || '')}</div></dd></div>
+          <div><dt>ชั้นปัจจุบัน → ปีหน้า</dt><dd>${esc(s.class || '-')} → ${esc(s.next_class || '-')}</dd></div>
+          <div><dt>นักเรียนแจ้งว่าจะไปเรียนที่</dt><dd>${esc(s.next_school_text || 'ยังไม่ทราบ')}</dd></div>
+          <div><dt>ประเภททุน / สถานะ</dt><dd>${TYPE[s.type]} · ${badge(s)}</dd></div>
+          <div><dt>กำหนดส่งหลักฐาน</dt><dd>${transferDeadlineText.call(this, s)}</dd></div></dl></section>
+        ${mine.length ? `<section class="card"><h3>ประวัติการย้าย (${mine.length})</h3><ol class="timeline">${mine.map((t, i) =>
+          `<li class="done">ครั้งที่ ${i + 1}: ${esc(this.schoolName(t.from))} → ${esc(this.schoolName(t.to))}${t.cls ? ` (${esc(t.cls)})` : ''}<small>แจ้งย้าย ${thDate(t.date)} · บันทึกโดย ${esc(t.by)}${t.note ? ' · ' + esc(t.note) : ''}</small></li>`).join('')}</ol></section>` : ''}
+      </aside>
+    </div>`};
+}
+const transferFilters = q => ({state: document.getElementById('t_state').value, province: document.getElementById('t_prov').value,
+  cls: document.getElementById('t_cls').value, q: q != null ? q : document.getElementById('tq').value});
+App.on('transfer-filter', function () { this.go('staff-transfer', {f: transferFilters()}); });
+App.on('transfer-state', function (el) { this.go('staff-transfer', {f: {...transferFilters(), state: el.dataset.state}}); });
 App.on('transfer-search', function (el) {
   clearTimeout(this._tq);
-  this._tq = setTimeout(() => this.go('staff-transfer', {q: el.value.trim().length >= 2 ? el.value : ''}), 250);
+  /* ค้นหาด้วยรหัสหรือชื่อ: ถ้าไม่เจอในกลุ่มแจ้งย้าย ให้หาจากนักเรียนทั้งหมด */
+  this._tq = setTimeout(() => {
+    const q = el.value.trim();
+    const hit = q.length >= 6 && this.db.students.find(x => x.code.toLowerCase() === q.toLowerCase());
+    if (hit && hit.school_next !== 'transfer' && !this.db.transfers.some(t => t.code === hit.code)) { this.go('staff-transfer', {code: hit.code}); return; }
+    this.go('staff-transfer', {f: {...transferFilters(q), state: q ? 'all' : document.getElementById('t_state').value}, focusQ: 1});
+  }, 300);
 });
 App.on('transfer-addschool', function () {
   const a = this.readArea('tr');
@@ -439,14 +499,19 @@ App.on('transfer-save', function (form) {
   const s = this.studentByCode[form.dataset.code];
   const v = formData(form);
   const a = this.readArea('tr');
+  const last = this.db.transfers.filter(t => t.code === s.code).slice(-1)[0];
+  const from = last ? last.from : s.school;
   const e = {};
   if (!a.school) e.school = 'กรุณาเลือกสถานศึกษาใหม่';
-  else if (a.school === s.school) e.school = 'สถานศึกษาใหม่ต้องไม่ใช่สถานศึกษาเดิม';
+  else if (a.school === from) e.school = 'สถานศึกษาใหม่ต้องไม่ใช่สถานศึกษาเดิม';
+  if (!v.t_class) e.cls = 'กรุณาเลือกระดับชั้นที่ไปเรียน';
   if (!v.notified) e.notified = 'กรุณาระบุวันที่แจ้งย้ายสถานศึกษา';
-  if (Object.keys(e).length) { this.go('staff-transfer', {code: s.code, values: {...a, ...v}, errors: e}); return; }
-  this.db.transfers.push({code: s.code, from: s.school, to: a.school, date: v.notified, note: v.note, by: this.session.name, at: nowIso()});
-  addHistory(s, `ย้ายสถานศึกษา: ${this.schoolName(s.school)} → ${this.schoolName(a.school)} — ${this.session.name}`, 'transfer');
+  if (Object.keys(e).length) { this.go('staff-transfer', {code: s.code, values: {...a, cls: v.t_class, notified: v.notified, note: v.note}, errors: e}); return; }
+  if (last) Object.assign(last, {to: a.school, cls: v.t_class, date: v.notified, note: v.note, by: this.session.name, at: nowIso()});
+  else this.db.transfers.push({code: s.code, from, to: a.school, cls: v.t_class, date: v.notified, note: v.note, by: this.session.name, at: nowIso()});
+  addHistory(s, `${last ? 'แก้ไขการย้าย' : 'ย้ายสถานศึกษา'}: ${this.schoolName(from)} → ${this.schoolName(a.school)} (${v.t_class}) — ${this.session.name}`, 'transfer');
   s.school = a.school;
+  s.next_class = v.t_class;
   this.save();
   this.toast(`บันทึกการย้ายสถานศึกษาของ ${fullName(s)} แล้ว`);
   this.go('staff-transfer', {code: s.code});
@@ -607,6 +672,7 @@ App.reportData = function (f) {
     const sc = this.schoolById[s.school] || {};
     const d = s.decision;
     return (!f.decision || (d && d.result === f.decision)) && (!f.type || s.type === f.type) && (!f.round || String(s.round || '') === f.round)
+      && (!f.move || s.school_next === f.move)
       && (!f.region || sc.region === f.region) && (!f.province || sc.province === f.province) && (!f.district || sc.district === f.district)
       && (!f.levels.length || f.levels.includes(s.rate) || (f.levels.includes('SPECIAL') && d && d.approved_amount === this.rateAmount('SPECIAL')));
   });
@@ -654,6 +720,7 @@ App.views['staff-reports'] = function (p) {
         ${field('r_dec', 'ผลพิจารณา', select('r_dec', Object.entries(DECISION).map(([k, d]) => [k, d.label]), f.decision, 'ทั้งหมด'))}
         ${field('r_type', 'ประเภททุน', select('r_type', [['NEW', 'ทุนใหม่'], ['CONT', 'ทุนต่อเนื่อง']], f.type, 'ทั้งหมด'))}
         ${field('r_round', 'รอบ', select('r_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], f.round, 'ทั้งหมด'))}
+        ${field('r_move', 'สถานศึกษาปีหน้า', select('r_move', [['transfer', 'ย้ายสถานศึกษา'], ['same', 'เรียนต่อที่เดิม']], f.move, 'ทั้งหมด'))}
       </div>
       <div class="field"><span class="label">พื้นที่</span><div class="grid-3" data-area='{"any":true}'>${this.areaPicker('ra', f, {any: true})}</div></div>
       <div class="field"><span class="label">ระดับชั้นปี ${this.db.cycle.year} (เลือกได้มากกว่า 1)</span>
@@ -671,7 +738,7 @@ App.on('report-kind', function (el) { this._repF = {...(this._repF || {levels: [
 App.on('report-filter', function (form) {
   const v = formData(form);
   const a = this.readArea('ra');
-  this._repF = {kind: (this._repF || {}).kind || 'all', decision: v.r_dec, type: v.r_type, round: v.r_round, region: a.region, province: a.province, district: a.district, levels: arr(v.r_levels)};
+  this._repF = {kind: (this._repF || {}).kind || 'all', decision: v.r_dec, type: v.r_type, round: v.r_round, move: v.r_move, region: a.region, province: a.province, district: a.district, levels: arr(v.r_levels)};
   this.go('staff-reports');
 });
 App.on('report-export', function () {
