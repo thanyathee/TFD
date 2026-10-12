@@ -191,11 +191,16 @@ function stepStudent(s, e) {
   </section>
   <section class="card"><h3>ที่อยู่</h3>
     ${field('home_address', 'ที่อยู่ตามภูมิลำเนา', textarea('home_address', s.home_address, 'rows="2" placeholder="บ้านเลขที่ หมู่ ถนน ตำบล/แขวง อำเภอ/เขต จังหวัด รหัสไปรษณีย์" data-oninput="student-copy-address"'), {req: 1, err: e.home_address})}
-    ${field('current_address', 'ที่อยู่ปัจจุบัน', textarea('current_address', s.current_address, `rows="2" placeholder="ที่อยู่ที่พักอาศัยอยู่จริงในปัจจุบัน เช่น หอพัก บ้านญาติ หรือบ้านเช่า" ${s.same_address ? 'readonly' : ''}`), {req: 1, err: e.current_address})}
-    <label class="check"><input type="checkbox" name="same_address" ${s.same_address ? 'checked' : ''} data-onchange="student-copy-address"> <span>เหมือนกับที่อยู่ตามภูมิลำเนา</span></label>
+    <div class="field ${e.current_address ? 'invalid' : ''}">
+      <div class="row between"><label class="label" for="current_address">ที่อยู่ปัจจุบัน <span class="req">*</span></label>
+        <label class="check small"><input type="checkbox" name="same_address" ${s.same_address ? 'checked' : ''} data-onchange="student-copy-address"> <span>เหมือนกับที่อยู่ตามภูมิลำเนา</span></label></div>
+      ${textarea('current_address', s.current_address, `rows="2" placeholder="ที่อยู่ที่พักอาศัยอยู่จริงในปัจจุบัน เช่น หอพัก บ้านญาติ หรือบ้านเช่า" ${s.same_address ? 'readonly' : ''}`)}
+      ${e.current_address ? `<div class="err">${esc(e.current_address)}</div>` : ''}</div>
   </section>
-  <section class="card"><div class="card-head"><h3>ข้อมูลการศึกษา</h3><span class="sub">สถานศึกษาปัจจุบัน: ภาค → จังหวัด → อำเภอ / เขต → ชื่อสถานศึกษา</span></div>
+  <section class="card"><div class="card-head"><h3>สถานศึกษาปัจจุบัน</h3><span class="sub">เลือกภาค → จังหวัด → อำเภอ / เขต → ชื่อสถานศึกษา</span></div>
     <div class="grid-2" data-area='${JSON.stringify({school: true, required: true, err: {school: e.school}})}'>${this.areaPicker('st', area, {school: true, required: true, err: {school: e.school}})}</div>
+  </section>
+  <section class="card"><h3>ระดับชั้นเรียน</h3>
     <div id="class_box" class="stack">${classFields.call(this, s, e)}</div>
   </section>
   <section class="card"><h3>สถานศึกษาในปีถัดไป</h3>
