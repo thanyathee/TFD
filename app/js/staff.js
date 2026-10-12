@@ -258,10 +258,17 @@ App.views['staff-apps'] = function (p) {
         <div class="row"><button class="btn" type="button" data-go="staff-apps" data-reset="1">ล้างตัวกรอง</button><button class="btn primary" type="submit">ค้นหา / แสดงผล</button></div></div>
     </form>
     <p class="small muted">พบ ${rows.length} รายการ — เลือกสถานะการดำเนินงานและผลการพิจารณาแยกกันได้</p>
-    ${listRows(rows.map(s => { const sc = this.schoolById[s.school] || {};
-      return studentRow(s, `data-go="staff-app" data-code="${s.code}"`,
-        `<span class="num">${s.code}</span> · ${esc(this.regionName(sc.region))} / ${esc(sc.province || '')} · ${esc(sc.name || '')} · ${esc(s.class || '-')} · ${TYPE[s.type]}${s.round ? ' · รอบ ' + s.round : ''}${s.loan === 'yes' ? ' · กู้ กยศ.' : ''}`); }),
-      'ไม่พบใบสมัครตามเงื่อนไข')}`};
+    <div class="tlist app-list" role="table" aria-label="รายชื่อใบสมัคร">
+      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>ชื่อ–นามสกุล</span><span>สถานะ</span><span>สถานศึกษา</span><span>ชั้น</span><span>ประเภททุน</span><span>รอบ</span></div>
+      ${rows.length ? rows.map((s, i) => { const sc = this.schoolById[s.school] || {};
+        return `<button class="trow" role="row" data-go="staff-app" data-code="${s.code}">
+          <span class="n">${i + 1}</span>
+          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}${s.loan === 'yes' ? ' · กู้ กยศ.' : ''}<span class="m-only"> · ${esc(s.class || '-')} · ${TYPE[s.type]}${s.round ? ' · รอบ ' + s.round : ''}</span></small></span>
+          <span class="c-status">${badge(s)}</span>
+          <span class="c-school">${esc(sc.name || '-')}<small>จ.${esc(sc.province || '')} · ${esc(this.regionName(sc.region))}</small></span>
+          <span class="c-class">${esc(s.class || '-')}</span><span class="c-type">${TYPE[s.type]}</span><span class="c-round">${s.round ? s.round : '—'}</span></button>`; }).join('')
+        : '<div class="empty">ไม่พบใบสมัครตามเงื่อนไข</div>'}
+    </div>`};
 };
 App.on('apps-filter', function (form) {
   const v = formData(form);

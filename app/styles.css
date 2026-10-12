@@ -409,3 +409,22 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
   .sch-list .c-area small,.sch-list .c-acc small{display:inline}
   .sch-list .c-area small::before,.sch-list .c-acc small::before{content:" · "}
 }
+/* เจ้าหน้าที่: งานพิจารณาใบสมัคร แบบตาราง */
+.app-list .tlist-head,.app-list .trow{grid-template-columns:52px minmax(190px,1.6fr) minmax(170px,1.2fr) minmax(200px,1.8fr) 80px 100px 50px}
+.app-list .n{text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
+.app-list small{display:block;font-size:12.5px;color:var(--muted);font-weight:500}
+.app-list .c-name{font-weight:600}
+.app-list .c-class,.app-list .c-type,.app-list .c-round{font-size:14px;color:var(--ink-2)}
+@media (max-width:900px){
+  .app-list .trow{display:grid;grid-template-columns:32px 1fr auto;grid-template-areas:"n name status" "n school school" "n meta meta";row-gap:2px}
+  .app-list .n{grid-area:n;align-self:start}.app-list .c-name{grid-area:name}.app-list .c-status{grid-area:status}.app-list .c-school{grid-area:school;font-size:13px}
+  .app-list .c-school small{display:inline}.app-list .c-school small::before{content:" · "}
+  .app-list .c-class,.app-list .c-type,.app-list .c-round{display:none}
+  .app-list .c-name small{display:inline}.app-list .c-name small::before{content:" · "}
+}
+.app-list .m-only{display:none}
+@media (max-width:900px){.app-list .m-only{display:inline}.app-list .c-name small{display:block}.app-list .c-name small::before{content:none}}
+@media (max-width:900px){
+  .app-list .trow{grid-template-columns:32px 1fr;grid-template-areas:"n name" "n school" "n status";row-gap:4px}
+  .app-list .c-status{justify-self:start}
+}
