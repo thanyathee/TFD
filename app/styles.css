@@ -457,3 +457,4 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
   .tr-list .c-from .sch,.tr-list .c-to .sch{display:inline}
 }
 @media (max-width:900px){.tr-filters{grid-template-columns:1fr 1fr}.tr-filters>.field:first-child{grid-column:1/-1}}
+.tr-list .cls{display:inline-block;margin-left:4px;padding:1px 8px;border-radius:6px;background:var(--fill-2);color:var(--ink);font-size:13px;font-weight:600;white-space:nowrap}
