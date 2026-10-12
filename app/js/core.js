@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v8';
+const STORE_KEY = 'tfd-scholarship-demo-v9';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -121,8 +121,12 @@ const App = {
     const copy = o => JSON.parse(JSON.stringify(o));
     const sent = ['waiting_staff', 'need_more_info', 'waiting_manager', 'decided'];
     return {
-      students: s.students.map(x => ({...copy(x), docFiles: sent.includes(x.status)
-        ? Object.fromEntries(docsFor(x).map(d => [d[0], [`${x.code}_${d[0]}.pdf`]])) : {}})),
+      students: s.students.map(x => {
+        /* เอกสารตัวอย่าง: ส่งแล้ว = ครบ, รอครู = ตาม demo_docs (none / partial / full) */
+        const docs = docsFor(x).filter(d => !d[3]);
+        const n = sent.includes(x.status) || x.demo_docs === 'full' ? docs.length : x.demo_docs === 'partial' ? Math.ceil(docs.length / 2) : 0;
+        return {...copy(x), docFiles: Object.fromEntries(docs.slice(0, n).map(d => [d[0], [`${x.code}_${d[0]}.pdf`]]))};
+      }),
       schools: copy(s.schools),
       teachers: copy(s.teachers),
       transfers: [],

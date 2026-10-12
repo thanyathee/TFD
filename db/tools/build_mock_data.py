@@ -105,6 +105,26 @@ def rate_of(nxt, pvs):
     return 'BACHELOR'
 
 
+# โรงเรียนตัวอย่าง sch001: ครบทุกสถานะและทุกกรณีที่ครูจะเจอ
+# docs (เฉพาะ waiting_teacher): none = ยังไม่แนบ, partial = แนบบางส่วน, full = แนบครบแต่ยังไม่เขียนความคิดเห็น
+DEMO_CASES = [
+    {'status': 'draft', 'class': 'ป.5', 'type': 'NEW', 'note': 'ป.5 ทุนใหม่ กำลังกรอก (ไม่มีส่วนเขียนเล่า)'},
+    {'status': 'draft', 'class': 'ม.2', 'type': 'CONT', 'note': 'ทุนต่อเนื่อง กำลังกรอก'},
+    {'status': 'returned_to_student', 'class': 'ม.1', 'type': 'NEW', 'note': 'ครูเปิดสิทธิ์ให้แก้ไข'},
+    {'status': 'waiting_teacher', 'class': 'ป.6', 'type': 'NEW', 'docs': 'none', 'note': 'ยังไม่แนบเอกสาร'},
+    {'status': 'waiting_teacher', 'class': 'ม.3', 'type': 'NEW', 'docs': 'partial', 'transfer': True, 'note': 'แนบบางส่วน + ย้ายสถานศึกษา'},
+    {'status': 'waiting_teacher', 'class': 'ม.4', 'type': 'CONT', 'docs': 'full', 'note': 'ทุนต่อเนื่อง เอกสารครบ ยังไม่เขียนความคิดเห็น'},
+    {'status': 'waiting_teacher', 'class': 'ม.6', 'type': 'NEW', 'docs': 'full', 'loan': True, 'transfer': True, 'note': 'ม.6 กู้ กยศ. เอกสารครบ ยังไม่เขียนความคิดเห็น'},
+    {'status': 'waiting_teacher', 'class': 'ป.5', 'type': 'NEW', 'docs': 'partial', 'note': 'ป.5 แนบบางส่วน (มูลนิธิฯ พิจารณาจากความเห็นครู)'},
+    {'status': 'waiting_staff', 'class': 'ม.2', 'type': 'NEW', 'note': 'ส่งมูลนิธิฯ แล้ว รอเจ้าหน้าที่'},
+    {'status': 'need_more_info', 'class': 'ม.5', 'type': 'CONT', 'note': 'เจ้าหน้าที่ขอข้อมูลเพิ่มเติม'},
+    {'status': 'waiting_manager', 'class': 'ม.3', 'type': 'NEW', 'note': 'รอผู้จัดการพิจารณา'},
+    {'status': 'decided', 'result': 'approved', 'class': 'ป.6', 'type': 'NEW', 'transfer': True, 'note': 'อนุมัติ (ย้ายไป ม.1 ที่อื่น)'},
+    {'status': 'decided', 'result': 'approved', 'class': 'ม.4', 'type': 'CONT', 'note': 'อนุมัติ ทุนต่อเนื่อง'},
+    {'status': 'decided', 'result': 'rejected', 'class': 'ม.1', 'type': 'NEW', 'note': 'ไม่ผ่าน'},
+    {'status': 'decided', 'result': 'reserve', 'class': 'ม.5', 'type': 'NEW', 'note': 'สำรอง'},
+    {'status': 'decided', 'result': 'ineligible', 'class': 'ม.6', 'type': 'NEW', 'loan': True, 'note': 'ไม่เข้าเกณฑ์ (กู้ กยศ.)'},
+]
 STATUS_PLAN = (['draft'] * 20 + ['waiting_teacher'] * 25 + ['returned_to_student'] * 5 + ['waiting_staff'] * 20 +
                ['need_more_info'] * 5 + ['waiting_manager'] * 10 + ['decided'] * 15)
 DECISION_PLAN = ['approved'] * 9 + ['rejected'] * 2 + ['reserve'] * 2 + ['ineligible'] * 2
@@ -207,6 +227,8 @@ def main():
                 kind, name, levels, top = 'university', f'มหาวิทยาลัยตัวอย่าง{pv} (จำลอง)', ['bachelor'], 'bachelor'
             elif k == 1 and a in COLLEGE_AREAS:
                 kind, name, levels, top = 'college', f'วิทยาลัยเทคนิค{am} (จำลอง)', ['voc', 'highvoc'], 'highvoc'
+            elif i == 1:   # โรงเรียนตัวอย่างหลัก (sch001) เปิดสอน ป.5–ม.6 เพื่อให้ทดลองได้ทุกกรณี
+                kind, name, levels, top = 'school', f'โรงเรียน{am}วิทยา (จำลอง)', ['primary', 'lowersec', 'uppersec'], 'm6'
             elif k == 0:
                 kind, name, levels, top = 'school', f'โรงเรียน{am}วิทยา (จำลอง)', ['lowersec', 'uppersec'], 'm6'
             else:
@@ -244,18 +266,28 @@ def main():
     users = staff + teachers
 
     # ---------------- นักเรียน 100 คน: กระจุกในบางโรงเรียนเพื่อให้หน้าครูมีรายชื่อพอทดลอง
-    slots = ([1] * 8 + [3] * 5 + [2] * 5 + list(range(4, 101)))[:100]
+    slots = ([1] * len(DEMO_CASES) + [3] * 5 + [2] * 5 + list(range(4, 101)))[:100]
+    # sch001 ได้ครบทุกสถานะ / ทุกกรณีตาม DEMO_CASES ที่เหลือสุ่มจากแผนเดิม (ยอดรวมเท่าเดิม)
     statuses = STATUS_PLAN[:]
-    rng.shuffle(statuses)
     decisions_left = DECISION_PLAN[:]
+    for c in DEMO_CASES:
+        statuses.remove(c['status'])
+        if c.get('result'):
+            decisions_left.remove(c['result'])
+    rng.shuffle(statuses)
+    statuses = [c['status'] for c in DEMO_CASES] + statuses
     students, apps, fams, persons, occs, sibs, funding, treviews, sreviews, decisions, history = [], [], [], [], [], [], [], [], [], [], []
     app_people = {}
     used_ids = set()
     base = datetime(2026, 11, 1, 8, 0)
     for n in range(1, 101):
         sc = schools[slots[n - 1] - 1]
+        case = DEMO_CASES[n - 1] if n <= len(DEMO_CASES) else {}
         group = rng.choice(sc['levels_offered'])
         cur = rng.choice(CLASS_GROUPS[group])
+        if case:
+            cur = case['class']
+            group = next(g for g, l in CLASS_GROUPS.items() if cur in l)
         nxt = rng.choice(NEXT[cur])
         bachelor = group == 'bachelor'
         higher = group in ('voc', 'highvoc', 'bachelor')
@@ -278,18 +310,18 @@ def main():
         status = statuses[n - 1]
         if bachelor and status in ('waiting_teacher', 'returned_to_student'):
             status = 'waiting_staff'
-        res = decisions_left.pop() if status == 'decided' else None
-        cont = rng.random() < 0.3
+        res = (case.get('result') if case else decisions_left.pop()) if status == 'decided' else None
+        cont = case['type'] == 'CONT' if case else rng.random() < 0.3
         started = base + timedelta(days=rng.randint(0, 50), hours=rng.randint(0, 10), minutes=rng.randint(0, 59))
         submitted = None if status == 'draft' else started + timedelta(hours=rng.randint(1, 72))
         aid = uid('app', n)
         addr = f'{rng.randint(1, 299)} หมู่ {rng.randint(1, 15)} {sc["_subdistrict"]} {sc["_district"]} จังหวัด{sc["_province"]} {sc["postcode"]}'
         same_addr = rng.random() < 0.75
-        loan = res == 'ineligible' or rng.random() < 0.08
+        loan = res == 'ineligible' or (case.get('loan', False) if case else rng.random() < 0.08)
         other_sch = rng.random() < 0.15
         part = rng.random() < 0.3
         n_sib = rng.randint(0, 4)
-        transfer = rng.random() < (0.6 if cur in ('ม.3', 'ม.6', 'ปวช.3', 'ปวส.2') else 0.15)
+        transfer = case.get('transfer', False) if case else rng.random() < (0.6 if cur in ('ม.3', 'ม.6', 'ปวช.3', 'ปวส.2') else 0.15)
         apps.append({
             'id': aid, 'app_code': f'TF2570-{n:06d}', 'cycle_id': 1, 'student_id': sid, 'school_id': sc['id'],
             'applicant_type': 'CONT' if cont else 'NEW', 'received_prev_year': cont,
@@ -495,6 +527,9 @@ def main():
         t, r, d = tr_by.get(a['id']), sr_by.get(a['id']), de_by.get(a['id'])
         other = next((x for x in fund_by.get(a['id'], []) if x['kind'] == 'scholarship'), None)
         mock['students'].append({
+            'demo_docs': (DEMO_CASES[int(a['app_code'][-6:]) - 1].get('docs', '') if int(a['app_code'][-6:]) <= len(DEMO_CASES) else ''),
+            'demo_note': (DEMO_CASES[int(a['app_code'][-6:]) - 1].get('note', '') if int(a['app_code'][-6:]) <= len(DEMO_CASES) else ''),
+            'return_reason': 'กรุณาแก้ไขข้อมูลรายได้ของบิดาให้ตรงกับความเป็นจริง และเพิ่มรายละเอียดในส่วนเขียนเล่า' if a['status'] == 'returned_to_student' else '',
             'code': a['app_code'], 'citizen_id': st['citizen_id'], 'title': st['title'], 'first_name': st['first_name'],
             'last_name': st['last_name'], 'gender': st['gender'], 'birth_date': st['birth_date'], 'phone': st['phone'], 'email': a['email'] or '',
             'school': by_id[a['school_id']]['institution_code'], 'school_top': a['school_top_level'], 'type': a['applicant_type'], 'status': a['status'],

@@ -347,3 +347,5 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
   .trow .c-code,.trow .c-class,.trow .c-type{font-size:13px}
   .trow .c-docs{margin-left:auto}
 }
+.btn.sample{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;white-space:normal}
+.btn.sample span{color:var(--muted);font-weight:500;font-size:14px}

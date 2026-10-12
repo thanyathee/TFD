@@ -718,8 +718,6 @@ App.views['student-entry'] = function (p) {
   const e = p.errors || {};
   const y = this.db.cycle.history_year;
   const tries = (this._tries || {})[v.cid] || 0;
-  const sample = this.db.students.find(s => s.status === 'draft' && s.group !== 'bachelor');
-  const sent = this.db.students.find(s => s.status === 'waiting_teacher');
   return {html: `
     <div class="page-head"><div><h1>เริ่มสมัครขอรับทุนการศึกษา</h1><p class="sub">ตรวจสอบสิทธิ์และเลือกประเภทใบสมัคร</p></div></div>
     <div class="split">
@@ -742,8 +740,9 @@ App.views['student-entry'] = function (p) {
       </form>
       <aside class="card"><h3>ทดลองใช้งาน</h3>
         <p class="small muted">กรอกเลขบัตรใหม่ที่ถูกต้องเพื่อเริ่มใบสมัครใหม่ หรือเลือกนักเรียนตัวอย่าง</p>
-        ${sample ? `<button class="btn" data-action="student-sample" data-code="${sample.code}">นักเรียนที่กำลังกรอก</button>` : ''}
-        ${sent ? `<button class="btn" data-action="student-sample" data-code="${sent.code}">นักเรียนที่ส่งแล้ว</button>` : ''}
+        ${[['draft', 'NEW', 'ป.5'], ['draft', 'CONT'], ['returned_to_student'], ['waiting_teacher'], ['waiting_staff'], ['decided']].map(([st, ty, cl]) =>
+          this.db.students.find(x => x.demo_note && x.status === st && (!ty || x.type === ty) && (!cl || x.class === cl))).filter(Boolean).map(x =>
+          `<button class="btn sample" data-action="student-sample" data-code="${x.code}"><b>${esc(x.class)} ${TYPE[x.type]}</b><span>${esc(STATUS[x.status].label)}</span></button>`).join('')}
         <button class="btn" data-action="student-newid">สร้างเลขบัตรใหม่สำหรับทดลอง</button>
         <p class="tiny muted">บันทึกร่างอัตโนมัติทุกครั้งที่กดถัดไป กลับมากรอกต่อได้หากอินเทอร์เน็ตหลุดหรือปิดหน้าเว็บ</p>
       </aside>
