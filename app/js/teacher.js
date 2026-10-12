@@ -280,20 +280,33 @@ App.views['teacher-report'] = function () {
   const t = this.teacherOf(sc.id);
   const sent = this.myStudents().filter(s => SENT.includes(s.status) && s.group !== 'bachelor');
   return {nav: this.teacherNav(), html: `
-    <div class="page-head"><div><h1>รายงานการส่งนักเรียน</h1><p class="sub">${esc(sc.name)}</p></div>
+    <div class="page-head no-print"><div><h1>รายงานการส่งนักเรียน</h1><p class="sub">${esc(sc.name)}</p></div>
       <button class="btn primary no-print" data-action="print">${icon('print')} พิมพ์ใบสรุปรายชื่อเสนอ ผอ.</button></div>
     <div class="stats no-print"><div class="stat"><span>ส่งแล้วทั้งหมด</span><b>${sent.length}</b><small>คน</small></div>
       <div class="stat"><span>ทุนใหม่</span><b>${sent.filter(s => s.type === 'NEW').length}</b><small>คน</small></div>
       <div class="stat"><span>ทุนต่อเนื่อง</span><b>${sent.filter(s => s.type === 'CONT').length}</b><small>คน</small></div></div>
     <div class="note info no-print">หลังผู้อำนวยการลงนามรับรองแล้ว ให้สแกน/บันทึกเป็น PDF และส่งทางอีเมลมาที่ <b>tiscofoundation@tiscofoundation.org</b>
       ฉบับจริงเก็บไว้ที่สถานศึกษา <b>ไม่ต้องส่งทางไปรษณีย์</b></div>
-    <div class="paper">
-      <h3>ใบสรุปรายชื่อนักเรียนที่ส่งขอรับทุนการศึกษา มูลนิธิทิสโก้ เพื่อการกุศล</h3>
-      <div class="c"><b>${esc(sc.name)}</b><br>${esc(sc.district)} จังหวัด${esc(sc.province)} | ปีการศึกษา ${this.db.cycle.year}</div>
-      <table><thead><tr><th>ลำดับ</th><th>รหัสผู้สมัคร</th><th>ชื่อ–นามสกุล</th><th>ชั้น</th><th>ประเภททุน</th></tr></thead>
-        <tbody>${sent.length ? sent.map((s, i) => `<tr><td>${i + 1}</td><td>${s.code}</td><td>${esc(fullName(s))}</td><td>${esc(s.class)}</td><td>${TYPE[s.type]}</td></tr>`).join('')
+    <div class="a4-wrap"><div class="paper a4" id="a4">
+      <div class="a4-head"><span class="a4-logo">TF</span><div><b>มูลนิธิทิสโก้ เพื่อการกุศล</b><span>ปีการศึกษา ${this.db.cycle.year}</span></div></div>
+      <h3>ใบสรุปรายชื่อนักเรียนที่ส่งขอรับทุนการศึกษา<br>มูลนิธิทิสโก้ เพื่อการกุศล</h3>
+      <div class="c"><b>${esc(sc.name)}</b><br>${esc(sc.district)} จังหวัด${esc(sc.province)}</div>
+      <table><thead><tr><th class="n">ลำดับ</th><th>รหัสผู้สมัคร</th><th>ชื่อ–นามสกุล</th><th>ชั้น</th><th>ประเภททุน</th></tr></thead>
+        <tbody>${sent.length ? sent.map((s, i) => `<tr><td class="n">${i + 1}</td><td>${s.code}</td><td>${esc(fullName(s))}</td><td>${esc(s.class)}</td><td>${TYPE[s.type]}</td></tr>`).join('')
           : '<tr><td colspan="5" style="text-align:center">ยังไม่มีนักเรียนที่ส่งมูลนิธิฯ</td></tr>'}</tbody></table>
+      <p class="a4-sum">รวมทั้งสิ้น <b>${sent.length}</b> คน (ทุนใหม่ ${sent.filter(s => s.type === 'NEW').length} คน · ทุนต่อเนื่อง ${sent.filter(s => s.type === 'CONT').length} คน)</p>
+      <p class="a4-cert">ขอรับรองว่านักเรียนตามรายชื่อข้างต้นเป็นนักเรียนของสถานศึกษาจริง และข้อมูลที่ส่งมายังมูลนิธิฯ ได้ผ่านการตรวจสอบจากสถานศึกษาแล้ว</p>
       <div class="sign"><div><b>ผู้ประสานงานทุนการศึกษา</b><br>${esc(t ? t.name : '')}<br>โทร. ${esc(t ? t.phone : '')}<br>อีเมล ${esc(t ? t.email : '')}</div>
-        <div style="text-align:right">ลงชื่อ ................................................ ผู้อำนวยการสถานศึกษา<br>(................................................)<br>วันที่ ........../........../..........</div></div>
-    </div>`};
+        <div class="sig">ลงชื่อ ................................................<br>(................................................)<br>ผู้อำนวยการสถานศึกษา<br>วันที่ ........../........../..........</div></div>
+    </div></div>`,
+    after() { fitA4(); }};
 };
+/* ย่อหน้า A4 ให้พอดีจอ (มือถือ) โดยไม่กระทบตอนพิมพ์ */
+function fitA4() {
+  const el = document.getElementById('a4');
+  if (!el) return;
+  el.style.zoom = 1;
+  const w = el.parentElement.clientWidth;
+  el.style.zoom = Math.min(1, w / el.offsetWidth);
+}
+window.addEventListener('resize', fitA4);
