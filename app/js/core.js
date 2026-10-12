@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v4';
+const STORE_KEY = 'tfd-scholarship-demo-v5';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -53,24 +53,28 @@ function rateOf(next, pvsType) {
   return null;
 }
 /* teacherNeedsScholarCert (v28) */
-const needsScholarCert = cls => ['ม.4', 'ม.5', 'ม.6', 'ปวช.1', 'ปวช.2', 'ปวช.3', 'ปวส.1', 'ปวส.2'].includes(cls);
-/* รายการเอกสาร (v28: renderTeacherDocuments / updatePage5DocumentFlow / renderDocs) — [รหัส, ชื่อ, แนบได้หลายไฟล์] */
+/* แบบฟอร์มรับรองสถานะการกู้ยืม กยศ./กรอ.: สำหรับ ม.ปลาย อาชีวศึกษา และปริญญาตรี (ตามแบบฟอร์มกระดาษ) */
+const needsLoanCert = s => ['uppersec', 'voc', 'highvoc', 'bachelor'].includes(s.group || groupOfClass(s.class));
+/* เอกสารประกอบตามแบบฟอร์มกระดาษ — [รหัส, ชื่อ, แนบได้หลายไฟล์, ไม่บังคับ] */
 function docsFor(s) {
-  const bachelor = s.group === 'bachelor';
-  const d = [['01_IDCARD', 'บัตรประจำตัวประชาชน', false], ['03_STUDENTCERT', 'หนังสือรับรองสถานภาพนักเรียน / นักศึกษา', false],
-    ['04_TRANSCRIPT', 'ใบแสดงผลการเรียน', false]];
-  const other = ['07_OTHERSCHOLAR', 'หนังสือรับรองสถานะ กยศ./กรอ. และทุนต่อเนื่องจากหน่วยงานอื่น', false];
+  const bachelor = (s.group || groupOfClass(s.class)) === 'bachelor';
+  const d = [['01_IDCARD', 'สำเนาบัตรประจำตัวประชาชนของนักเรียน / นักศึกษา'], ['03_STUDENTCERT', 'หนังสือรับรองสถานภาพการเป็นนักเรียน / นักศึกษา'],
+    ['04_TRANSCRIPT', 'สำเนาผลการศึกษาเทอมล่าสุด']];
+  const loan = ['07_OTHERSCHOLAR', 'แบบฟอร์มรับรองสถานะการกู้ยืม กยศ./กรอ. และการได้รับทุนการศึกษาอื่น'];
   if (s.type === 'CONT') {
-    if (needsScholarCert(s.class) || bachelor) d.push(other);
-    d.push(['08_BANKFRONT', 'สำเนาสมุดบัญชีหน้าแรกที่มีชื่อผู้ขอทุน', false],
-      ['09_BANKTXN', 'สำเนาสมุดบัญชีหน้าที่มีรายการเดินบัญชี / การเบิกถอนเงินทุน', true],
-      ['10_EXPENSEREPORT', 'ใบรายงานค่าใช้จ่าย', false], ['11_RECEIPT', 'หลักฐานการใช้จ่าย / ใบเสร็จ', true]);
+    if (needsLoanCert(s)) d.push(loan);
+    d.push(['08_BANKFRONT', 'สำเนาสมุดบัญชีเงินฝาก หน้าที่แสดงชื่อเจ้าของบัญชี'],
+      ['09_BANKTXN', 'สำเนาสมุดบัญชีเงินฝาก หน้าที่แสดงรายการเดินบัญชีจำนวนเงินทุนในปีล่าสุดที่เข้าบัญชีจนถึงรายการปัจจุบัน', true],
+      ['10_EXPENSEREPORT', 'แบบฟอร์มรายการใช้จ่ายเงินทุนการศึกษา'],
+      ['12_TUITION', 'ใบเสร็จรับเงินค่าธรรมเนียมการศึกษา / ค่าบำรุงการศึกษา (กรณีใช้เงินทุนชำระ)', true, true],
+      ['13_INTERNET', 'หลักฐานการใช้จ่ายค่าอินเทอร์เน็ต (กรณีมีการใช้จ่าย)', true, true],
+      ['11_RECEIPT', 'ใบเสร็จรับเงินค่าใช้จ่ายที่เบิกถอน (เบิกจากบัญชีตั้งแต่ 500 บาทขึ้นไป)', true]);
   } else {
-    d.push(['05_HOUSEPHOTO', 'รูปสภาพที่อยู่อาศัย', true]);
-    if (bachelor) d.push(['06_ADVISORCERT', 'หนังสือรับรองอาจารย์ที่ปรึกษา', false]);
-    if (needsScholarCert(s.class) || bachelor) d.push(other);
+    d.push(['05_HOUSEPHOTO', 'รูปถ่ายสภาพบ้านที่อยู่อาศัยของนักเรียน / นักศึกษา', true]);
+    if (needsLoanCert(s)) d.push(loan);
+    if (bachelor) d.push(['06_ADVISORCERT', 'จดหมายรับรองความเห็นจากอาจารย์ที่ปรึกษา']);
   }
-  return d;
+  return d.map(x => [x[0], x[1], !!x[2], !!x[3]]);
 }
 
 const ICONS = {

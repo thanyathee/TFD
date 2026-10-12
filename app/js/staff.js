@@ -313,12 +313,12 @@ App.views['staff-app'] = function (p) {
     <div class="page-head"><div><h1><span class="num">${s.code}</span> — ${esc(fullName(s))}</h1><p class="sub">หน้าพิจารณาแบบเต็ม: ข้อมูลผู้สมัครทุกส่วน + เอกสาร + ความเห็นครู</p></div>${badge(s)}</div>
     <div class="split">
       <div class="stack">${applicantSections.call(this, s, {numbered: true})}
-        <section class="card"><h3>5. ความคิดเห็นของครูผู้ดูแลทุน</h3>${tr ? `<p>${esc(tr.comment)}</p><p class="small muted">ส่งเมื่อ ${thDate(tr.sent_at, true)}</p>`
+        <section class="card"><h3>6. ความคิดเห็นของครูผู้ดูแลทุน</h3>${tr ? `<p>${esc(tr.comment)}</p><p class="small">ผลการเรียน: ${gradeText(tr)}</p><p class="small muted">ส่งเมื่อ ${thDate(tr.sent_at, true)}</p>`
           : `<p class="small muted">${s.group === 'bachelor' ? 'ระดับปริญญาตรีส่งตรงถึงมูลนิธิฯ ไม่ผ่านครู' : 'ครูยังไม่ได้ดำเนินการ'}</p>`}</section>
-        <section class="card"><h3>6. ประวัติสถานะใบสมัคร</h3>${(s.history || []).length ? `<ol class="timeline">${s.history.map(h =>
+        <section class="card"><h3>7. ประวัติสถานะใบสมัคร</h3>${(s.history || []).length ? `<ol class="timeline">${s.history.map(h =>
           `<li class="done">${esc(h.text)}<small>${thDate(h.at, true)}</small></li>`).join('')}</ol>` : '<p class="small muted">ยังไม่มีประวัติ</p>'}</section>
-        <section class="card"><h3>7. เอกสารแนบ</h3><div>${docsFor(s).map(([code, name]) => { const fl = files[code] || [];
-          return `<div class="doc-row"><div><div>${code} — ${name}</div><div class="code">${fl.length ? esc(fl.length > 1 ? fl.length + ' ไฟล์' : fl[0]) : 'ยังไม่ได้แนบ'}</div></div>
+        <section class="card"><h3>8. เอกสารแนบ</h3><div>${docsFor(s).map(([code, name, , opt]) => { const fl = files[code] || [];
+          return `<div class="doc-row"><div><div>${code} — ${name}</div><div class="code">${fl.length ? esc(fl.length > 1 ? fl.length + ' ไฟล์' : fl[0]) : opt ? 'ไม่มี (ไม่บังคับ)' : 'ยังไม่ได้แนบ'}</div></div>
             ${fl.length ? `<button class="btn sm" type="button" data-action="preview">Preview</button>` : ''}</div>`; }).join('')}</div></section>
       </div>
       <aside class="stack"><section class="card"><h3>${ROLE[role][0]}</h3>${panel}</section></aside>

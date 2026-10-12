@@ -2,12 +2,10 @@
 'use strict';
 
 const SENT = ['waiting_staff', 'need_more_info', 'waiting_manager', 'decided'];
-const PARENT_LABEL = {alive: 'มีชีวิตอยู่', dead: 'เสียชีวิต', contact: 'ขาดการติดต่อ', prison: 'ถูกจำคุก', monk: 'บวช'};
-const INCOME_LABEL = {none: 'ไม่มีรายได้', daily: 'รับจ้างรายวัน', salary: 'เงินเดือนประจำ', other: 'รายได้ไม่แน่นอน'};
 
 App.teacherNav = function () { return [['teacher-home', 'รายชื่อนักเรียน', ['teacher-student']], ['teacher-report', 'ใบสรุปเสนอ ผอ.']]; };
 App.myStudents = function () { return this.db.students.filter(s => s.school === this.session.school); };
-const docsComplete = s => docsFor(s).every(([code]) => ((s.docFiles || {})[code] || []).length);
+const docsComplete = s => docsFor(s).every(([code, , , opt]) => opt || ((s.docFiles || {})[code] || []).length);
 
 App.views['teacher-entry'] = function (p) {
   this.session = {role: null};
@@ -83,51 +81,70 @@ App.on('teacher-search', function (el) {
 function applicantSections(s, o = {}) {
   const sc = this.schoolById[s.school] || {};
   const f = s.family || {};
-  const parent = k => {
-    const st = f[k + '_status'];
-    if (st !== 'alive') return PARENT_LABEL[st] || '—';
-    const it = f[k + '_income_type'];
-    const inc = it === 'daily' ? `ประมาณ ${baht(f[k + '_daily_wage'])}/วัน ${f[k + '_work_days'] ? `ทำงานเฉลี่ย ${f[k + '_work_days']} วัน/เดือน` : '(ไม่ทราบจำนวนวัน)'}`
-      : it === 'salary' || it === 'other' ? `${baht(f[k + '_monthly_income'])}/เดือน` : '';
-    return `${esc(f[k + '_name'] || '-')}${f[k + '_age'] ? ` (${f[k + '_age']} ปี)` : ''}<div class="small muted">${esc(f[k + '_occupation'] || '')} ${INCOME_LABEL[it] ? '· ' + INCOME_LABEL[it] : ''} ${inc}${f[k + '_cannot_work'] ? ' · ไม่สามารถประกอบอาชีพได้' : ''}</div>`;
+  const lab = (list, k) => (list.find(x => x[0] === k) || [, k || '—'])[1];
+  const person = (k, p) => {
+    if (!p) return '—';
+    const head = `<b>${esc(p.name || '-')}</b>${p.age ? ` · ${esc(p.age)} ปี` : ''}${p.relation ? ` · ${esc(p.relation)}` : ''}${p.status ? ` · ${p.status === 'dead' ? 'ถึงแก่กรรม' : 'ยังมีชีวิตอยู่'}` : ''}`;
+    if (p.status === 'dead') return head;
+    const occ = p.no_occ ? '<div class="small muted">ไม่มีอาชีพ / ไม่มีรายได้ / ไม่ทราบ</div>'
+      : (p.occs || []).map(x => `<div class="small">• ${esc(occText(x))}</div>`).join('');
+    return `${head}${occ}${p.workplace || p.work_province ? `<div class="small muted">ที่ทำงาน: ${esc(p.workplace || '')} ${p.work_province ? 'จ.' + esc(p.work_province) : ''}</div>` : ''}
+      ${p.no_occ ? '' : `<div class="small"><b>รวมประมาณ ${baht(personMonthly(p))} / เดือน</b></div>`}`;
   };
-  const assetText = f.no_assets ? 'ไม่มีสิ่งของตามรายการ' : Object.entries(f.assets || {}).map(([k, n]) => {
-    const a = ASSETS.find(x => x[0] === k); return a ? a[1] + (a[2] ? ` ${n} คัน` : '') : k; }).join(', ') || '—';
-  const flags = (f.family_status || []).map(k => (FAMILY_FLAGS.find(x => x[0] === k) || [k, k])[1]).join(', ') || '—';
-  const land = (yes, rai, ngan, cost) => yes ? `${rai || 0} ไร่ ${ngan || 0} งาน${cost ? ` · ค่าเช่า ${baht(cost)}/ปี` : ''}` : yes === false ? 'ไม่มี' : '—';
+  const total = personMonthly(f.father) + personMonthly(f.mother) + (f.live_with === 'guardian' ? personMonthly(f.guardian) : 0);
+  const housing = lab(HOUSING_P, f.housing) + (f.housing_land_owner ? ` (ที่ดินของ ${f.housing_land_owner})` : '') + (f.housing_cost ? ` · ${baht(f.housing_cost)}/เดือน` : '') + (f.housing_other ? ` · ${f.housing_other}` : '');
+  const equip = f.no_equipment ? 'ไม่มีอุปกรณ์ตามรายการ' : (f.equipment || []).map(k => k === 'other' ? (f.equipment_other || 'อื่น ๆ') : lab(EQUIP, k)).join(', ') || '—';
+  const land = [f.own_land ? `เป็นของตนเอง ${f.own_land_amt || '-'} ${lab(LAND_UNITS, f.own_land_unit)}` : '',
+    f.rent_land ? `เช่าผู้อื่น ${f.rent_land_amt || '-'} ${lab(LAND_UNITS, f.rent_land_unit)} ค่าเช่า ${baht(f.rent_land_cost)}/${f.rent_land_per === 'month' ? 'เดือน' : 'ปี'}` : ''].filter(Boolean).join(' · ') || 'ไม่มี';
   const sibs = s.siblings || [];
   const n = o.numbered ? i => `${i}. ` : () => '';
   return `
-    <section class="card"><h3>${n(1)}ข้อมูลผู้สมัคร</h3><dl class="kv">
+    <section class="card"><h3>${n(1)}ข้อมูลผู้ขอทุน</h3><dl class="kv">
       <div><dt>ชื่อ–นามสกุล</dt><dd>${esc(fullName(s))}</dd></div><div><dt>เลขประจำตัวประชาชน</dt><dd class="num">${esc(s.citizen_id)}</dd></div>
       <div><dt>วันเดือนปีเกิด / อายุ</dt><dd>${beDate(s.birth_date)} / ${s.age_at_submit !== undefined && s.age_at_submit !== '' ? s.age_at_submit : ageAt(s.birth_date)} ปี</dd></div>
-      <div><dt>หมายเลขโทรศัพท์</dt><dd class="num">${esc(s.phone)}</dd></div><div><dt>เพศ</dt><dd>${esc(s.gender || '-')}</dd></div></dl>
+      <div><dt>หมายเลขโทรศัพท์</dt><dd class="num">${esc(s.phone)}</dd></div><div><dt>E-mail</dt><dd>${esc(s.email || '—')}</dd></div><div><dt>เพศ</dt><dd>${esc(s.gender || '-')}</dd></div></dl>
       <dl class="kv"><div><dt>ที่อยู่ตามภูมิลำเนา</dt><dd>${esc(s.home_address || '-')}</dd></div><div><dt>ที่อยู่ปัจจุบัน</dt><dd>${s.same_address ? 'เหมือนที่อยู่ตามภูมิลำเนา' : esc(s.current_address || '-')}</dd></div></dl></section>
     <section class="card"><h3>${n(2)}ข้อมูลการศึกษา</h3><dl class="kv">
       <div><dt>สถานศึกษา</dt><dd>${esc(sc.name || '-')}</dd></div><div><dt>พื้นที่</dt><dd>${esc(this.regionName(sc.region))} / จังหวัด${esc(sc.province || '')} / ${esc(sc.district || '')}</dd></div>
-      <div><dt>ระดับชั้นปัจจุบัน</dt><dd>${esc(s.class || '-')}</dd></div><div><dt>ระดับชั้นปีถัดไป</dt><dd>${esc(s.next_class || '-')}</dd></div>
-      ${s.faculty ? `<div><dt>คณะ / สาขาวิชา</dt><dd>${esc(s.faculty)}</dd></div>` : ''}
-      ${s.pvs_type ? `<div><dt>ประเภทวิชา</dt><dd>${esc((PVS_TYPES.find(x => x[0] === s.pvs_type) || [, s.pvs_type])[1])}</dd></div>` : ''}
-      ${s.study_mode ? `<div><dt>รูปแบบการเรียน</dt><dd>${esc((STUDY_MODES.find(x => x[0] === s.study_mode) || [, s.study_mode])[1])}${s.study_mode_other ? ' — ' + esc(s.study_mode_other) : ''}</dd></div>` : ''}
-      <div><dt>สถานศึกษาปีถัดไป</dt><dd>${s.school_next === 'same' ? 'เรียนต่อสถานศึกษาเดิม' : s.school_next === 'transfer' ? 'ย้ายสถานศึกษา' : '-'}</dd></div>
-      <div><dt>ประเภททุน</dt><dd>${TYPE[s.type]}</dd></div><div><dt>อัตราทุน</dt><dd>${baht(this.rateAmount(s.rate))}</dd></div>
-      <div><dt>กยศ./กรอ.</dt><dd>${s.loan === 'yes' ? `กู้ ${s.loan_amount ? baht(s.loan_amount) + ' ' + esc(s.loan_period || '') : ''}` : s.loan === 'no' ? 'ไม่กู้' : '-'}</dd></div>
-      <div><dt>ทุนต่อเนื่องอื่น</dt><dd>${s.other === 'yes' ? `${esc(s.other_org || '')} ${s.other_amount ? baht(s.other_amount) + ' ' + esc(s.other_period || '') : ''}` : s.other === 'no' ? 'ไม่ได้รับ' : '-'}</dd></div>
-      ${s.teacher_review ? `<div><dt>ผลการเรียนจากครู</dt><dd>${s.teacher_review.grade_type === 'gpa' ? `${s.teacher_review.grade_value} / 4.00` : `${s.teacher_review.grade_value}%`}</dd></div>` : ''}
+      <div><dt>สถานศึกษาเปิดสอนถึง</dt><dd>${esc(lab(TOP_LEVELS, s.school_top))}</dd></div>
+      <div><dt>ระดับชั้นปัจจุบัน</dt><dd>${esc(s.class || '-')}</dd></div>
+      ${s.faculty ? `<div><dt>คณะ / สาขา</dt><dd>${esc(s.faculty)}${s.program_years ? ` · หลักสูตร ${esc(s.program_years)} ปี` : ''}</dd></div>` : ''}
+      ${s.pvs_type ? `<div><dt>ประเภทวิชา</dt><dd>${esc(lab(PVS_TYPES, s.pvs_type))}</dd></div>` : ''}
+      ${s.study_mode ? `<div><dt>รูปแบบการเรียน</dt><dd>${esc(lab(STUDY_MODES_PAPER, s.study_mode))}${s.study_mode_other ? ' — ' + esc(s.study_mode_other) : ''}</dd></div>` : ''}
+      <div><dt>ปีหน้าศึกษาต่อระดับชั้น</dt><dd>${esc(s.next_class || '-')}${s.next_faculty ? ' · ' + esc(s.next_faculty) : ''}</dd></div>
+      <div><dt>สถานศึกษาปีหน้า</dt><dd>${s.school_next === 'same' ? 'ศึกษาต่อสถานศึกษาเดิม' : s.school_next === 'transfer' ? `ย้ายสถานศึกษาใหม่${s.next_school_text ? ' ไป ' + esc(s.next_school_text) : ''}` : '-'}</dd></div>
+      <div><dt>ประเภททุน</dt><dd>${TYPE[s.type]}${s.type === 'CONT' && s.cont_since ? ` · ได้รับตั้งแต่ปี ${esc(s.cont_since)} รวม ${esc(s.cont_years || '-')} ปี` : ''}</dd></div>
+      <div><dt>อัตราทุน</dt><dd>${baht(this.rateAmount(s.rate))}</dd></div>
+      ${s.teacher_review ? `<div><dt>ผลการเรียนจากครู</dt><dd>${gradeText(s.teacher_review)}</dd></div>` : ''}
     </dl></section>
-    <section class="card"><h3>${n(3)}ข้อมูลครอบครัว</h3><dl class="kv">
-      <div><dt>บิดา</dt><dd>${parent('father')}</dd></div><div><dt>มารดา</dt><dd>${parent('mother')}</dd></div>
-      <div><dt>สถานภาพครอบครัว</dt><dd>${esc(flags)}</dd></div><div><dt>พี่น้อง</dt><dd>${sibs.length} คน</dd></div>
-      <div><dt>ที่อยู่อาศัย</dt><dd>${esc(f.housing_type || '-')}</dd></div><div><dt>ค่าเช่า / ค่างวด</dt><dd>${f.housing_cost ? baht(f.housing_cost) + '/เดือน' : '—'}</dd></div>
-      <div><dt>ที่ดินเกษตรของตนเอง</dt><dd>${land(f.own_land, f.own_land_rai, f.own_land_ngan)}</dd></div>
-      <div><dt>เช่าที่ดินเกษตร</dt><dd>${land(f.rent_land, f.rent_land_rai, f.rent_land_ngan, f.rent_land_cost)}</dd></div>
-      <div><dt>ทรัพย์สิน</dt><dd>${esc(assetText)}</dd></div></dl>
-      ${sibs.length ? `<details class="more"><summary>รายละเอียดพี่น้อง (${sibs.length})</summary><div>${sibs.map((x, i) => `<div class="small"><b>${i + 1}. ${esc(x.name || '-')}</b> ${x.age ? x.age + ' ปี' : ''} · ${esc(x.relation || '')} · ${esc(x.residence || '')}
-        <div class="muted">${x.status === 'study' ? `กำลังศึกษา ${esc(x.edu_level || '')} ${esc(x.school_name || '')}${x.has_loan ? ' · กู้ กยศ./กรอ.' : ''}` : x.status === 'work' ? `ทำงาน: ${esc(x.occupation || '')}` : x.status === 'none' ? esc(x.detail || 'ไม่ได้ศึกษาและยังไม่ได้ทำงาน') : ''}</div></div>`).join('')}</div></details>` : ''}
+    <section class="card"><h3>${n(3)}ข้อมูลครอบครัว</h3>
+      <div class="note info small">รายได้รวมของผู้ปกครองประมาณ <b>${baht(total)} / เดือน</b> (ระบบคำนวณจากข้อมูลที่กรอก)</div>
+      <dl class="kv">
+        <div><dt>บิดา</dt><dd>${person('father', f.father)}</dd></div><div><dt>มารดา</dt><dd>${person('mother', f.mother)}</dd></div>
+        <div><dt>อาศัยอยู่กับ</dt><dd>${esc(lab(LIVE_WITH, f.live_with))}</dd></div>
+        ${f.live_with === 'guardian' ? `<div><dt>ญาติ / ผู้อุปการะ</dt><dd>${person('guardian', f.guardian)}</dd></div>` : ''}
+        <div><dt>สภาพที่อยู่ปัจจุบัน</dt><dd>${esc(housing)}</dd></div><div><dt>อุปกรณ์ในบ้าน</dt><dd>${esc(equip)}</dd></div>
+        <div><dt>ที่ดินทำกิน</dt><dd>${esc(land)}</dd></div>
+        <div><dt>ความสัมพันธ์ในครอบครัว</dt><dd>${esc((f.relations || []).map(relLabel).join(', ') || '—')}</dd></div>
+        <div><dt>พี่น้อง</dt><dd>${sibs.length} คน${f.sib_moved ? ` (แยกไปมีครอบครัว ${esc(f.sib_moved)} คน)` : ''}</dd></div></dl>
+      ${sibs.length ? `<details class="more"><summary>รายละเอียดพี่น้อง (${sibs.length})</summary><div>${sibs.map((x, i) => `<div class="small"><b>${i + 1}. ${esc(x.name || '-')}</b> ${esc(x.gender || '')} ${x.age ? x.age + ' ปี' : ''}
+        <div class="muted">${esc([x.edu, x.occupation, x.place].filter(Boolean).join(' · ') || '—')}</div></div>`).join('')}</div></details>` : ''}
     </section>
-    <section class="card"><h3>${n(4)}เรื่องราวชีวิตที่นักเรียนเขียน</h3>
+    <section class="card"><h3>${n(4)}ข้อมูลเพิ่มเติม</h3><dl class="kv">
+      <div><dt>ได้เงินมาใช้จ่ายวันละ</dt><dd>${baht(s.allowance)}</dd></div>
+      <div><dt>ทุนต่อเนื่องอื่น</dt><dd>${s.other === 'yes' ? `${esc(s.other_org || '')} ${s.other_amount ? baht(s.other_amount) + ' ' + esc(s.other_period || '') : ''}` : s.other === 'no' ? 'ไม่ได้รับ' : '-'}</dd></div>
+      <div><dt>กยศ. / กรอ. (ผู้ขอทุนหรือพี่น้อง)</dt><dd>${s.loan === 'yes' ? `<span class="badge t-warn">มี ${esc(s.loan_count || '')} คน</span> ${esc(s.loan_names || '')}${s.loan_amount ? ` · ผู้ขอทุนได้รับ ${baht(s.loan_amount)}/ปี` : ''}` : s.loan === 'no' ? 'ไม่มี' : '-'}</dd></div>
+      <div><dt>หลังเลิกเรียน / วันหยุด</dt><dd>${s.part_time === 'yes' ? `ทำงานพิเศษ: ${esc(s.part_job || '')} ${s.part_income ? baht(s.part_income) + '/' + (s.part_per === 'month' ? 'เดือน' : 'วัน') : ''}` : s.part_time === 'no' ? 'ไม่ได้ทำงานหารายได้พิเศษ' : '-'}</dd></div>
+    </dl></section>
+    <section class="card"><h3>${n(5)}เขียนเล่าประวัติและสภาพความเป็นอยู่</h3>
       <details class="more" ${o.openStories ? 'open' : ''}><summary>เปิดดูคำตอบทั้งหมด</summary><div>${STORY_Q.map(([t], i) =>
-        `<div class="story"><b class="small">${i + 1}. ${t}</b><span>${esc(s.stories[i] || '—')}</span></div>`).join('')}</div></details></section>`;
+        `<div class="story"><b class="small">${i + 1}. ${t}</b><span>${esc((s.stories || [])[i] || '—')}</span></div>`).join('')}
+        <div class="story"><b class="small">เหตุผลในการขอรับทุน</b><span>${esc(s.reason || '—')}</span></div>
+        ${s.goal ? `<div class="story"><b class="small">เป้าหมายในการศึกษาต่อระดับอุดมศึกษา</b><span>${esc(s.goal)}</span></div>` : ''}</div></details></section>`;
+}
+function gradeText(t) {
+  const g = v => t.grade_type === 'gpa' ? `${v} / 4.00` : `${v}%`;
+  return t.grade_before != null && t.grade_before !== '' ? `ก่อนรับทุน ${g(t.grade_before)} · หลังรับทุน ${g(t.grade_value)}` : g(t.grade_value);
 }
 
 App.views['teacher-student'] = function (p) {
@@ -136,7 +153,9 @@ App.views['teacher-student'] = function (p) {
   const tr = s.teacher_review;
   const active = s.status === 'waiting_teacher';
   const bachelor = s.group === 'bachelor';
-  const v = p.values || {grade_type: tr ? tr.grade_type : '', grade_value: tr ? tr.grade_value : '', comment: tr ? tr.comment : ''};
+  const v = p.values || {grade_type: tr ? tr.grade_type : '', grade_value: tr ? tr.grade_value : '', grade_before: tr ? tr.grade_before : '', comment: tr ? tr.comment : ''};
+  const cont = s.type === 'CONT';
+  const gAttr = `type="number" step="0.01" min="0" ${v.grade_type === 'gpa' ? 'max="4" placeholder="เช่น 3.25"' : v.grade_type === 'percent' ? 'max="100" placeholder="เช่น 78.50"' : 'placeholder="กรุณาเลือกรูปแบบคะแนนก่อน"'} inputmode="decimal" ${active ? '' : 'readonly'}`;
   const complete = docsComplete(s);
   const gradeLabel = v.grade_type === 'gpa' ? 'เกรดเฉลี่ย (GPA)' : v.grade_type === 'percent' ? 'คะแนนเฉลี่ย (%)' : 'คะแนน / เกรดเฉลี่ย';
   return {nav: this.teacherNav(), html: `
@@ -152,17 +171,18 @@ App.views['teacher-student'] = function (p) {
       <form class="stack" data-submit="teacher-send" data-code="${s.code}" novalidate>
         <section class="card"><div class="card-head"><h3>เอกสารประกอบ</h3><span class="sub">${TYPE[s.type]} · ${esc(s.class || '')}</span></div>
           <p class="small muted">ระบบแสดงเฉพาะเอกสารที่เกี่ยวข้องกับนักเรียนรายนี้ ตามประเภททุนและระดับชั้น</p>
-          <div>${docsFor(s).map(([code, name, multi]) => docRow(s, code, name, multi, active, 'teacher-file')).join('')}</div>
+          <div>${docsFor(s).map(([code, name, multi, opt]) => docRow(s, code, name, multi, active, 'teacher-file', opt)).join('')}</div>
           ${e.docs ? `<div class="err">${e.docs}</div>` : ''}</section>
         <section class="card"><h3>ความเห็นของครูผู้ดูแลทุน</h3>
           ${active ? `<div class="note info small"><b>กรุณาเขียนข้อมูลที่ช่วยให้มูลนิธิฯ เข้าใจความจำเป็นของนักเรียน</b> เช่น สภาพครอบครัว ภาระค่าใช้จ่าย ความยากลำบาก เหตุจำเป็น หรือข้อเท็จจริงที่ครูทราบ
             <b>หลีกเลี่ยงข้อความสั้น ๆ เช่น “สมควรได้รับทุน” เพียงอย่างเดียว</b></div>` : ''}
-          ${field('comment', 'ความคิดเห็นของครู', textarea('comment', v.comment, `rows="5" data-oninput="count" maxlength="2000" aria-describedby="cnt_c" placeholder="เขียนเหตุผลและข้อเท็จจริงที่แสดงถึงความจำเป็นของนักเรียน" ${active ? '' : 'readonly'}`) +
+          ${field('comment', cont ? 'เห็นสมควรให้ผู้ขอทุนได้รับทุนต่อเนื่องจากมูลนิธิฯ เนื่องจาก' : 'ความคิดเห็นของครู (เพราะเหตุใดผู้สมัครจึงสมควรได้รับทุน)', textarea('comment', v.comment, `rows="5" data-oninput="count" maxlength="2000" aria-describedby="cnt_c" placeholder="เขียนเหตุผลและข้อเท็จจริงที่แสดงถึงความจำเป็นของนักเรียน" ${active ? '' : 'readonly'}`) +
             `<div class="counter" id="cnt_c">${(v.comment || '').length} / 2000</div>`, {req: active, err: e.comment})}
           <h3>ผลการเรียนของนักเรียน</h3>
           <div class="grid-2">
             ${field('grade_type', 'รูปแบบคะแนน', select('grade_type', [['gpa', 'เกรดเฉลี่ย (GPA 4.00)'], ['percent', 'คะแนนเฉลี่ยเป็นเปอร์เซ็นต์']], v.grade_type, 'กรุณาเลือก', `data-onchange="teacher-grade" ${active ? '' : 'disabled'}`), {req: active, err: e.grade_type})}
-            ${field('grade_value', `<span id="grade_label">${gradeLabel}</span>`, input('grade_value', v.grade_value, `type="number" step="0.01" min="0" ${v.grade_type === 'gpa' ? 'max="4" placeholder="เช่น 3.25"' : v.grade_type === 'percent' ? 'max="100" placeholder="เช่น 78.50"' : 'placeholder="กรุณาเลือกรูปแบบคะแนนก่อน"'} inputmode="decimal" ${active ? '' : 'readonly'}`), {req: active, err: e.grade_value})}
+            ${cont ? field('grade_before', `ผลการเรียนก่อนรับทุน`, input('grade_before', v.grade_before, gAttr), {req: active, err: e.grade_before}) : ''}
+            ${field('grade_value', `<span id="grade_label">${cont ? 'ผลการเรียนหลังรับทุน' : gradeLabel}</span>`, input('grade_value', v.grade_value, gAttr), {req: active, err: e.grade_value})}
           </div>
           ${active ? `<div class="note ${complete ? 'ok' : 'warn'} small">${complete ? 'เอกสารบังคับครบแล้ว กดส่งมูลนิธิฯ ได้' : 'ระบบจะเปิดปุ่ม “ส่งมูลนิธิฯ” เมื่อแนบเอกสารบังคับครบทุกรายการ'}</div>
           <div class="row between"><button class="btn" type="button" data-action="teacher-return-open" data-code="${s.code}">เปิดสิทธิ์ให้นักเรียนแก้ไข</button>
@@ -177,7 +197,9 @@ App.views['teacher-student'] = function (p) {
 };
 App.on('teacher-grade', function (el) {
   const g = document.getElementById('grade_value');
-  document.getElementById('grade_label').textContent = el.value === 'gpa' ? 'เกรดเฉลี่ย (GPA)' : el.value === 'percent' ? 'คะแนนเฉลี่ย (%)' : 'คะแนน / เกรดเฉลี่ย';
+  const gb = document.getElementById('grade_before');
+  if (gb) { gb.max = el.value === 'gpa' ? 4 : 100; gb.placeholder = el.value === 'gpa' ? 'เช่น 3.25' : 'เช่น 78.50'; }
+  if (!gb) document.getElementById('grade_label').textContent = el.value === 'gpa' ? 'เกรดเฉลี่ย (GPA)' : el.value === 'percent' ? 'คะแนนเฉลี่ย (%)' : 'คะแนน / เกรดเฉลี่ย';
   g.max = el.value === 'gpa' ? 4 : el.value === 'percent' ? 100 : '';
   g.placeholder = el.value === 'gpa' ? 'เช่น 3.25' : el.value === 'percent' ? 'เช่น 78.50' : 'กรุณาเลือกรูปแบบคะแนนก่อน';
 });
@@ -205,7 +227,13 @@ App.on('teacher-send', function (form) {
   else if (v.grade_type === 'gpa' && (g < 0 || g > 4)) e.grade_value = 'เกรดเฉลี่ยต้องอยู่ระหว่าง 0.00–4.00';
   else if (v.grade_type === 'percent' && (g < 0 || g > 100)) e.grade_value = 'คะแนนเฉลี่ยต้องอยู่ระหว่าง 0–100';
   if (Object.keys(e).length) { this.go('teacher-student', {code: s.code, values: v, errors: e}); return; }
-  s.teacher_review = {teacher: this.session.teacher, grade_type: v.grade_type, grade_value: g, comment: v.comment, sent_at: nowIso()};
+  if (s.type === 'CONT') {
+    const b = Number(v.grade_before);
+    if (v.grade_before === '' || v.grade_before == null || isNaN(b)) e.grade_before = 'กรุณากรอกผลการเรียนก่อนรับทุน';
+    else if ((v.grade_type === 'gpa' && (b < 0 || b > 4)) || (v.grade_type === 'percent' && (b < 0 || b > 100))) e.grade_before = 'ค่าเกินช่วงที่กำหนด';
+    if (e.grade_before) { this.go('teacher-student', {code: s.code, values: v, errors: e}); return; }
+  }
+  s.teacher_review = {teacher: this.session.teacher, grade_type: v.grade_type, grade_value: g, grade_before: s.type === 'CONT' ? Number(v.grade_before) : null, comment: v.comment, sent_at: nowIso()};
   s.status = 'waiting_staff';
   addHistory(s, 'ครูส่งข้อมูลให้มูลนิธิฯ — ' + this.schoolName(s.school), 'teacher_sent');
   this.save();

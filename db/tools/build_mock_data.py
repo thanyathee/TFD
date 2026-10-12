@@ -109,13 +109,70 @@ STATUS_PLAN = (['draft'] * 20 + ['waiting_teacher'] * 25 + ['returned_to_student
                ['need_more_info'] * 5 + ['waiting_manager'] * 10 + ['decided'] * 15)
 DECISION_PLAN = ['approved'] * 9 + ['rejected'] * 2 + ['reserve'] * 2 + ['ineligible'] * 2
 
-PARENT_STATUS_W = [('alive', 86), ('dead', 5), ('contact', 6), ('prison', 2), ('monk', 1)]
-OCCUPATIONS = ['รับจ้างทั่วไป', 'เกษตรกร', 'ค้าขาย', 'พนักงานโรงงาน', 'ขับรถรับจ้าง', 'แม่บ้าน', 'ก่อสร้าง']
-HOUSING = ['บ้านของครอบครัว', 'บ้านเช่า', 'ห้องเช่า / หอพัก', 'อาศัยอยู่กับญาติหรือผู้อื่น', 'บ้านพักที่นายจ้างหรือที่ทำงานจัดให้',
-           'บ้านพักของทางราชการ', 'อื่น ๆ']
-ASSET_KEYS = ['washer', 'computer', 'aircon', 'motorcycle', 'car', 'pickup', 'farm_vehicle']
-FAMILY_FLAGS = ['together', 'apart', 'separated', 'divorced', 'father_new', 'mother_new']
+# ---------------- ตัวเลือกตามแบบฟอร์มกระดาษ
+HIRE = [('รับจ้างทั่วไป (งานรายวัน / งานจร)', ['ทาสีบ้าน รับตัดหญ้า', 'แบกหามสินค้าในตลาด', 'รับจ้างทั่วไปในหมู่บ้าน']),
+        ('พนักงานโรงงาน', ['ประกอบชิ้นส่วนอิเล็กทรอนิกส์', 'แพ็กสินค้า', 'คัดแยกผลไม้ส่งออก']),
+        ('ก่อสร้าง / ช่าง', ['ช่างปูน', 'กรรมกรก่อสร้าง', 'ช่างไฟฟ้า']),
+        ('รับจ้างภาคเกษตร (ตัดอ้อย กรีดยาง เก็บผลไม้ ฯลฯ)', ['กรีดยาง', 'ตัดอ้อย', 'เก็บลำไย']),
+        ('แม่บ้าน / ทำความสะอาด', ['แม่บ้านโรงแรม', 'ทำความสะอาดสำนักงาน'])]
+POSITIONS = {'พนักงานโรงงาน': ['พนักงานฝ่ายผลิต', 'พนักงานคลังสินค้า', 'หัวหน้าไลน์']}
+CROPS = {'rice': ['ข้าวเหนียว', 'ข้าวหอมมะลิ'], 'field': ['มันสำปะหลัง', 'อ้อย', 'ข้าวโพด'], 'orchard': ['สวนยาง', 'ลำไย', 'ทุเรียน', 'ปาล์มน้ำมัน']}
+GOODS = ['ข้าวแกง', 'ผักสด', 'ขนมไทย', 'ลูกชิ้นทอด', 'เสื้อผ้ามือสอง']
+OTHER_JOBS = ['ขับวินมอเตอร์ไซค์', 'ช่างตัดผม', 'ทำขนมขาย', 'รับซ่อมรถจักรยานยนต์']
+GOV = [('ครู', 'โรงเรียนในพื้นที่'), ('ลูกจ้างประจำ', 'องค์การบริหารส่วนตำบล'), ('พนักงานขับรถ', 'โรงพยาบาลชุมชน')]
+RELATION_KEYS = ['together', 'away_work', 'divorced', 'father_new', 'mother_new', 'father_lost', 'mother_lost',
+                 'father_prison', 'mother_prison', 'father_monk', 'mother_monk', 'father_dead', 'mother_dead']
 TRAVEL = ['เดิน', 'ปั่นจักรยาน', 'ซ้อนรถจักรยานยนต์ผู้ปกครอง', 'รถสองแถว', 'รถรับส่งนักเรียน']
+WEEKS = 4.33
+
+
+def monthly(o):
+    if o['pay'] == 'daily':
+        return round(o['wage'] * o['days'] * (WEEKS if o['per'] == 'week' else 1))
+    if o['pay'] == 'yearly':
+        return round(o['amount'] / 12)
+    return o['amount']
+
+
+def make_occ():
+    cat = rng.choices(['hire', 'farm', 'trade', 'gov', 'other'], [50, 25, 12, 4, 9])[0]
+    o = {'cat': cat, 'hire_kind': '', 'detail': '', 'position': '', 'agency': '', 'goods': '', 'sell_where': '',
+         'farm_kinds': [], 'crops': '', 'farm_land': '', 'pay': '', 'wage': '', 'days': '', 'per': '', 'amount': ''}
+    if cat == 'hire':
+        kind, details = rng.choice(HIRE)
+        o.update(hire_kind=kind, detail=rng.choice(details), position=rng.choice(POSITIONS.get(kind, ['-'])))
+        if kind == 'พนักงานโรงงาน':
+            o.update(pay='monthly', amount=rng.randint(90, 130) * 100)
+        else:
+            o.update(pay='daily', wage=rng.choice([250, 300, 350, 400]), days=rng.choice([2, 3, 4, 5, 15, 20]))
+            o['per'] = 'week' if o['days'] <= 5 else 'month'
+    elif cat == 'farm':
+        k = rng.choice(list(CROPS))
+        o.update(farm_kinds=[k], crops=rng.choice(CROPS[k]), farm_land=rng.choice(['ที่ดินของตนเอง', 'เช่าที่ดินผู้อื่น', 'รับจ้างทำในที่ดินผู้อื่น']),
+                 pay='yearly', amount=rng.randint(15, 70) * 1000)
+    elif cat == 'trade':
+        o.update(goods=rng.choice(GOODS), sell_where=rng.choice(['ตลาด / แผงลอย', 'หน้าบ้าน / ร้านของตนเอง', 'เร่ขาย / รถเข็น']),
+                 pay='irregular', amount=rng.randint(30, 90) * 100)
+    elif cat == 'gov':
+        pos, ag = rng.choice(GOV)
+        o.update(position=pos, agency=ag, pay='monthly', amount=rng.randint(110, 250) * 100)
+    else:
+        o.update(detail=rng.choice(OTHER_JOBS), pay='irregular', amount=rng.randint(30, 80) * 100)
+    return o
+
+
+def make_person(role, last, sex, status='alive'):
+    p = {'role': role, 'name': f'{"นาย" if sex == "m" else "นาง"} {rng.choice(ADULT_M if sex == "m" else ADULT_F)} {last}',
+         'age': rng.randint(32, 60), 'status': status if role != 'guardian' else None, 'relation': None,
+         'no_occ': False, 'workplace': '', 'work_province': '', 'occs': []}
+    if status == 'dead':
+        return p
+    if rng.random() < 0.1:
+        p['no_occ'] = True
+        return p
+    p['occs'] = [make_occ() for _ in range(rng.choices([1, 2], [75, 25])[0])]
+    p['workplace'] = rng.choice(['ในหมู่บ้าน', 'บ้านตนเอง', 'ตลาดสดอำเภอ', 'นิคมอุตสาหกรรม', 'ไร่ของตนเอง'])
+    return p
 
 
 def citizen_id():
@@ -126,27 +183,6 @@ def citizen_id():
 
 def phone(n):
     return f'080000{n:04d}'
-
-
-def parent(prefix, sex, last):
-    st = rng.choices([s for s, _ in PARENT_STATUS_W], [w for _, w in PARENT_STATUS_W])[0]
-    f = {prefix + '_status': st}
-    if st not in ('alive',):
-        f.update({prefix + k: None for k in ('_name', '_age', '_occupation', '_income_type', '_daily_wage', '_work_days', '_monthly_income')})
-        f[prefix + '_cannot_work'] = False
-        return f
-    itype = rng.choices(['none', 'daily', 'salary', 'other'], [10, 45, 15, 30])[0]
-    f.update({
-        prefix + '_name': f'{"นาย" if sex == "m" else "นาง"} {rng.choice(ADULT_M if sex == "m" else ADULT_F)} {last}',
-        prefix + '_age': rng.randint(32, 58),
-        prefix + '_occupation': None if itype == 'none' else rng.choice(OCCUPATIONS),
-        prefix + '_cannot_work': itype == 'none' and rng.random() < 0.5,
-        prefix + '_income_type': itype,
-        prefix + '_daily_wage': rng.choice([250, 300, 350, 400]) if itype == 'daily' else None,
-        prefix + '_work_days': (rng.choice([10, 15, 18, 20, 22, None])) if itype == 'daily' else None,
-        prefix + '_monthly_income': rng.randint(60, 150) * 100 if itype in ('salary', 'other') else None,
-    })
-    return f
 
 
 def main():
@@ -168,19 +204,19 @@ def main():
             i = len(schools) + 1
             sub = subs[k % len(subs)]
             if k == 1 and a in UNIVERSITY_AREAS:
-                kind, name, levels = 'university', f'มหาวิทยาลัยตัวอย่าง{pv} (จำลอง)', ['bachelor']
+                kind, name, levels, top = 'university', f'มหาวิทยาลัยตัวอย่าง{pv} (จำลอง)', ['bachelor'], 'bachelor'
             elif k == 1 and a in COLLEGE_AREAS:
-                kind, name, levels = 'college', f'วิทยาลัยเทคนิค{am} (จำลอง)', ['voc', 'highvoc']
+                kind, name, levels, top = 'college', f'วิทยาลัยเทคนิค{am} (จำลอง)', ['voc', 'highvoc'], 'highvoc'
             elif k == 0:
-                kind, name, levels = 'school', f'โรงเรียน{am}วิทยา (จำลอง)', ['lowersec', 'uppersec']
+                kind, name, levels, top = 'school', f'โรงเรียน{am}วิทยา (จำลอง)', ['lowersec', 'uppersec'], 'm6'
             else:
-                kind, name, levels = 'school', f'โรงเรียนบ้าน{sub["th"]} (จำลอง)', ['primary', 'lowersec']
+                kind, name, levels, top = 'school', f'โรงเรียนบ้าน{sub["th"]} (จำลอง)', ['primary', 'lowersec'], 'm3'
             schools.append({
                 'id': i, 'institution_code': f'SCH-{i:03d}', 'name': name, 'school_type': kind,
                 'subdistrict_id': sub['id'], 'district_id': d['id'],
                 'address': f'{rng.randint(1, 299)} หมู่ {rng.randint(1, 15)}', 'postcode': sub['zip'], 'levels_offered': levels,
                 '_province': pv, '_district': d['pre'] + d['th'], '_subdistrict': sub['pre'] + sub['th'],
-                '_region': region_code[p['r']],
+                '_region': region_code[p['r']], '_top': top,
             })
 
     # ---------------- บัญชีเจ้าหน้าที่ 4 + ครู 1 บัญชีต่อสถานศึกษา
@@ -208,15 +244,12 @@ def main():
     users = staff + teachers
 
     # ---------------- นักเรียน 100 คน: กระจุกในบางโรงเรียนเพื่อให้หน้าครูมีรายชื่อพอทดลอง
-    plan = [1] * 8 + [3] * 5 + [2] * 5 + [k for k in range(4, 101) for _ in range(1)]
-    slots = []
-    for sid in plan:
-        slots.append(sid)
-    slots = slots[:100]
+    slots = ([1] * 8 + [3] * 5 + [2] * 5 + list(range(4, 101)))[:100]
     statuses = STATUS_PLAN[:]
     rng.shuffle(statuses)
     decisions_left = DECISION_PLAN[:]
-    students, apps, fams, sibs, funding, treviews, sreviews, decisions, history = [], [], [], [], [], [], [], [], []
+    students, apps, fams, persons, occs, sibs, funding, treviews, sreviews, decisions, history = [], [], [], [], [], [], [], [], [], [], []
+    app_people = {}
     used_ids = set()
     base = datetime(2026, 11, 1, 8, 0)
     for n in range(1, 101):
@@ -225,8 +258,10 @@ def main():
         cur = rng.choice(CLASS_GROUPS[group])
         nxt = rng.choice(NEXT[cur])
         bachelor = group == 'bachelor'
-        pvs = rng.choice(['industry', 'business', 'other']) if nxt.startswith('ปวส') else None
-        rate = rate_of(nxt, pvs)
+        higher = group in ('voc', 'highvoc', 'bachelor')
+        pvs = rng.choice(['industry', 'business', 'other']) if group == 'highvoc' else None
+        next_pvs = rng.choice(['industry', 'business', 'other']) if nxt.startswith('ปวส') and group != 'highvoc' else None
+        rate = rate_of(nxt, pvs or next_pvs)
         age = AGE[cur]
         birth = date(2026 - age, 1, 1) + timedelta(days=rng.randint(0, 364))
         female = rng.random() < 0.55
@@ -250,23 +285,32 @@ def main():
         aid = uid('app', n)
         addr = f'{rng.randint(1, 299)} หมู่ {rng.randint(1, 15)} {sc["_subdistrict"]} {sc["_district"]} จังหวัด{sc["_province"]} {sc["postcode"]}'
         same_addr = rng.random() < 0.75
-        loan = res == 'ineligible'
+        loan = res == 'ineligible' or rng.random() < 0.08
         other_sch = rng.random() < 0.15
+        part = rng.random() < 0.3
         n_sib = rng.randint(0, 4)
+        transfer = rng.random() < (0.6 if cur in ('ม.3', 'ม.6', 'ปวช.3', 'ปวส.2') else 0.15)
         apps.append({
             'id': aid, 'app_code': f'TF2570-{n:06d}', 'cycle_id': 1, 'student_id': sid, 'school_id': sc['id'],
             'applicant_type': 'CONT' if cont else 'NEW', 'received_prev_year': cont,
             'prev_year_verified': True if status in ('waiting_manager', 'decided') else None,
             'status': status, 'is_bachelor': bachelor, 'education_group': group,
             'current_class': cur, 'next_class': nxt, 'rate_level_code': rate,
-            'study_mode': rng.choice(['regular'] * 8 + ['special', 'dual']) if group in ('uppersec', 'voc', 'highvoc', 'bachelor') else None,
-            'study_mode_other': None, 'pvs_type': pvs,
-            'faculty': (rng.choice(['ช่างยนต์', 'ช่างไฟฟ้า', 'การบัญชี', 'คอมพิวเตอร์ธุรกิจ']) if group in ('voc', 'highvoc')
+            'study_mode': rng.choice(['regular'] * 8 + ['special', 'dual']) if higher else None, 'study_mode_other': None, 'pvs_type': pvs,
+            'faculty': (rng.choice(['ช่างยนต์', 'ช่างไฟฟ้ากำลัง', 'การบัญชี', 'คอมพิวเตอร์ธุรกิจ']) if group in ('voc', 'highvoc')
                         else rng.choice(['ครุศาสตร์ / การประถมศึกษา', 'พยาบาลศาสตร์', 'บริหารธุรกิจ / การบัญชี', 'วิศวกรรมศาสตร์']) if bachelor else None),
-            'program_years': rng.choice([4, 5]) if cur == 'ปริญญาตรี ปี 4' else None,
-            'stays_same_school': rng.random() < 0.8 if cur not in ('ม.3', 'ม.6', 'ปวช.3', 'ปวส.2') else rng.random() < 0.4,
-            'has_student_loan': loan, 'loan_amount': rng.choice([18000, 25000, 30000]) if loan else None,
-            'loan_period': 'ต่อปี' if loan else None, 'review_round': None,
+            'program_years': ({'voc': 3, 'highvoc': 2}.get(group) or rng.choice([4, 5])) if higher else None,
+            'stays_same_school': not transfer, 'email': f'student{n:03d}@example.com' if rng.random() < 0.5 else None,
+            'school_top_level': sc['_top'], 'next_faculty': None, 'next_pvs_type': next_pvs,
+            'next_school_text': rng.choice(['', 'โรงเรียนประจำจังหวัด', 'วิทยาลัยเทคนิคในจังหวัด']) if transfer else None,
+            'cont_since_year': rng.choice([2566, 2567, 2568]) if cont else None, 'cont_years': None,
+            'daily_allowance': rng.choice([20, 30, 40, 50, 60, 80]),
+            'has_student_loan': loan, 'loan_people_count': 1 if loan else None,
+            'loan_people_names': ('ผู้ขอทุน' if res == 'ineligible' else 'พี่สาว') if loan else None,
+            'loan_amount': rng.choice([18000, 25000, 30000]) if res == 'ineligible' else None, 'loan_period': 'ต่อปี' if res == 'ineligible' else None,
+            'part_time': part, 'part_job': rng.choice(['ช่วยขายของที่ตลาด', 'ล้างจานร้านอาหาร', 'รับจ้างเก็บผลไม้']) if part else None,
+            'part_income': rng.choice([100, 150, 200, 300]) if part else None, 'part_income_per': 'day' if part else None,
+            'review_round': None,
             'home_address': addr, 'current_address': addr if same_addr else f'{rng.randint(1, 199)}/{rng.randint(1, 30)} ' + addr.split(' ', 1)[1],
             'story_family': f'อาศัยอยู่กับ{rng.choice(["พ่อแม่", "แม่", "ยายและตา", "ป้า"])} ผู้ปกครองมีรายได้ไม่แน่นอน ต้องดูแลสมาชิกหลายคน',
             'story_siblings': f'มีพี่น้อง {n_sib} คน แม่เป็นผู้ออกค่าใช้จ่ายหลัก' if n_sib else 'เป็นลูกคนเดียว ยายช่วยออกค่าใช้จ่ายบางส่วน',
@@ -275,44 +319,74 @@ def main():
                                          'ห้องเช่าเล็ก ๆ ใกล้ตลาด อยู่กันสี่คน', 'บ้านไม้สองชั้นที่ทรุดโทรม พื้นผุบางส่วน']),
             'story_expenses': f'ค่าใช้จ่ายในบ้านประมาณ {rng.randint(4, 12) * 1000:,} บาทต่อเดือน' + rng.choice([' ยังไม่มีหนี้', ' และมีหนี้นอกระบบ', ' มีหนี้ ธ.ก.ส.']),
             'story_other': rng.choice(['', 'อยากเรียนต่อพยาบาล', 'ตั้งใจเรียนเพื่อช่วยครอบครัว', 'ช่วยผู้ปกครองทำงานหลังเลิกเรียน']),
+            'story_reason': 'ต้องการแบ่งเบาภาระค่าใช้จ่ายของครอบครัว และใช้เป็นค่าอุปกรณ์การเรียนและค่าเดินทาง',
+            'story_goal': rng.choice(['ตั้งใจศึกษาต่อคณะพยาบาลศาสตร์', 'อยากเรียนต่อวิศวกรรมไฟฟ้า', 'ศึกษาต่อครุศาสตร์เพื่อเป็นครู']) if (cur == 'ม.6' or group in ('voc', 'highvoc')) else None,
             'confirmed_true': status != 'draft', 'pdpa_version': None if status == 'draft' else '2026-08',
             'pdpa_ack_at': submitted.isoformat() if submitted else None,
             'submitted_at': submitted.isoformat() if submitted else None,
             'locked': status not in ('draft', 'returned_to_student'),
         })
-        if loan:
+        if cont:
+            apps[-1]['cont_years'] = 2570 - apps[-1]['cont_since_year'] - 1 + 1
+        if res == 'ineligible':
             funding.append({'application_id': aid, 'kind': 'loan', 'provider': 'กยศ.', 'amount': apps[-1]['loan_amount'], 'period': 'ต่อปี'})
         if other_sch:
             funding.append({'application_id': aid, 'kind': 'scholarship', 'provider': rng.choice(['องค์การบริหารส่วนจังหวัด', 'มูลนิธิตัวอย่าง', 'สถานศึกษา']),
-                            'amount': rng.choice([2000, 3000, 5000]), 'period': rng.choice(['ต่อภาคเรียน', 'ต่อปี'])})
+                            'amount': rng.choice([2000, 3000, 5000]), 'period': rng.choice(['ต่อเทอม', 'ต่อปี'])})
 
-        fam = {'application_id': aid}
-        fam.update(parent('father', 'm', last))
-        fam.update(parent('mother', 'f', last))
-        flags = rng.choice([['together'], ['together'], ['together'], ['apart'], ['separated'], ['divorced', 'father_new'], ['separated', 'mother_new']])
-        housing = rng.choice(HOUSING[:4] * 3 + HOUSING[4:])
-        own = rng.random() < 0.3
-        rent = rng.random() < 0.15
-        no_assets = rng.random() < 0.2
-        assets = {} if no_assets else {k: (rng.randint(1, 2) if k in ('motorcycle', 'car', 'pickup', 'farm_vehicle') else 1)
-                                       for k in rng.sample(ASSET_KEYS[:4] + ['pickup'], rng.randint(1, 3))}
-        fam.update({'family_status': flags, 'housing_type': housing,
-                    'housing_cost': rng.choice([800, 1500, 2000, 2500]) if housing in ('บ้านเช่า', 'ห้องเช่า / หอพัก') or rng.random() < 0.1 else None,
-                    'own_land': own, 'own_land_rai': rng.randint(1, 8) if own else None, 'own_land_ngan': rng.randint(0, 3) if own else None,
-                    'rent_land': rent, 'rent_land_rai': rng.randint(1, 5) if rent else None, 'rent_land_ngan': rng.randint(0, 3) if rent else None,
-                    'rent_land_cost': rng.choice([2000, 3000, 5000]) if rent else None,
-                    'assets': assets, 'no_assets': no_assets, 'sibling_count': n_sib})
-        fams.append(fam)
+        # ครอบครัว (ข้อ 2–8)
+        f_dead = rng.random() < 0.06
+        m_dead = rng.random() < 0.04
+        father = make_person('father', last, 'm', 'dead' if f_dead else 'alive')
+        mother = make_person('mother', last, 'f', 'dead' if m_dead else 'alive')
+        rel = rng.choice([['together'], ['together'], ['together'], ['away_work'], ['divorced', 'father_new'], ['father_lost'], ['divorced', 'mother_new']])
+        if f_dead:
+            rel = ['father_dead']
+        if m_dead:
+            rel = rel + ['mother_dead']
+        if 'father_lost' in rel:
+            father['no_occ'] = True
+            father['occs'] = []
+        live = 'mother' if f_dead or 'father_lost' in rel else 'father' if m_dead else rng.choice(['both', 'both', 'both', 'mother', 'guardian'])
+        people = [father, mother]
+        if live == 'guardian':
+            g = make_person('guardian', rng.choice(SURNAME), 'f')
+            g['relation'] = rng.choice(['ยาย', 'ป้า', 'น้า'])
+            people.append(g)
+        housing = rng.choice(['own', 'own', 'own', 'own_other_land', 'installment', 'rent', 'other'])
+        own_land = rng.random() < 0.3
+        rent_land = rng.random() < 0.15
+        no_eq = rng.random() < 0.25
+        fams.append({'application_id': aid, 'live_with': live, 'housing': housing,
+                     'housing_land_owner': 'ที่ดินของวัด' if housing == 'own_other_land' else None,
+                     'housing_cost': rng.choice([1500, 2000, 2500]) if housing in ('installment', 'rent') else None,
+                     'housing_other': 'อาศัยบ้านญาติ' if housing == 'other' else None,
+                     'equipment': [] if no_eq else rng.sample(['washer', 'computer', 'pickup', 'aircon', 'etan'], rng.randint(1, 3)),
+                     'equipment_other': None, 'no_equipment': no_eq,
+                     'own_land': own_land, 'own_land_amt': rng.randint(1, 10) if own_land else None, 'own_land_unit': 'rai',
+                     'rent_land': rent_land, 'rent_land_amt': rng.randint(1, 5) if rent_land else None, 'rent_land_unit': 'rai',
+                     'rent_land_cost': rng.choice([2000, 3000, 5000]) if rent_land else None, 'rent_land_per': 'year',
+                     'relations': rel, 'sibling_count': n_sib, 'siblings_moved': rng.randint(0, 1) if n_sib else 0})
+        app_people[aid] = people
+        for prs in people:
+            pid = len(persons) + 1
+            persons.append({'id': pid, 'application_id': aid, 'role': prs['role'], 'name': prs['name'], 'age': prs['age'], 'status': prs['status'],
+                            'relation': prs['relation'], 'no_occupation': prs['no_occ'], 'workplace': prs['workplace'] or None,
+                            'work_province': sc['_province'] if prs['occs'] else None})
+            prs['work_province'] = sc['_province'] if prs['occs'] else ''
+            for k, o in enumerate(prs['occs'], start=1):
+                occs.append({'person_id': pid, 'seq': k, 'category': o['cat'], 'hire_kind': o['hire_kind'] or None, 'detail': o['detail'] or None,
+                             'position': o['position'] or None, 'agency': o['agency'] or None, 'goods': o['goods'] or None,
+                             'sell_where': o['sell_where'] or None, 'farm_kinds': o['farm_kinds'], 'crops': o['crops'] or None,
+                             'farm_land': o['farm_land'] or None, 'pay': o['pay'], 'daily_wage': o['wage'] or None,
+                             'work_days': o['days'] or None, 'days_per': o['per'] or None, 'amount': o['amount'] or None,
+                             'monthly_estimate': monthly(o)})
         for k in range(1, n_sib + 1):
             st = rng.choice(['study', 'study', 'work', 'none'])
-            sibs.append({'application_id': aid, 'seq': k, 'name': f'{rng.choice(BOY + GIRL)} {last}', 'age': rng.randint(3, 25),
-                         'relation': rng.choice(['พี่/น้องร่วมบิดามารดา'] * 4 + ['พี่/น้องต่างบิดา', 'พี่/น้องต่างมารดา']),
-                         'residence': rng.choice(['อยู่บ้านเดียวกัน'] * 3 + ['แยกออกไปพักอาศัยที่อื่น']), 'status': st,
-                         'edu_level': rng.choice(['ประถมศึกษา', 'มัธยมศึกษา', 'ปวช.']) if st == 'study' else None,
-                         'school_name': 'โรงเรียนใกล้บ้าน' if st == 'study' else None,
-                         'has_loan': (rng.random() < 0.2) if st == 'study' else None,
-                         'occupation': rng.choice(OCCUPATIONS[:5]) if st == 'work' else None,
-                         'detail': rng.choice(['ยังไม่ถึงวัยเรียน', 'แม่บ้าน', 'บวช']) if st == 'none' else None})
+            sibs.append({'application_id': aid, 'seq': k, 'gender': rng.choice(['ชาย', 'หญิง']), 'name': f'{rng.choice(BOY + GIRL)} {last}',
+                         'age': rng.randint(3, 25), 'education': rng.choice(['ป.4', 'ม.2', 'ม.5', 'ปวช.2']) if st == 'study' else rng.choice(['จบ ม.3', 'จบ ป.6', 'ยังไม่เข้าเรียน']),
+                         'occupation': 'นักเรียน' if st == 'study' else rng.choice(['พนักงานโรงงาน', 'รับจ้างทั่วไป']) if st == 'work' else '-',
+                         'place': 'โรงเรียนใกล้บ้าน' if st == 'study' else rng.choice(['นิคมอุตสาหกรรม', 'กรุงเทพฯ']) if st == 'work' else '-'})
 
         ev = [(started, 'นักเรียนเริ่มกรอกใบสมัคร', 'started')]
         if submitted:
@@ -322,9 +396,10 @@ def main():
             t_sent = submitted + timedelta(days=rng.randint(1, 6), hours=rng.randint(0, 8))
             if not bachelor:
                 gpa = rng.random() < 0.7
+                gv = round(rng.uniform(2.2, 3.9), 2) if gpa else round(rng.uniform(60, 92), 2)
                 treviews.append({'application_id': aid, 'teacher_id': teachers[sc['id'] - 1]['id'],
-                                 'grade_type': 'gpa' if gpa else 'percent',
-                                 'grade_value': round(rng.uniform(2.2, 3.9), 2) if gpa else round(rng.uniform(60, 92), 2),
+                                 'grade_type': 'gpa' if gpa else 'percent', 'grade_value': gv,
+                                 'grade_before': (round(max(0, gv - rng.uniform(-0.2, 0.4)), 2) if gpa else round(max(0, gv - rng.uniform(-3, 8)), 2)) if cont else None,
                                  'comment': 'ครอบครัวมีรายได้ไม่แน่นอน ผู้ปกครองรับจ้างรายวัน ' + rng.choice(
                                      ['นักเรียนช่วยงานบ้านและตั้งใจเรียนสม่ำเสมอ', 'มีภาระหนี้สินและต้องดูแลผู้สูงอายุในบ้าน', 'นักเรียนเดินทางไกลมาเรียนทุกวัน']),
                                  'sent_at': t_sent.isoformat()})
@@ -338,7 +413,7 @@ def main():
             who = staff[rng.randint(0, 1)]
             sreviews.append({'application_id': aid, 'reviewer_id': who['id'], 'review_round': rnd, 'result': rr,
                              'comment': {'need_more_info': 'ขอหนังสือรับรองรายได้ผู้ปกครองเพิ่มเติม',
-                                         'ineligible': 'ผู้สมัครกู้ยืม กยศ. ไม่เข้าเกณฑ์การพิจารณาทุน',
+                                         'ineligible': 'ผู้ขอทุนกู้ยืม กยศ. อยู่แล้ว ไม่เข้าเกณฑ์การพิจารณาทุน',
                                          'forward': 'ข้อมูลครบถ้วน ครอบครัวมีความจำเป็นจริง'}[rr]})
             ev.append((reviewed, {'need_more_info': 'เจ้าหน้าที่ขอข้อมูลเพิ่มเติม', 'ineligible': 'เจ้าหน้าที่รีวิว: ไม่เข้าเกณฑ์',
                                   'forward': 'เจ้าหน้าที่รีวิวเรียบร้อย ส่งให้ผู้จัดการพิจารณา'}[rr] + ' — ' + who['full_name'],
@@ -358,7 +433,6 @@ def main():
         history.append((aid, [{'at': t.isoformat(timespec='minutes'), 'text': txt, 'kind': kind} for t, txt, kind in ev]))
 
     # ---------------- SQL
-    fam_cols = list(fams[0])
     out = ['-- ข้อมูลจำลองสำหรับทดสอบ — สร้างโดย db/tools/build_mock_data.py ห้ามแก้ไฟล์นี้ด้วยมือ',
            '-- นักเรียน 100 คน / สถานศึกษา 100 แห่ง / บัญชีครู 100 (1 โรงเรียน = 1 Username) / เจ้าหน้าที่ 4',
            '-- รหัสผ่านทุกบัญชี: Demo@1234   ห้ามใช้ไฟล์นี้กับฐานข้อมูลจริง', '',
@@ -372,11 +446,12 @@ def main():
     out.append('INSERT INTO staff_users (' + ', '.join(cols) + ', password_hash) VALUES\n' + ',\n'.join(
         '  (' + ', '.join(q(u[c]) for c in cols) + ", crypt('Demo@1234', gen_salt('bf', 6)))" for u in users) + ';\n')
     out += [insert('students', students), insert('applications', apps), insert('application_family', fams),
-            insert('application_siblings', sibs), insert('application_other_funding', funding), insert('teacher_reviews', treviews),
-            insert('staff_reviews', sreviews), insert('decisions', decisions), 'COMMIT;', '']
+            insert('application_persons', persons), "SELECT setval(pg_get_serial_sequence('application_persons','id'), (SELECT max(id) FROM application_persons));\n",
+            insert('person_occupations', occs), insert('application_siblings', sibs), insert('application_other_funding', funding),
+            insert('teacher_reviews', treviews), insert('staff_reviews', sreviews), insert('decisions', decisions), 'COMMIT;', '']
     (ROOT / 'seed_mock.sql').write_text('\n'.join(out), 'utf-8')
 
-    # ---------------- JSON สำหรับหน้า HTML
+    # ---------------- JSON สำหรับหน้า HTML (รูปแบบเดียวกับที่แอปบันทึก)
     by_id = {x['id']: x for x in schools}
     user_by = {u['id']: u for u in users}
     tr_by = {r['application_id']: r for r in treviews}
@@ -386,9 +461,12 @@ def main():
     hist_by = dict(history)
     sib_by, fund_by = {}, {}
     for r in sibs:
-        sib_by.setdefault(r['application_id'], []).append({k: v for k, v in r.items() if k not in ('application_id', 'seq')})
+        sib_by.setdefault(r['application_id'], []).append({'gender': r['gender'], 'name': r['name'], 'age': r['age'],
+                                                          'edu': r['education'], 'occupation': r['occupation'], 'place': r['place']})
     for r in funding:
         fund_by.setdefault(r['application_id'], []).append(r)
+    jperson = lambda p: p and {'name': p['name'], 'age': p['age'], 'status': p['status'] or '', 'relation': p['relation'] or '',
+                               'no_occ': p['no_occ'], 'workplace': p['workplace'], 'work_province': p['work_province'], 'occs': p['occs']}
     mock = {
         'note': 'ข้อมูลจำลองทั้งหมด ไม่ใช่บุคคลจริง',
         'schools': [{'id': x['institution_code'], 'name': x['name'], 'type': x['school_type'], 'region': x['_region'],
@@ -400,26 +478,39 @@ def main():
         'students': [],
     }
     for st, a in zip(students, apps):
-        f = {k: v for k, v in fam_by[a['id']].items() if k != 'application_id'}
+        f = fam_by[a['id']]
+        ppl = {p['role']: p for p in app_people[a['id']]}
         t, r, d = tr_by.get(a['id']), sr_by.get(a['id']), de_by.get(a['id'])
-        fund = fund_by.get(a['id'], [])
-        other = next((x for x in fund if x['kind'] == 'scholarship'), None)
+        other = next((x for x in fund_by.get(a['id'], []) if x['kind'] == 'scholarship'), None)
         mock['students'].append({
             'code': a['app_code'], 'citizen_id': st['citizen_id'], 'title': st['title'], 'first_name': st['first_name'],
-            'last_name': st['last_name'], 'gender': st['gender'], 'birth_date': st['birth_date'], 'phone': st['phone'],
-            'school': by_id[a['school_id']]['institution_code'], 'type': a['applicant_type'], 'status': a['status'],
+            'last_name': st['last_name'], 'gender': st['gender'], 'birth_date': st['birth_date'], 'phone': st['phone'], 'email': a['email'] or '',
+            'school': by_id[a['school_id']]['institution_code'], 'school_top': a['school_top_level'], 'type': a['applicant_type'], 'status': a['status'],
             'group': a['education_group'], 'class': a['current_class'], 'next_class': a['next_class'], 'rate': a['rate_level_code'],
-            'pvs_type': a['pvs_type'], 'faculty': a['faculty'], 'study_mode': a['study_mode'], 'program_years': a['program_years'],
-            'school_next': 'same' if a['stays_same_school'] else 'transfer',
-            'loan': 'yes' if a['has_student_loan'] else 'no', 'loan_amount': a['loan_amount'], 'loan_period': a['loan_period'],
-            'other': 'yes' if other else 'no', 'other_org': other and other['provider'], 'other_amount': other and other['amount'],
-            'other_period': other and other['period'], 'round': a['review_round'],
+            'pvs_type': a['pvs_type'] or '', 'next_pvs_type': a['next_pvs_type'] or '', 'faculty': a['faculty'] or '', 'study_mode': a['study_mode'] or '',
+            'program_years': str(a['program_years'] or ''), 'next_faculty': '',
+            'school_next': 'same' if a['stays_same_school'] else 'transfer', 'next_school_text': a['next_school_text'] or '',
+            'cont_since': str(a['cont_since_year'] or ''), 'cont_years': str(a['cont_years'] or ''),
+            'allowance': str(a['daily_allowance']), 'loan': 'yes' if a['has_student_loan'] else 'no', 'loan_count': str(a['loan_people_count'] or ''),
+            'loan_names': a['loan_people_names'] or '', 'loan_amount': str(a['loan_amount'] or ''),
+            'other': 'yes' if other else 'no', 'other_org': other and other['provider'] or '', 'other_amount': other and str(other['amount']) or '',
+            'other_period': other and other['period'] or '', 'part_time': 'yes' if a['part_time'] else 'no', 'part_job': a['part_job'] or '',
+            'part_income': str(a['part_income'] or ''), 'part_per': a['part_income_per'] or '', 'round': a['review_round'],
             'home_address': a['home_address'], 'current_address': a['current_address'],
             'same_address': a['home_address'] == a['current_address'], 'submitted_at': a['submitted_at'],
             'stories': [a['story_family'], a['story_siblings'], a['story_travel'], a['story_housing'], a['story_expenses'], a['story_other']],
-            'family': {**f, 'assets': f['assets']}, 'siblings': sib_by.get(a['id'], []),
-            'teacher_review': t and {'teacher': user_by[t['teacher_id']]['username'], 'grade_type': t['grade_type'],
-                                     'grade_value': t['grade_value'], 'comment': t['comment'], 'sent_at': t['sent_at']},
+            'reason': a['story_reason'], 'goal': a['story_goal'] or '',
+            'family': {'father': jperson(ppl['father']), 'mother': jperson(ppl['mother']), 'guardian': jperson(ppl.get('guardian')),
+                       'live_with': f['live_with'], 'housing': f['housing'], 'housing_land_owner': f['housing_land_owner'] or '',
+                       'housing_cost': str(f['housing_cost'] or ''), 'housing_other': f['housing_other'] or '',
+                       'equipment': f['equipment'], 'equipment_other': '', 'no_equipment': f['no_equipment'],
+                       'own_land': f['own_land'], 'own_land_amt': str(f['own_land_amt'] or ''), 'own_land_unit': f['own_land_unit'],
+                       'rent_land': f['rent_land'], 'rent_land_amt': str(f['rent_land_amt'] or ''), 'rent_land_unit': f['rent_land_unit'],
+                       'rent_land_cost': str(f['rent_land_cost'] or ''), 'rent_land_per': f['rent_land_per'],
+                       'relations': f['relations'], 'sib_moved': str(f['siblings_moved'] or '')},
+            'siblings': sib_by.get(a['id'], []),
+            'teacher_review': t and {'teacher': user_by[t['teacher_id']]['username'], 'grade_type': t['grade_type'], 'grade_value': t['grade_value'],
+                                     'grade_before': t['grade_before'], 'comment': t['comment'], 'sent_at': t['sent_at']},
             'staff_review': r and {'reviewer': user_by[r['reviewer_id']]['full_name'], 'result': r['result'], 'round': r['review_round'], 'comment': r['comment']},
             'decision': d and {'result': d['result'], 'standard_amount': d['standard_amount'], 'approved_amount': d['approved_amount'],
                                'reason': d['amount_reason'] or d['reject_reason'], 'by': user_by[d['manager_id']]['full_name']},
@@ -428,7 +519,7 @@ def main():
     (ROOT / 'mock').mkdir(exist_ok=True)
     (ROOT / 'mock/mock_data.json').write_text(json.dumps(mock, ensure_ascii=False, indent=1), 'utf-8')
     print(f'{len(schools)} สถานศึกษา / {len(teachers)} บัญชีครู / {len(staff)} เจ้าหน้าที่ / {len(students)} นักเรียน / '
-          f'{len(sibs)} พี่น้อง / {len(treviews)} ความเห็นครู / {len(sreviews)} รีวิว / {len(decisions)} ผลพิจารณา')
+          f'{len(persons)} บิดา-มารดา-ผู้อุปการะ / {len(occs)} อาชีพ / {len(sibs)} พี่น้อง / {len(treviews)} ความเห็นครู / {len(decisions)} ผลพิจารณา')
 
 
 if __name__ == '__main__':

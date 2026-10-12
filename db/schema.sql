@@ -1,7 +1,8 @@
 -- =====================================================================
 -- TISCO Foundation Scholarship — ฐานข้อมูลกลาง (PostgreSQL 14+ / Supabase)
 -- ใช้ร่วมกัน 3 ส่วน: นักเรียน (v28), ครู/สถานศึกษา (v28), เจ้าหน้าที่ (Admin v14)
--- เงื่อนไขและตัวเลือกยึดตามต้นแบบ v28 / Admin v14
+-- คำถามและตัวเลือกฝั่งผู้สมัครยึดตามแบบฟอร์มกระดาษของมูลนิธิฯ (ทุนใหม่ / ทุนต่อเนื่อง ฉบับแก้ไข 10/09/2569)
+-- ฝั่งครูและเจ้าหน้าที่ยึดตามต้นแบบ v28 / Admin v14
 -- ดูคำอธิบายใน docs/database-design.md
 -- =====================================================================
 
@@ -28,8 +29,10 @@ CREATE TYPE cycle_status    AS ENUM ('preparing', 'open', 'closed'); -- เต�
 CREATE TYPE decision_result AS ENUM ('approved', 'rejected', 'reserve', 'ineligible'); -- ineligible = จบที่เจ้าหน้าที่รีวิว
 CREATE TYPE review_result   AS ENUM ('forward', 'ineligible', 'need_more_info');     -- ส่งต่อผู้จัดการ / ไม่เข้าเกณฑ์ / รอข้อมูลเพิ่มเติม
 CREATE TYPE grade_type      AS ENUM ('gpa', 'percent');
-CREATE TYPE parent_status   AS ENUM ('alive', 'dead', 'contact', 'prison', 'monk'); -- มีชีวิต / เสียชีวิต / ขาดการติดต่อ / ถูกจำคุก / บวช
-CREATE TYPE income_type     AS ENUM ('none', 'daily', 'salary', 'other');           -- ไม่มีรายได้ / รายวัน / เงินเดือน / ไม่แน่นอน
+CREATE TYPE parent_status   AS ENUM ('alive', 'dead');      -- ยังมีชีวิตอยู่ / ถึงแก่กรรม (ขาดการติดต่อ ฯลฯ อยู่ในความสัมพันธ์ในครอบครัว)
+CREATE TYPE person_role     AS ENUM ('father', 'mother', 'guardian');
+CREATE TYPE occupation_category AS ENUM ('hire', 'gov', 'trade', 'farm', 'other');  -- รับจ้าง / รับราชการ / ค้าขาย / ทำนา-ไร่-สวน / อื่น ๆ
+CREATE TYPE pay_type        AS ENUM ('daily', 'monthly', 'yearly', 'irregular');  -- รายวัน / รายเดือน / รายปี-ฤดูกาล / ไม่แน่นอน
 
 -- ---------------------------------------------------------------------
 -- 1) ข้อมูลพื้นที่ (Master)
@@ -185,11 +188,26 @@ CREATE TABLE applications (
   faculty          text,               -- คณะ / สาขาวิชา (ปวช. / ปวส. / ป.ตรี)
   program_years    smallint,           -- หลักสูตรกี่ปี (ถามเมื่อ ป.ตรี ปี 4)
   stays_same_school boolean,           -- ปีถัดไป: true = เรียนต่อสถานศึกษาเดิม, false = ย้ายสถานศึกษา
-  has_student_loan boolean,            -- กยศ. / กรอ. (true = ไม่เข้าเกณฑ์)
+  has_student_loan boolean,            -- ข้อ 11 ผู้ขอทุนหรือพี่น้องกู้ กยศ. / กรอ. (เจ้าหน้าที่เป็นผู้พิจารณา)
   loan_amount      integer,
   loan_period      text,               -- ต่อภาคเรียน / ต่อปี
   review_round     smallint,           -- รอบพิจารณา 1 / 2 (เจ้าหน้าที่รีวิวกำหนด)
   next_school_id   integer REFERENCES schools(id),
+
+  email            text,
+  school_top_level text,               -- สถานศึกษาเปิดสอนถึงระดับสูงสุด: p6, m3, m6, voc, highvoc, bachelor
+  next_faculty     text,
+  next_pvs_type    text,
+  next_school_text text,               -- ย้ายไปศึกษาต่อที่ (ถ้าทราบ)
+  cont_since_year  smallint,           -- ทุนต่อเนื่อง: ได้รับทุนตั้งแต่ปี พ.ศ.
+  cont_years       smallint,           -- รวมกี่ปี
+  daily_allowance  integer,            -- ข้อ 9 ได้เงินมาใช้จ่ายวันละ
+  loan_people_count smallint,          -- ข้อ 11 ผู้ขอทุนหรือพี่น้องที่กู้ กยศ./กรอ. (คน)
+  loan_people_names text,
+  part_time        boolean,            -- ข้อ 13 ทำงานพิเศษหลังเลิกเรียน / วันหยุด / ปิดเทอม
+  part_job         text,
+  part_income      integer,
+  part_income_per  text,               -- day / month
 
   -- ที่อยู่
   home_address     text,
@@ -202,6 +220,8 @@ CREATE TABLE applications (
   story_housing    text,
   story_expenses   text,
   story_other      text,
+  story_reason     text,               -- เหตุผลในการขอรับทุน
+  story_goal       text,               -- เป้าหมายการศึกษาต่อระดับอุดมศึกษา (ม.6 / ปวช. / ปวส.)
 
   -- ยืนยัน / PDPA
   confirmed_true   boolean NOT NULL DEFAULT false,
@@ -221,53 +241,78 @@ CREATE INDEX ON applications (cycle_id, status);
 -- ครอบครัว (1:1 กับใบสมัคร)
 CREATE TABLE application_family (
   application_id   uuid PRIMARY KEY REFERENCES applications(id) ON DELETE CASCADE,
-  father_status    parent_status,
-  father_name      text,
-  father_age       smallint,
-  father_occupation text,
-  father_cannot_work boolean NOT NULL DEFAULT false,
-  father_income_type income_type,
-  father_daily_wage  integer,          -- บาท / วัน (รายวัน)
-  father_work_days   smallint,         -- วัน / เดือน (รายวัน; null = ไม่ทราบ)
-  father_monthly_income integer,       -- บาท / เดือน (เงินเดือน หรือรายได้ไม่แน่นอน)
-  mother_status    parent_status,
-  mother_name      text,
-  mother_age       smallint,
-  mother_occupation text,
-  mother_cannot_work boolean NOT NULL DEFAULT false,
-  mother_income_type income_type,
-  mother_daily_wage  integer,
-  mother_work_days   smallint,
-  mother_monthly_income integer,
-  family_status    text[] NOT NULL DEFAULT '{}',  -- เลือกได้หลายข้อ: together, apart, separated, divorced, father_new, mother_new
-  housing_type     text,               -- บ้านของครอบครัว / บ้านเช่า / ห้องเช่า-หอพัก / อาศัยญาติ / บ้านพักนายจ้าง / บ้านพักราชการ / อื่น ๆ
-  housing_cost     integer,            -- ค่าเช่า / ค่างวดผ่อน บาท/เดือน
-  own_land         boolean,
-  own_land_rai     numeric(6,1),
-  own_land_ngan    numeric(4,1),
-  rent_land        boolean,
-  rent_land_rai    numeric(6,1),
-  rent_land_ngan   numeric(4,1),
-  rent_land_cost   integer,            -- บาท / ปี
-  assets           jsonb NOT NULL DEFAULT '{}',  -- {"washer":1,"motorcycle":2,...}; {} + no_assets = ไม่มี
-  no_assets        boolean NOT NULL DEFAULT false,
-  sibling_count    smallint
+  live_with        text,               -- ข้อ 4: father / mother / both / guardian
+  housing          text,               -- ข้อ 5: own / own_other_land / installment / rent / other
+  housing_land_owner text,
+  housing_cost     integer,            -- ผ่อนชำระ / ค่าเช่า บาท/เดือน
+  housing_other    text,
+  equipment        text[] NOT NULL DEFAULT '{}',  -- washer, aircon, computer, car, pickup, tractor, etan, other
+  equipment_other  text,
+  no_equipment     boolean NOT NULL DEFAULT false,
+  own_land         boolean NOT NULL DEFAULT false,  -- ข้อ 6
+  own_land_amt     numeric(8,1),
+  own_land_unit    text,               -- wa (ตารางวา) / rai (ไร่)
+  rent_land        boolean NOT NULL DEFAULT false,
+  rent_land_amt    numeric(8,1),
+  rent_land_unit   text,
+  rent_land_cost   integer,
+  rent_land_per    text,               -- month / year
+  relations        text[] NOT NULL DEFAULT '{}',  -- ข้อ 7 ความสัมพันธ์ในครอบครัว (13 ตัวเลือก)
+  sibling_count    smallint,
+  siblings_moved   smallint            -- แยกไปมีครอบครัวแล้ว (คน)
 );
 
-CREATE TABLE application_siblings (
+-- บิดา / มารดา / ญาติหรือผู้อุปการะ (ข้อ 2–4)
+CREATE TABLE application_persons (
+  id             bigserial PRIMARY KEY,
+  application_id uuid NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+  role           person_role NOT NULL,
+  name           text,                 -- บิดา/มารดา: บังคับทุกกรณี แม้ถึงแก่กรรมหรือขาดการติดต่อ
+  age            smallint,
+  status         parent_status,        -- null สำหรับผู้อุปการะ
+  relation       text,                 -- ผู้อุปการะ: มีความสัมพันธ์เป็น
+  no_occupation  boolean NOT NULL DEFAULT false,  -- ไม่มีอาชีพ / ไม่มีรายได้ / ไม่ทราบ
+  workplace      text,
+  work_province  text,
+  UNIQUE (application_id, role),
+  CHECK (role = 'guardian' OR name IS NOT NULL)
+);
+
+-- อาชีพ ตอบได้มากกว่า 1 อาชีพต่อคน; รายได้แปลงเป็นต่อเดือน (รายวัน × วัน, รายปี ÷ 12)
+CREATE TABLE person_occupations (
+  id             bigserial PRIMARY KEY,
+  person_id      bigint NOT NULL REFERENCES application_persons(id) ON DELETE CASCADE,
+  seq            smallint NOT NULL,
+  category       occupation_category NOT NULL,
+  hire_kind      text,                 -- รับจ้าง: ลักษณะงาน
+  detail         text,                 -- รับจ้าง: งานที่ทำโดยละเอียด / อื่น ๆ: ระบุอาชีพ
+  position       text,                 -- รับจ้าง/รับราชการ: ตำแหน่ง / แผนก
+  agency         text,                 -- รับราชการ: หน่วยงาน
+  goods          text,                 -- ค้าขาย: สินค้าที่ขาย
+  sell_where     text,
+  farm_kinds     text[] NOT NULL DEFAULT '{}',  -- rice / field / orchard
+  crops          text,                 -- ปลูกอะไร
+  farm_land      text,                 -- ที่ดินของตนเอง / เช่า / รับจ้างทำ
+  pay            pay_type NOT NULL,
+  daily_wage     integer,
+  work_days      numeric(4,1),
+  days_per       text,                 -- week / month
+  amount         integer,              -- รายเดือน / รายปี / เฉลี่ยต่อเดือน (ตาม pay)
+  monthly_estimate integer NOT NULL,   -- รายได้ประมาณต่อเดือนที่ระบบคำนวณ
+  UNIQUE (person_id, seq),
+  CHECK (pay <> 'daily' OR (daily_wage IS NOT NULL AND work_days IS NOT NULL AND days_per IN ('week','month')))
+);
+
+CREATE TABLE application_siblings (    -- ข้อ 8 พี่น้อง (บิดามารดาเดียวกัน)
   id             bigserial PRIMARY KEY,
   application_id uuid NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
   seq            smallint NOT NULL,
+  gender         text,
   name           text,
   age            smallint,
-  relation       text,                 -- ร่วมบิดามารดา / ต่างบิดา / ต่างมารดา
-  residence      text,                 -- อยู่บ้านเดียวกัน / แยกไปพักที่อื่น
-  status         text,                 -- study / work / none
-  edu_level      text,                 -- เมื่อกำลังศึกษา
-  school_name    text,
-  has_loan       boolean,
-  occupation     text,                 -- เมื่อทำงาน
-  detail         text,                 -- เมื่อไม่ได้ศึกษาและยังไม่ได้ทำงาน
+  education      text,                 -- การศึกษา / ระดับชั้น
+  occupation     text,                 -- อาชีพ / ตำแหน่ง
+  place          text,                 -- สถานที่ทำงาน หรือสถานที่ศึกษา
   UNIQUE (application_id, seq)
 );
 
@@ -306,7 +351,8 @@ CREATE TABLE teacher_reviews (
   application_id uuid PRIMARY KEY REFERENCES applications(id) ON DELETE CASCADE,
   teacher_id     uuid NOT NULL REFERENCES staff_users(id),
   grade_type     grade_type NOT NULL,
-  grade_value    numeric(5,2) NOT NULL,
+  grade_value    numeric(5,2) NOT NULL,   -- ผลการเรียน (ทุนต่อเนื่อง = หลังรับทุน)
+  grade_before   numeric(5,2),            -- ทุนต่อเนื่อง: ผลการเรียนก่อนรับทุน
   comment        text NOT NULL CHECK (char_length(comment) >= 30),
   sent_at        timestamptz,          -- กดส่งมูลนิธิฯ
   CHECK ((grade_type = 'gpa' AND grade_value BETWEEN 0 AND 4)
