@@ -144,7 +144,7 @@ def main():
         title = rng.choice(['นาง', 'นางสาว']) if female else 'นาย'
         first = rng.choice(ADULT_F if female else ADULT_M)
         teachers.append({
-            'id': uid('teacher', n), 'username': f't{n:03d}', 'full_name': f'{title}{first} {rng.choice(SURNAME)}',
+            'id': uid('teacher', n), 'username': f't{n:03d}', 'full_name': f'{title} {first} {rng.choice(SURNAME)}',
             'position': rng.choice(['ครู', 'ครูชำนาญการ', 'ครูชำนาญการพิเศษ']), 'role': 'teacher', 'school_id': sc['id'],
             'phone': phone(n), 'email': f't{n:03d}@example.com',
         })
@@ -214,10 +214,10 @@ def main():
         rent = rng.random() < 0.25
         fams.append({
             'application_id': aid,
-            'father_name': f'นาย{rng.choice(ADULT_M)} {last}', 'father_status': f_status,
+            'father_name': f'นาย {rng.choice(ADULT_M)} {last}', 'father_status': f_status,
             'father_occupation': f_occ if f_status == 'alive' else None, 'father_income_type': f_type if f_status == 'alive' else None,
             'father_monthly_income': rng.randint(*f_rng) // 100 * 100 if f_status == 'alive' else 0,
-            'mother_name': f'นาง{rng.choice(ADULT_F)} {last}', 'mother_status': 'alive',
+            'mother_name': f'นาง {rng.choice(ADULT_F)} {last}', 'mother_status': 'alive',
             'mother_occupation': m_occ, 'mother_income_type': m_type, 'mother_monthly_income': rng.randint(*m_rng) // 100 * 100,
             'family_status': rng.choice(['อยู่ด้วยกัน', 'อยู่ด้วยกัน', 'แยกกันอยู่', 'หย่าร้าง']),
             'guardian_relation': rng.choice(['บิดามารดา', 'มารดา', 'ยาย', 'ป้า']),

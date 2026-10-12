@@ -1,7 +1,7 @@
 /* ส่วนกลาง: ข้อมูล, การเก็บสถานะ, ตัวช่วยแสดงผล, การเปลี่ยนหน้า, หน้าเลือกบทบาท */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v1';
+const STORE_KEY = 'tfd-scholarship-demo-v2';
 
 const STATUS = {
   draft:               {label: 'กำลังกรอก',          tone: 'idle'},
@@ -191,7 +191,7 @@ function badge(status, decision) {
   const s = STATUS[status] || {label: status, tone: 'idle'};
   return `<span class="badge t-${s.tone}">${s.label}</span>`;
 }
-function fullName(s) { return `${s.title || ''}${s.first_name} ${s.last_name}`; }
+function fullName(s) { return [s.title, s.first_name, s.last_name].filter(Boolean).join(' '); }
 function baht(n) { return n == null ? '—' : Number(n).toLocaleString('th-TH') + ' บาท'; }
 function thDate(iso, time) {
   if (!iso) return '—';
