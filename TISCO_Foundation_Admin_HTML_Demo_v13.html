@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TISCO Foundation Office HTML Demo</title>
+<style>
+:root{--blue:#0055b8;--light:#eef5fc;--line:#d7e2ee;--text:#1f2937;--muted:#6b7280;--danger:#b42318;--success:#147a46;--amber:#9a6700}
+*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f4f7fb;color:var(--text)}
+.header{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.header-inner{max-width:1280px;margin:auto;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:44px;height:44px;border-radius:10px;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:700}
+.brand h1{font-size:18px;margin:0;color:var(--blue)}.brand small{display:block;color:var(--muted);margin-top:3px}
+.nav{max-width:1280px;margin:auto;padding:0 18px 12px;display:flex;gap:6px;flex-wrap:wrap}
+button{border:0;border-radius:9px;padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer}
+.btn-primary{background:var(--blue);color:#fff}.btn-secondary{background:#edf1f5;color:#334155}.btn-outline{background:#fff;border:1px solid var(--blue);color:var(--blue)}
+main{max-width:1280px;margin:24px auto 70px;padding:0 18px}.page{display:none}.page.active{display:block}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 28px rgba(27,57,84,.06);padding:22px;margin-bottom:18px}
+.title{font-size:24px;color:var(--blue);margin:0 0 6px}.subtitle{color:var(--muted);margin:0 0 18px;line-height:1.6}
+.section-title{margin:24px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--light);font-size:18px;color:#164e86}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:14px}.stat strong{display:block;font-size:25px;color:var(--blue);margin-top:4px}
+.field{margin-bottom:14px}label{display:block;font-weight:700;margin-bottom:6px;font-size:13px}
+input,select,textarea{width:100%;border:1px solid #bfcada;border-radius:9px;padding:10px 11px;font-size:14px;background:#fff}textarea{min-height:110px}
+.info{background:#f3f8fe;border-left:4px solid var(--blue);padding:11px 13px;border-radius:8px;margin:10px 0 14px;line-height:1.6;font-size:13px}
+.warn{background:#fff7e8;border-left:4px solid #e9a100;padding:11px 13px;border-radius:8px;margin:10px 0 14px;line-height:1.6;font-size:13px}
+table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--line);padding:9px 8px;text-align:left;font-size:12.5px;vertical-align:top}th{background:#f7f9fc;color:#36516b}
+.status{display:inline-block;padding:4px 7px;border-radius:999px;font-size:11px;font-weight:700}.s-teacher{background:#fff3d6;color:var(--amber)}.s-sent{background:#eef5fc;color:var(--blue)}.s-review{background:#f0f3ff;color:#4b4bb7}.s-ok{background:#e9f7ef;color:var(--success)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin:12px 0}.toolbar .field{margin:0;min-width:160px;flex:1}
+.hidden{display:none!important}.actions{display:flex;justify-content:space-between;gap:10px;margin-top:20px}
+@media(max-width:900px){.grid,.grid3,.grid4{grid-template-columns:1fr}}
+
+.rolebar{max-width:1280px;margin:auto;padding:0 18px 10px;display:flex;gap:8px;flex-wrap:wrap}
+.rolebtn.active{background:#0055b8;color:#fff}
+.multicheck{border:1px solid #bfcada;border-radius:9px;padding:8px 10px;background:#fff;display:flex;flex-wrap:wrap;gap:8px 14px}
+.multicheck label{font-weight:400;margin:0;display:flex;align-items:center;gap:5px}
+.multicheck input{width:auto}
+.tree{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:10px 0 14px}
+.tree div{padding:8px 12px;border-bottom:1px solid var(--line);font-size:13px}
+.tree div:last-child{border-bottom:0}.r1{font-weight:700;background:#f7f9fc}.r2{padding-left:26px!important}.r3{padding-left:44px!important}.r4{padding-left:62px!important}
+
+.loading-note{font-size:12px;color:#6b7280;margin-top:5px}
+.account-state{display:inline-block;padding:3px 7px;border-radius:999px;background:#e9f7ef;color:#147a46;font-size:11px;font-weight:700}
+.print-summary{border:1px solid var(--line);border-radius:10px;background:#fbfdff;padding:12px;margin-top:10px;font-size:13px}
+
+.review-workspace{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+.review-main{min-width:0}
+.review-side{position:sticky;top:126px;align-self:start}
+.review-section{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff;margin-bottom:12px}
+.review-section h4{margin:0 0 10px;color:#164e86;font-size:15px}
+.kv{display:grid;grid-template-columns:180px 1fr;gap:7px 12px;font-size:13px}
+.kv .k{font-weight:700;color:#475467}
+.file-preview{border:1px dashed #9eb7cf;border-radius:10px;padding:10px;margin:8px 0;background:#fbfdff}
+.file-preview .meta{font-size:12px;color:#667085;margin-top:4px}
+.sticky-title{font-size:16px;font-weight:700;color:#0055b8;margin-bottom:10px}
+@media(max-width:1000px){.review-workspace{grid-template-columns:1fr}.review-side{position:static}}
+
+.address-parser{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+.school-master-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.level-filter-note{font-size:12px;color:#667085;margin-top:6px}
+@media(max-width:900px){.school-master-grid{grid-template-columns:1fr}.address-parser{grid-template-columns:1fr}}
+
+.money{font-variant-numeric:tabular-nums;font-weight:700}
+.rate-box{border:1px solid #bfd2e5;background:#f8fbff;border-radius:12px;padding:12px;margin:10px 0}
+.rate-box .big{font-size:24px;font-weight:800;color:#0055b8}
+.warn-rate{border-left:4px solid #d92d20;background:#fff5f5;padding:10px;border-radius:8px;margin-top:8px}
+.report-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.report-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0}
+@media(max-width:900px){.report-grid{grid-template-columns:repeat(2,1fr)}}
+
+.decision-group{display:grid;gap:8px;margin:8px 0 14px}
+.decision-card{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;transition:.15s;background:#fff}
+.decision-card input{width:auto;margin-top:3px}
+.decision-card strong{display:block}
+.decision-card.blue{background:#f3f8fe;border-color:#b8d1eb}
+.decision-card.orange{background:#fff7e8;border-color:#f0c36b}
+.decision-card.green{background:#edf9f1;border-color:#9ed6ae}
+.decision-card.red{background:#fff1f1;border-color:#e5a6a0}
+.decision-card.yellow{background:#fff8df;border-color:#e8cc72}
+.decision-card.selected.blue{outline:2px solid #0055b8}
+.decision-card.selected.orange{outline:2px solid #e38b00}
+.decision-card.selected.green{outline:2px solid #147a46}
+.decision-card.selected.red{outline:2px solid #b42318}
+.decision-card.selected.yellow{outline:2px solid #b8860b}
+
+.rolebar .pill{background:#eef5fc;color:#0055b8;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:700}
+
+.dashboard-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:12px 0 18px}
+.dashboard-toolbar .field{margin:0;min-width:150px;flex:1}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi-card{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff;cursor:pointer;transition:.15s}
+.kpi-card:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,0,0,.06)}
+.kpi-card .kpi-label{font-size:12px;color:var(--muted);line-height:1.4}
+.kpi-card .kpi-value{font-size:27px;font-weight:800;color:var(--blue);margin-top:5px}
+.kpi-card .kpi-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.kpi-card.green .kpi-value{color:#147a46}.kpi-card.red .kpi-value{color:#b42318}.kpi-card.orange .kpi-value{color:#c66a00}.kpi-card.gray .kpi-value{color:#475467}
+.dashboard-section{margin-top:22px}.dashboard-section h3{margin:0 0 10px;color:#164e86;font-size:17px}
+.activity-table td.num,.activity-table th.num{text-align:right}.mini-breakdown{font-size:11px;color:#667085;margin-top:4px;line-height:1.5}
+.trend-controls{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.segmented{display:inline-flex;border:1px solid #bfcada;border-radius:9px;overflow:hidden;background:#fff}
+.segmented button{border:0;border-radius:0;background:#fff;color:#475467;padding:8px 12px;font-size:12px}.segmented button.active{background:#0055b8;color:#fff}
+.trend-chart{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px;overflow:auto}.trend-svg{width:100%;min-width:760px;height:280px}
+.timeline{position:relative;margin:10px 0 0 6px;padding-left:22px}.timeline:before{content:"";position:absolute;left:7px;top:5px;bottom:5px;width:2px;background:#d7e2ee}
+.timeline-item{position:relative;padding:0 0 16px 8px}.timeline-dot{position:absolute;left:-21px;top:4px;width:12px;height:12px;border-radius:50%;background:#0055b8;border:2px solid #fff;box-shadow:0 0 0 2px #b8d4f0}
+.timeline-item.green .timeline-dot{background:#147a46;box-shadow:0 0 0 2px #b7dec6}.timeline-title{font-size:13px;font-weight:700}.timeline-meta{font-size:11px;color:#667085;margin-top:2px}.timeline-note{font-size:12px;color:#475467;margin-top:4px}
+.drill-modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}.drill-modal.open{display:flex}.drill-card{background:#fff;border-radius:16px;max-width:980px;width:100%;max-height:85vh;overflow:auto;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.2)}
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+
+.transfer-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+.transfer-stat{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px;cursor:pointer}
+.transfer-stat strong{display:block;font-size:24px;color:#0055b8;margin-top:4px}
+.transfer-layout{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:14px;align-items:start}
+.transfer-detail{position:sticky;top:12px;border:1px solid #cdd9e6;border-radius:14px;background:#fff;padding:16px}
+.transfer-detail h3{margin:0;color:#164e86}
+.transfer-step{border:1px solid #dce5ef;border-radius:12px;padding:12px;margin-top:12px;background:#fbfdff}
+.transfer-step.disabled{opacity:.55;pointer-events:none}
+.transfer-radio{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.transfer-radio label{border:1px solid #ccd8e5;border-radius:10px;padding:9px 11px;background:#fff;cursor:pointer}
+.transfer-radio label:has(input:checked){border-color:#0055b8;background:#eef6ff}
+.transfer-history{margin-top:12px;font-size:12px}
+.transfer-history-item{padding:8px 0;border-bottom:1px dashed #d8e1ea}
+@media(max-width:1000px){.transfer-layout{grid-template-columns:1fr}.transfer-detail{position:static}.transfer-summary{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-inner">
+    <div class="brand"><div class="logo">OF</div><div><h1>office.tiscofoundation.org</h1><small>ระบบสำนักงานมูลนิธิทิสโก้ เพื่อการกุศล</small></div></div>
+    <div><strong>HTML Demo</strong></div>
+  </div>
+  <div class="nav">
+    <button class="btn-outline" onclick="goPage('dashboard')">Dashboard</button>
+    <button class="btn-outline" onclick="goPage('cycles')">รอบรับสมัคร</button>
+    <button class="btn-outline" onclick="goPage('schools')">สถานศึกษา/ครู</button>
+    <button class="btn-outline" onclick="goPage('applications')">ใบสมัคร</button>
+    <button class="btn-outline" onclick="goPage('transfers')">ย้ายสถานศึกษา</button>
+    <button class="btn-outline" onclick="goPage('reports')">รายงาน/Export</button>
+    <button class="btn-outline" onclick="goPage('privacy')">PDPA</button>
+  </div>
+  <div class="rolebar">
+    <button id="roleReviewer" class="btn-outline rolebtn active" onclick="switchRole('reviewer')">จนท.รีวิว</button>
+    <button id="roleManager" class="btn-outline rolebtn" onclick="switchRole('manager')">ผจก.อนุมัติทุน</button>
+    <button id="roleAdmin" class="btn-outline rolebtn" onclick="switchRole('admin')">แอดมินระบบ</button>
+    <span id="currentAdminRoleLabel" class="pill" style="align-self:center">กำลังใช้งาน: จนท.รีวิว</span>
+  </div>
+</div>
+<main>
+
+<section id="dashboard" class="page active">
+  <div class="card">
+    <h2 class="title">Dashboard — ภาพรวมทุนการศึกษา ปี 2570</h2>
+    <p class="subtitle">ติดตามสถานะปัจจุบัน งานที่ดำเนินการในแต่ละวัน ผลการพิจารณา และแนวโน้มตลอดรอบทุน</p>
+    <div class="dashboard-toolbar">
+      <div class="field"><label>ปีทุนการศึกษา</label><select><option>2570</option></select></div>
+      <div class="field"><label>รอบพิจารณา</label><select><option>ทั้งหมด</option><option>รอบ 1</option><option>รอบ 2</option></select></div>
+      <div class="field"><label>ภาค</label><select><option>ทั่วประเทศ</option><option>ภาคเหนือ</option><option>ภาคกลาง</option><option>ภาคตะวันออกเฉียงเหนือ</option><option>ภาคตะวันออก</option><option>ภาคตะวันตก</option><option>ภาคใต้</option></select></div>
+      <div class="field"><label>จังหวัด</label><select><option>ทั้งหมด</option></select></div>
+      <div class="field"><label>เจ้าหน้าที่</label><select><option>ทั้งหมด</option><option>จนท. 01</option><option>จนท. 02</option></select></div>
+    </div>
+    <div class="dashboard-section"><h3>ผู้สมัครทั้งหมด</h3><div class="kpi-grid"><div class="kpi-card" onclick="showDrilldown('ผู้สมัครทั้งหมด','all')"><div class="kpi-label">ผู้สมัครทั้งหมด ปี 2570</div><div class="kpi-value">4,862</div><div class="kpi-sub">ทุนใหม่ 3,726 | ทุนต่อเนื่อง 1,136</div></div></div></div>
+    <div class="dashboard-section"><h3>สถานะปัจจุบัน — งานคงค้าง</h3><div class="kpi-grid">
+      <div class="kpi-card" onclick="showDrilldown('นักเรียนกำลังกรอกข้อมูล','student_draft')"><div class="kpi-label">นักเรียนกำลังกรอกข้อมูล</div><div class="kpi-value">1,240</div><div class="kpi-sub">กดเพื่อดูรายชื่อ</div></div>
+      <div class="kpi-card orange" onclick="showDrilldown('รอครูดำเนินการ','waiting_teacher')"><div class="kpi-label">รอครูดำเนินการ</div><div class="kpi-value">684</div><div class="kpi-sub">กดเพื่อดูรายชื่อ</div></div>
+      <div class="kpi-card gray" onclick="showDrilldown('รอเจ้าหน้าที่ดำเนินการ','waiting_reviewer')"><div class="kpi-label">รอเจ้าหน้าที่ดำเนินการ</div><div class="kpi-value">392</div><div class="kpi-sub">กดเพื่อดูรายชื่อ</div></div>
+      <div class="kpi-card" onclick="showDrilldown('รอผู้จัดการพิจารณา','waiting_manager')"><div class="kpi-label">รอผู้จัดการพิจารณา</div><div class="kpi-value">126</div><div class="kpi-sub">กดเพื่อดูรายชื่อ</div></div>
+    </div></div>
+    <div class="dashboard-section"><div class="trend-controls"><div><h3 style="margin-bottom:3px">การดำเนินงานในช่วงเวลาที่เลือก</h3><div class="help">ตัวอย่าง: วันนี้ 21 สิงหาคม 2569</div></div><div class="segmented"><button class="active">วันนี้</button><button>เมื่อวาน</button><button>เดือนนี้</button><button>กำหนดเอง</button></div></div>
+      <table class="activity-table"><thead><tr><th>ขั้นตอนที่ดำเนินการ</th><th class="num">จำนวน</th></tr></thead><tbody>
+        <tr><td>นักเรียนเริ่มกรอกใบสมัคร</td><td class="num"><button class="btn-outline" onclick="showDrilldown('นักเรียนเริ่มกรอกวันนี้','student_start')">128 คน</button></td></tr>
+        <tr><td>นักเรียนส่งข้อมูลให้ครู</td><td class="num"><button class="btn-outline" onclick="showDrilldown('นักเรียนส่งให้ครูวันนี้','sent_teacher')">96 คน</button></td></tr>
+        <tr><td>ครูส่งข้อมูลให้มูลนิธิฯ</td><td class="num"><button class="btn-outline" onclick="showDrilldown('ครูส่งมูลนิธิฯ วันนี้','sent_foundation')">72 คน</button></td></tr>
+        <tr><td><strong>เจ้าหน้าที่ดำเนินการเรียบร้อย</strong><div class="mini-breakdown">ส่งต่อผู้จัดการ 49 คน + ไม่เข้าเกณฑ์ 9 คน</div></td><td class="num"><button class="btn-primary" onclick="showDrilldown('เจ้าหน้าที่ดำเนินการเรียบร้อยวันนี้','reviewer_done')">58 คน</button></td></tr>
+        <tr><td>ส่งต่อให้ผู้จัดการพิจารณา</td><td class="num"><button class="btn-outline" onclick="showDrilldown('ส่งต่อผู้จัดการวันนี้','sent_manager')">49 คน</button></td></tr>
+        <tr><td><strong>ผู้จัดการดำเนินการเรียบร้อย</strong></td><td class="num"><button class="btn-primary" onclick="showDrilldown('ผู้จัดการดำเนินการเรียบร้อยวันนี้','manager_done')">37 คน</button></td></tr>
+      </tbody></table>
+    </div>
+    <div class="dashboard-section"><h3>ผลการพิจารณาในช่วงเวลาที่เลือก</h3><div class="kpi-grid">
+      <div class="kpi-card green" onclick="showDrilldown('ผ่าน','approved')"><div class="kpi-label">ผ่าน</div><div class="kpi-value">28</div><div class="kpi-sub">ผู้จัดการอนุมัติ</div></div>
+      <div class="kpi-card red" onclick="showDrilldown('ไม่ผ่าน','rejected')"><div class="kpi-label">ไม่ผ่าน</div><div class="kpi-value">5</div><div class="kpi-sub">ผู้จัดการไม่อนุมัติ</div></div>
+      <div class="kpi-card orange" onclick="showDrilldown('สำรอง','reserve')"><div class="kpi-label">สำรอง</div><div class="kpi-value">4</div><div class="kpi-sub">ผู้จัดการพิจารณา</div></div>
+      <div class="kpi-card gray" onclick="showDrilldown('ไม่เข้าเกณฑ์','ineligible')"><div class="kpi-label">ไม่เข้าเกณฑ์</div><div class="kpi-value">9</div><div class="kpi-sub">จบที่เจ้าหน้าที่รีวิว</div></div>
+    </div><div class="info" style="margin-top:12px">ผู้จัดการดำเนินการแล้ว 37 คน = ผ่าน 28 + ไม่ผ่าน 5 + สำรอง 4</div></div>
+    <div class="dashboard-section"><div class="trend-controls"><div><h3 style="margin-bottom:3px">แนวโน้มการดำเนินงานตลอดรอบทุน</h3><div class="help">ตั้งแต่วันเปิดรับสมัคร 1 พฤศจิกายน 2569 ถึงวันที่ล่าสุดที่มีความเคลื่อนไหว</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><div class="segmented"><button id="dailyBtn" class="active" onclick="setTrendMode('daily')">รายวัน</button><button id="cumBtn" onclick="setTrendMode('cumulative')">ยอดสะสม</button></div><div class="segmented"><button id="chartBtn" class="active" onclick="setTrendView('chart')">กราฟ</button><button id="tableBtn" onclick="setTrendView('table')">ตาราง</button></div></div></div>
+      <div id="trendChartWrap" class="trend-chart"><svg id="trendSvg" class="trend-svg" viewBox="0 0 900 280" preserveAspectRatio="none"></svg></div>
+      <div id="trendTableWrap" class="hidden" style="overflow:auto;margin-top:10px"><table id="trendTable"><thead><tr><th>วันที่</th><th>เริ่มสมัคร</th><th>ส่งให้ครู</th><th>มูลนิธิฯ รับ</th><th>จนท.ดำเนินการ</th><th>ส่ง ผจก.</th><th>ผจก.ดำเนินการ</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+</section>
+
+<section id="cycles" class="page">
+  <div class="card">
+    <h2 class="title">ตั้งค่ารอบรับสมัคร</h2>
+    <div class="grid3">
+      <div class="field"><label>ปีการศึกษาที่เปิดรับ</label><input value="2570"></div>
+      <div class="field"><label>ปีที่ใช้ในคำถามประวัติทุน</label><input value="2569"></div>
+      <div class="field"><label>สถานะรอบ</label><select><option>เปิดรับสมัคร</option><option>ปิดรับสมัคร</option><option>เตรียมระบบ</option></select></div>
+    </div>
+    <div class="grid">
+      <div class="field"><label>วันเปิดรับสมัคร</label><input type="date" value="2026-11-01"></div>
+      <div class="field"><label>วันปิดรับสมัคร</label><input type="date" value="2027-01-31"></div>
+    </div>
+    <h3 class="section-title">กำหนดการย้ายสถานศึกษา</h3>
+    <div class="grid3">
+      <div class="field"><label>วันเปิดรับหลักฐานย้าย</label><input type="date" value="2027-03-01"></div>
+      <div class="field"><label>วันตัดรอบแรก ป.6 / ม.3</label><input type="date" value="2027-05-15"></div>
+      <div class="field"><label>วันสุดท้ายรับหลักฐาน</label><input type="date" value="2027-07-31"></div>
+    </div>
+    <div class="actions"><span></span><button class="btn-primary">บันทึก</button></div>
+  </div>
+</section>
+
+<section id="schools" class="page">
+  <div class="card">
+    <h2 class="title">สถานศึกษาและบัญชีครู</h2>
+    <p class="subtitle">1 โรงเรียน = 1 Username</p>
+    <div class="toolbar">
+      <div class="field"><label>จังหวัด</label><select><option>ทั้งหมด</option><option>แพร่</option><option>เชียงใหม่</option></select></div>
+      <div class="field"><label>ค้นหา</label><input placeholder="ชื่อโรงเรียน / Username"></div>
+      <button class="btn-primary" onclick="openNewSchool()">+ เพิ่มสถานศึกษา</button>
+    </div>
+    <h3 class="section-title">โครงสร้างพื้นที่สถานศึกษา</h3>
+    <div class="info">
+      Master Data พื้นที่: ภาค → จังหวัด → อำเภอ/เขต → โรงเรียน<br>
+      Prototype จะโหลดรายชื่อจังหวัดและอำเภอ/เขตทั่วประเทศ ส่วน “โรงเรียน” เป็นข้อมูลที่ Admin เพิ่มเองในระบบ
+    </div>
+    <div class="field">
+      <label>ระดับชั้นที่สถานศึกษาเปิดสอน / ใช้ในระบบ (เลือกได้มากกว่า 1 ระดับ)</label>
+      <div class="multicheck">
+        <label><input type="checkbox"> ป.5–ป.6</label>
+        <label><input type="checkbox"> ม.ต้น</label>
+        <label><input type="checkbox"> ม.ปลาย</label>
+        <label><input type="checkbox"> ปวช.</label>
+        <label><input type="checkbox"> ปวส.</label>
+        <label><input type="checkbox"> ป.ตรี</label>
+      </div>
+    </div>
+    <table>
+      <thead><tr>
+        <th>InstitutionID</th><th>สถานศึกษา</th><th>ภาค</th><th>อำเภอ/เขต</th><th>จังหวัด</th>
+        <th>ช่วงชั้น</th><th>Username</th><th>Password</th><th>ครูผู้ดูแลทุน</th><th>ตำแหน่ง / งาน</th><th>ติดต่อ</th><th></th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>SCH-PRE-0001</td><td>โรงเรียนพิริยาลัยจังหวัดแพร่</td><td>ภาคเหนือ</td><td>เมืองแพร่</td><td>แพร่</td>
+          <td>ม.ต้น, ม.ปลาย</td><td>PRE0001</td><td><span class="account-state">ตั้งแล้ว</span></td>
+          <td>นางสาวสมฤดี ใจดี</td><td>ครู / งานแนะแนว</td>
+          <td>08X-XXX-XXXX<br>scholarship@school.ac.th</td>
+          <td><button class="btn-outline" onclick="openEditSchool('SCH-PRE-0001')">แก้ไข</button></td>
+        </tr>
+        <tr>
+          <td>SCH-CMI-0001</td><td>โรงเรียนกาวิละวิทยาลัย</td><td>ภาคเหนือ</td><td>เมืองเชียงใหม่</td><td>เชียงใหม่</td>
+          <td>ม.ต้น, ม.ปลาย</td><td>CMI0001</td><td><span class="account-state">ตั้งแล้ว</span></td>
+          <td>นายตัวอย่าง ครูแนะแนว</td><td>ครู / งานแนะแนว</td>
+          <td>08X-XXX-XXXX<br>guide@school.ac.th</td>
+          <td><button class="btn-outline" onclick="openEditSchool('SCH-CMI-0001')">แก้ไข</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div id="schoolEdit" class="card hidden">
+    <h3 class="section-title">เพิ่ม / แก้ไขข้อมูลสถานศึกษา</h3>
+
+    <div class="school-master-grid">
+      <div class="field">
+        <label>InstitutionID</label>
+        <input id="institutionId" value="SCH-PRE-0001" readonly>
+        <div class="help">ใช้รหัสเดียวกันสำหรับโรงเรียน วิทยาลัย และมหาวิทยาลัย</div>
+      </div>
+      <div class="field">
+        <label>ประเภทสถานศึกษา</label>
+        <select id="institutionType">
+          <option>โรงเรียน</option>
+          <option>วิทยาลัย</option>
+          <option>มหาวิทยาลัย</option>
+          <option>อื่น ๆ</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>ชื่อสถานศึกษา</label>
+      <input id="institutionName" value="โรงเรียนพิริยาลัยจังหวัดแพร่">
+    </div>
+
+    <h3 class="section-title">พื้นที่และที่อยู่สถานศึกษา</h3>
+
+    <div class="address-parser">
+      <div class="field" style="margin:0">
+        <label>วางที่อยู่แบบยาวเพื่อให้ระบบช่วยแยก (ไม่บังคับ)</label>
+        <textarea id="rawSchoolAddress" placeholder="เช่น 151 ถนน... ตำบลในเวียง อำเภอเมืองแพร่ จังหวัดแพร่ 54000"></textarea>
+      </div>
+      <button type="button" class="btn-outline" onclick="parseSchoolAddress()">ช่วยแยกที่อยู่</button>
+    </div>
+    <div class="help">ระบบช่วยกรอกให้เบื้องต้นเท่านั้น Admin ต้องตรวจสอบก่อนบันทึก</div>
+
+    <div class="grid" style="margin-top:12px">
+      <div class="field">
+        <label>ภาค</label>
+        <select id="schoolRegion" onchange="loadSchoolProvinces()">
+          <option value="">กรุณาเลือกภาค</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>จังหวัด</label>
+        <select id="schoolProvince" onchange="loadSchoolDistricts()" disabled>
+          <option value="">กรุณาเลือกจังหวัด</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label>อำเภอ / เขต</label>
+        <select id="schoolDistrict" onchange="loadSchoolSubdistricts()" disabled>
+          <option value="">กรุณาเลือกอำเภอ / เขต</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>ตำบล / แขวง</label>
+        <select id="schoolSubdistrict" disabled>
+          <option value="">กรุณาเลือกตำบล / แขวง</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label>ที่อยู่</label>
+        <input id="schoolAddressLine" placeholder="บ้านเลขที่ หมู่ ถนน อาคาร ฯลฯ">
+      </div>
+      <div class="field">
+        <label>รหัสไปรษณีย์</label>
+        <input id="schoolPostalCode" maxlength="5" placeholder="เช่น 54000">
+      </div>
+    </div>
+
+    <h3 class="section-title">ช่วงชั้นที่เปิดสอน</h3>
+    <div class="multicheck">
+      <label><input type="checkbox"> ประถมศึกษา</label>
+      <label><input type="checkbox" checked> มัธยมศึกษาตอนต้น</label>
+      <label><input type="checkbox" checked> มัธยมศึกษาตอนปลาย</label>
+      <label><input type="checkbox"> ปวช.</label>
+      <label><input type="checkbox"> ปวส.</label>
+      <label><input type="checkbox"> ปริญญาตรี</label>
+    </div>
+    <div class="help">เลือกได้มากกว่า 1 ช่วงชั้น ใช้เป็นตัวช่วยกรองสถานศึกษาในหน้าสมัครของนักเรียนและหน้าค้นหาของเจ้าหน้าที่</div>
+
+    <h3 class="section-title">บัญชีครู / ผู้ประสานงานทุน</h3>
+    <div class="grid3">
+      <div class="field"><label>Username</label><input id="schoolUsername" value="PRE0001"></div>
+      <div class="field"><label>สถานะบัญชี</label><select><option>ใช้งาน</option><option>ปิดใช้งาน</option></select></div>
+      <div class="field"><label>Password</label><button type="button" class="btn-outline" style="width:100%">ตั้ง / รีเซ็ตรหัสผ่าน</button></div>
+    </div>
+
+    <div class="grid">
+      <div class="field"><label>ชื่อครูผู้ดูแลทุน</label><input id="teacherName" value="นางสาวสมฤดี ใจดี"></div>
+      <div class="field"><label>ตำแหน่งครู</label><input id="teacherPosition" placeholder="เช่น ครู / อาจารย์ / เจ้าหน้าที่"></div>
+    </div>
+
+    <div class="grid">
+      <div class="field"><label>งาน / ฝ่ายที่รับผิดชอบ</label><input id="teacherDepartment" placeholder="เช่น งานแนะแนว / งานทุนการศึกษา / กองพัฒนานักศึกษา"></div>
+      <div class="field"><label>หมายเลขโทรศัพท์</label><input id="teacherPhone" value="08X-XXX-XXXX"></div>
+    </div>
+
+    <div class="field"><label>อีเมล</label><input id="teacherEmail" value="scholarship@school.ac.th"></div>
+
+    <div class="actions">
+      <button class="btn-secondary" onclick="document.getElementById('schoolEdit').classList.add('hidden')">ปิด</button>
+      <button class="btn-primary">บันทึกสถานศึกษา</button>
+    </div>
+  </div>
+</section>
+
+<section id="applications" class="page">
+  <div class="card">
+    <h2 class="title">งานพิจารณาใบสมัคร</h2>
+    <p class="subtitle" id="roleDescription">จนท.รีวิว — ตรวจข้อมูล เขียนคอมเมนต์ แยกไม่เข้าเกณฑ์ แยกรอบ 1/2 และส่งต่อให้ผู้จัดการ</p>
+
+    <div class="toolbar">
+      <div class="field">
+        <label>สถานะการดำเนินงาน</label>
+        <select id="reviewWorkStatus">
+          <option value="all">ทั้งหมด</option>
+          <option value="student_draft">นักเรียนกำลังกรอกข้อมูล</option>
+          <option value="waiting_teacher">รอครูดำเนินการ</option>
+          <option value="waiting_reviewer">รอเจ้าหน้าที่ดำเนินการ</option>
+          <option value="waiting_manager">รอผู้จัดการพิจารณา</option>
+          <option value="manager_done">ผู้จัดการดำเนินการเรียบร้อย</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>ผลการพิจารณา</label>
+        <select id="reviewDecisionResult">
+          <option value="all">ทั้งหมด</option>
+          <option value="approved">ผ่าน</option>
+          <option value="rejected">ไม่ผ่าน</option>
+          <option value="reserve">สำรอง</option>
+          <option value="ineligible">ไม่เข้าเกณฑ์</option>
+        </select>
+      </div>
+      <div class="field"><label>รอบพิจารณา</label><select id="reviewRound"><option>ทั้งหมด</option><option>รอบ 1</option><option>รอบ 2</option></select></div>
+      <div class="field"><label>กยศ./กรอ.</label><select id="reviewLoan"><option>ทั้งหมด</option><option>ไม่กู้</option><option>กู้ / ไม่เข้าเกณฑ์</option></select></div>
+      <div class="field"><label>ประเภททุน</label><select id="reviewScholarType"><option>ทั้งหมด</option><option>ทุนใหม่</option><option>ทุนต่อเนื่อง</option></select></div>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label>เลือกโรงเรียนที่ต้องการรีวิว</label>
+        <div class="grid">
+          <select id="reviewRegion" onchange="loadReviewProvinces()">
+            <option value="">กรุณาเลือกภาค</option>
+          </select>
+          <select id="reviewProvince" onchange="loadReviewDistricts()" disabled>
+            <option value="">กรุณาเลือกจังหวัด</option>
+          </select>
+        </div>
+        <div class="grid" style="margin-top:8px">
+          <select id="reviewDistrict" onchange="loadReviewSchools()" disabled>
+            <option value="">กรุณาเลือกอำเภอ / เขต</option>
+          </select>
+          <select id="reviewSchool" onchange="updateReviewSchoolSummary()" disabled>
+            <option value="">กรุณาเลือกโรงเรียน</option>
+          </select>
+        </div>
+        <div id="geoLoadStatus" class="loading-note">กำลังเตรียมข้อมูลจังหวัดและอำเภอ/เขต...</div>
+        <div class="help">ช่อง “โรงเรียน” จะแสดงเฉพาะสถานศึกษาที่ถูกเพิ่มไว้ในระบบของมูลนิธิฯ เท่านั้น</div>
+      </div>
+      <div class="field">
+        <label>ระดับชั้น (เลือกได้มากกว่า 1 ระดับ)</label>
+        <div class="multicheck">
+          <label><input class="review-level" type="checkbox" value="primary"> ป.5–ป.6</label>
+          <label><input class="review-level" type="checkbox" value="lower"> ม.ต้น</label>
+          <label><input class="review-level" type="checkbox" value="upper"> ม.ปลาย</label>
+          <label><input class="review-level" type="checkbox" value="voc"> ปวช.</label>
+          <label><input class="review-level" type="checkbox" value="highvoc"> ปวส.</label>
+          <label><input class="review-level" type="checkbox" value="bachelor"> ป.ตรี</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>ค้นหาเพิ่มเติม</label>
+      <input id="reviewKeyword" placeholder="รหัสผู้สมัคร / ชื่อ–นามสกุล">
+    </div>
+
+    <div class="actions" style="margin:8px 0 14px">
+      <div>
+        <button type="button" class="btn-primary" onclick="applyReviewFilters()">ค้นหา / แสดงผล</button>
+        <button type="button" class="btn-outline" onclick="clearReviewFilters()">ล้างตัวกรอง</button>
+      </div>
+      <button type="button" class="btn-outline" onclick="printFilteredReviewResults()">พิมพ์ผลการค้นหา</button>
+    </div>
+
+    <div id="reviewSearchSummary" class="print-summary">
+      แสดงรายการทั้งหมด — เลือกสถานะการดำเนินงานและผลการพิจารณาแยกกันได้
+    </div>
+
+    <table id="reviewResultTable">
+      <thead><tr><th>รหัส</th><th>ชื่อ</th><th>พื้นที่ / โรงเรียน</th><th>ชั้น</th><th>ทุน</th><th>รอบ</th><th>กยศ.</th><th>สถานะ</th><th></th></tr></thead>
+      <tbody>
+        <tr data-region="north" data-province="แพร่" data-district="เมืองแพร่" data-school="SCH-PRE-0001" data-level="lower" data-type="ทุนใหม่" data-round="รอบ 1" data-loan="ไม่กู้" data-workflow="waiting_reviewer" data-result="" data-status="รอเจ้าหน้าที่ดำเนินการ"><td>TF2570-001286</td><td>ธนกร สมพงษ์</td><td>ภาคเหนือ / แพร่ / เมืองแพร่<br>โรงเรียนพิริยาลัยจังหวัดแพร่</td><td>ม.2</td><td>ทุนใหม่</td><td>รอบ 1</td><td>ไม่กู้</td><td><span class="status s-sent">รอรีวิว</span></td><td><button class="btn-outline" onclick="toggleReview()">เปิด</button></td></tr>
+        <tr data-region="central" data-province="กรุงเทพมหานคร" data-district="ปทุมวัน" data-school="UNI-BKK-0001" data-level="bachelor" data-type="ทุนต่อเนื่อง" data-round="รอบ 1" data-loan="ไม่กู้" data-workflow="waiting_manager" data-result="" data-status="รอผู้จัดการพิจารณา"><td>TF2570-001310</td><td>นักศึกษาตัวอย่าง</td><td>ภาคกลาง / กรุงเทพมหานคร / เขตปทุมวัน<br>มหาวิทยาลัยตัวอย่าง</td><td>ป.ตรี ปี 2</td><td>ทุนต่อเนื่อง</td><td>รอบ 1</td><td>ไม่กู้</td><td><span class="status s-review">ส่งต่อผู้จัดการแล้ว</span></td><td><button class="btn-outline" onclick="toggleReview()">เปิด</button></td></tr>
+        <tr data-region="north" data-province="เชียงใหม่" data-district="เมืองเชียงใหม่" data-school="SCH-CMI-0001" data-level="upper" data-type="ทุนใหม่" data-round="รอบ 1" data-loan="ไม่กู้" data-workflow="manager_done" data-result="approved" data-status="ผ่าน">
+          <td>TF2570-001355</td><td>นักเรียนตัวอย่าง ผ่าน</td><td>ภาคเหนือ / เชียงใหม่ / เมืองเชียงใหม่<br>โรงเรียนกาวิละวิทยาลัย</td><td>ม.5</td><td>ทุนใหม่</td><td>รอบ 1</td><td>ไม่กู้</td><td><span class="status s-ok">ผ่าน</span></td><td><button class="btn-outline" onclick="toggleReview()">เปิด</button></td>
+        </tr>
+        <tr data-region="north" data-province="แพร่" data-district="เมืองแพร่" data-school="SCH-PRE-0001" data-level="lower" data-type="ทุนใหม่" data-round="รอบ 1" data-loan="ไม่กู้" data-workflow="manager_done" data-result="rejected" data-status="ไม่ผ่าน">
+          <td>TF2570-001356</td><td>นักเรียนตัวอย่าง ไม่ผ่าน</td><td>ภาคเหนือ / แพร่ / เมืองแพร่<br>โรงเรียนพิริยาลัยจังหวัดแพร่</td><td>ม.2</td><td>ทุนใหม่</td><td>รอบ 1</td><td>ไม่กู้</td><td><span class="status" style="background:#fff1f1;color:#b42318">ไม่ผ่าน</span></td><td><button class="btn-outline" onclick="toggleReview()">เปิด</button></td>
+        </tr>
+        <tr data-region="central" data-province="กรุงเทพมหานคร" data-district="ปทุมวัน" data-school="UNI-BKK-0001" data-level="bachelor" data-type="ทุนต่อเนื่อง" data-round="รอบ 1" data-loan="ไม่กู้" data-workflow="manager_done" data-result="reserve" data-status="สำรอง">
+          <td>TF2570-001357</td><td>นักศึกษาตัวอย่าง สำรอง</td><td>ภาคกลาง / กรุงเทพมหานคร / ปทุมวัน<br>มหาวิทยาลัยตัวอย่าง</td><td>ป.ตรี ปี 2</td><td>ทุนต่อเนื่อง</td><td>รอบ 1</td><td>ไม่กู้</td><td><span class="status" style="background:#fff8df;color:#9a6700">สำรอง</span></td><td><button class="btn-outline" onclick="toggleReview()">เปิด</button></td>
+        </tr>
+        <tr data-region="north" data-province="แพร่" data-district="เมืองแพร่" data-school="SCH-PRE-0001" data-level="lower" data-type="ทุนใหม่" data-round="รอบ 1" data-loan="กู้" data-workflow="reviewer_done" data-result="ineligible" data-status="ไม่เข้าเกณฑ์">
+          <td>TF2570-001358</td><td>นักเรียนตัวอย่าง ไม่เข้าเกณฑ์</td><td>ภาคเหนือ / แพร่ / เมืองแพร่<br>โรงเรียนพิริยาลัยจังหวัดแพร่</td><td>ม.3</td><td>ทุนใหม่</td><td>รอบ 1</td><td>กู้</td><td><span class="status" style="background:#fff1f1;color:#b42318">ไม่เข้าเกณฑ์</span></td><td><button class="btn-outline" onclick="toggleReview()">เปิด</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="reviewDetail" class="card hidden">
+    <div class="actions" style="margin-top:0">
+      <div>
+        <h3 class="section-title" style="margin-top:0">TF2570-001286 — ธนกร สมพงษ์</h3>
+        <div class="help">หน้าพิจารณาแบบเต็ม: ข้อมูลผู้สมัครทุกส่วน + เอกสาร + ความเห็นครู</div>
+      </div>
+      <button class="btn-secondary" onclick="document.getElementById('reviewDetail').classList.add('hidden')">ปิด</button>
+    </div>
+
+    <div class="review-workspace">
+      <div class="review-main">
+
+        <div class="review-section">
+          <h4>1. ข้อมูลผู้สมัคร</h4>
+          <div class="kv">
+            <div class="k">ชื่อ–นามสกุล</div><div>ธนกร สมพงษ์</div>
+            <div class="k">เลขประจำตัวประชาชน</div><div>1-2345-67890-12-3</div>
+            <div class="k">วันเดือนปีเกิด / อายุ</div><div>12/12/2553 / 16 ปี</div>
+            <div class="k">หมายเลขโทรศัพท์</div><div>081-234-5678</div>
+            <div class="k">ที่อยู่ตามภูมิลำเนา</div><div>ตัวอย่างที่อยู่ตามภูมิลำเนา จังหวัดแพร่</div>
+            <div class="k">ที่อยู่ปัจจุบัน</div><div>ตัวอย่างที่อยู่ปัจจุบัน จังหวัดแพร่</div>
+          </div>
+        </div>
+
+        <div class="review-section">
+          <h4>2. ข้อมูลการศึกษา</h4>
+          <div class="kv">
+            <div class="k">สถานศึกษา</div><div>โรงเรียนพิริยาลัยจังหวัดแพร่</div>
+            <div class="k">พื้นที่</div><div>ภาคเหนือ / จังหวัดแพร่ / อำเภอเมืองแพร่</div>
+            <div class="k">ระดับชั้นปัจจุบัน</div><div>ม.2</div>
+            <div class="k">ระดับชั้นปีถัดไป</div><div>ม.3</div>
+            <div class="k">สถานศึกษาปีถัดไป</div><div>เรียนต่อสถานศึกษาเดิม</div>
+            <div class="k">ประเภททุน</div><div>ทุนใหม่</div>
+            <div class="k">กยศ./กรอ.</div><div>ไม่กู้</div>
+            <div class="k">ทุนต่อเนื่องอื่น</div><div>ไม่ได้รับ</div>
+            <div class="k">เกรดเฉลี่ยจากครู</div><div>3.12 / 4.00</div>
+          </div>
+        </div>
+
+        <div class="review-section">
+          <h4>3. ข้อมูลครอบครัว</h4>
+          <div class="kv">
+            <div class="k">สถานะบิดา</div><div>มีชีวิตอยู่ / รับจ้างรายวัน</div>
+            <div class="k">รายได้บิดา</div><div>ประมาณ 350 บาท/วัน ทำงานเฉลี่ย 18 วัน/เดือน</div>
+            <div class="k">สถานะมารดา</div><div>มีชีวิตอยู่ / ไม่มีรายได้ประจำ</div>
+            <div class="k">สถานภาพครอบครัว</div><div>อยู่ด้วยกัน</div>
+            <div class="k">พี่น้อง</div><div>2 คน</div>
+            <div class="k">ที่อยู่อาศัย</div><div>บ้านของครอบครัว / ยังมีค่างวดผ่อน</div>
+            <div class="k">ค่าเช่า/ค่างวด</div><div>2,500 บาท/เดือน</div>
+            <div class="k">ที่ดินเกษตร</div><div>ไม่มี</div>
+            <div class="k">ทรัพย์สิน</div><div>รถจักรยานยนต์ 1 คัน, เครื่องซักผ้า 1 เครื่อง</div>
+          </div>
+        </div>
+
+        <div class="review-section">
+          <h4>4. เรื่องราวชีวิตที่นักเรียนเขียน</h4>
+          <div class="field"><label>ครอบครัวและอาชีพของผู้ปกครอง</label><textarea readonly>พ่อรับจ้างทั่วไป รายได้ไม่แน่นอน แม่ดูแลบ้านและช่วยงานเป็นครั้งคราว...</textarea></div>
+          <div class="field"><label>พี่น้องในครอบครัว</label><textarea readonly>มีพี่น้อง 2 คน คนหนึ่งกำลังเรียน อีกคนยังเด็ก...</textarea></div>
+          <div class="field"><label>การเดินทางและค่าใช้จ่ายมาโรงเรียน</label><textarea readonly>เดินทางด้วยรถจักรยานยนต์ ใช้เวลาประมาณ 25 นาที มีค่าน้ำมัน...</textarea></div>
+          <div class="field"><label>ลักษณะบ้านและที่อยู่อาศัย</label><textarea readonly>บ้านชั้นเดียว มีบางส่วนชำรุดและต้องซ่อมหลังคา...</textarea></div>
+          <div class="field"><label>ค่าใช้จ่าย / ภาระหนี้สินของครอบครัว</label><textarea readonly>มีค่าใช้จ่ายประจำเรื่องอาหาร ค่าไฟ ค่าน้ำ ค่างวดบ้าน และหนี้จากการใช้จ่ายในชีวิตประจำวัน...</textarea></div>
+          <div class="field"><label>เรื่องอื่น ๆ</label><textarea readonly>ต้องการเรียนต่อและช่วยแบ่งเบาภาระครอบครัว...</textarea></div>
+        </div>
+
+        <div class="review-section">
+          <h4>5. ความคิดเห็นของครูผู้ดูแลทุน</h4>
+          <textarea readonly>ครอบครัวมีรายได้ไม่แน่นอน ผู้ปกครองรับจ้างรายวัน มีภาระดูแลสมาชิกหลายคน นักเรียนมีความตั้งใจเรียนและมีค่าใช้จ่ายด้านการเดินทางและการศึกษาอย่างต่อเนื่อง...</textarea>
+        </div>
+
+        <div class="review-section">
+          <h4>6. ประวัติสถานะใบสมัคร</h4>
+          <div class="timeline">
+            <div class="timeline-item"><span class="timeline-dot"></span><div class="timeline-title">เริ่มกรอกใบสมัคร</div><div class="timeline-meta">1 พ.ย. 2569 เวลา 10:24 น. · นักเรียน</div></div>
+            <div class="timeline-item green"><span class="timeline-dot"></span><div class="timeline-title">ส่งข้อมูลให้สถานศึกษาแล้ว</div><div class="timeline-meta">1 พ.ย. 2569 เวลา 11:08 น. · นักเรียน</div></div>
+            <div class="timeline-item green"><span class="timeline-dot"></span><div class="timeline-title">ครูดำเนินการเรียบร้อย</div><div class="timeline-meta">3 พ.ย. 2569 เวลา 09:42 น. · ครูผู้ดูแลทุน</div></div>
+            <div class="timeline-item"><span class="timeline-dot"></span><div class="timeline-title">มูลนิธิฯ รับข้อมูลแล้ว</div><div class="timeline-meta">3 พ.ย. 2569 เวลา 09:42 น. · ระบบ</div></div>
+            <div class="timeline-item green"><span class="timeline-dot"></span><div class="timeline-title">เจ้าหน้าที่รีวิวเรียบร้อย</div><div class="timeline-meta">8 พ.ย. 2569 เวลา 14:35 น. · จนท. 01</div><div class="timeline-note">ผลจากเจ้าหน้าที่: ส่งต่อผู้จัดการพิจารณา</div></div>
+            <div class="timeline-item"><span class="timeline-dot"></span><div class="timeline-title">ส่งให้ผู้จัดการพิจารณา</div><div class="timeline-meta">8 พ.ย. 2569 เวลา 14:35 น. · จนท. 01</div></div>
+            <div class="timeline-item green"><span class="timeline-dot"></span><div class="timeline-title">ผู้จัดการพิจารณาเรียบร้อย</div><div class="timeline-meta">12 พ.ย. 2569 เวลา 16:07 น. · ผู้จัดการ</div><div class="timeline-note">ผลการพิจารณา: ผ่าน</div></div>
+          </div>
+        </div>
+
+        <div class="review-section">
+          <h4>7. เอกสารแนบ</h4>
+          <div class="file-preview">
+            <strong>01_IDCARD — บัตรประจำตัวประชาชน</strong>
+            <button class="btn-outline" style="float:right" onclick="alert('ต้นแบบ: เปิด Preview เอกสาร')">Preview</button>
+            <div class="meta">TF2570-001286_01_IDCARD.pdf</div>
+          </div>
+          <div class="file-preview">
+            <strong>03_STUDENTCERT — หนังสือรับรองสถานภาพ</strong>
+            <button class="btn-outline" style="float:right" onclick="alert('ต้นแบบ: เปิด Preview เอกสาร')">Preview</button>
+            <div class="meta">TF2570-001286_03_STUDENTCERT.pdf</div>
+          </div>
+          <div class="file-preview">
+            <strong>04_TRANSCRIPT — ใบแสดงผลการเรียน</strong>
+            <button class="btn-outline" style="float:right" onclick="alert('ต้นแบบ: เปิด Preview เอกสาร')">Preview</button>
+            <div class="meta">TF2570-001286_04_TRANSCRIPT.pdf</div>
+          </div>
+          <div class="file-preview">
+            <strong>05_HOUSEPHOTO — รูปสภาพที่อยู่อาศัย</strong>
+            <button class="btn-outline" style="float:right" onclick="alert('ต้นแบบ: เปิด Gallery รูป')">Preview</button>
+            <div class="meta">3 รูป</div>
+          </div>
+        </div>
+
+      </div>
+
+      <aside class="review-side">
+        <div id="reviewerPanel" class="review-section">
+          <div class="sticky-title">จนท.รีวิว</div>
+          <div class="field">
+            <label>ความคิดเห็นของเจ้าหน้าที่รีวิว</label>
+            <textarea placeholder="สรุปข้อเท็จจริง ความจำเป็น ประเด็นสำคัญ หรือเหตุผลที่ไม่เข้าเกณฑ์"></textarea>
+          </div>
+          <div class="field">
+            <label>ผลการรีวิว</label>
+            <select>
+              <option>ส่งต่อให้ผู้จัดการพิจารณา</option>
+              <option>ไม่เข้าเกณฑ์</option>
+              <option>รอข้อมูลเพิ่มเติม</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>จัดเข้ารอบ</label>
+            <select><option>รอบ 1</option><option>รอบ 2</option></select>
+          </div>
+          <button class="btn-primary" style="width:100%">บันทึกและส่งต่อผู้จัดการ</button>
+        </div>
+
+        <div id="managerPanel" class="review-section hidden">
+          <div class="sticky-title">ผจก.อนุมัติทุน</div>
+          <div class="info">เห็นข้อมูลนักเรียนทั้งหมด ความเห็นครู และความเห็นของ จนท.รีวิว ก่อนพิจารณาผลและจำนวนเงินทุน</div>
+
+          <div class="field">
+            <label>ผลการพิจารณา *</label>
+            <div class="decision-group" id="decisionGroup">
+              <label class="decision-card green selected">
+                <input type="radio" name="managerDecisionRadio" value="approved" checked onchange="updateManagerDecisionUI()">
+                <div><strong>อนุมัติทุน</strong><span class="help">ผ่านการพิจารณาและกำหนดจำนวนเงินทุน</span></div>
+              </label>
+              <label class="decision-card red">
+                <input type="radio" name="managerDecisionRadio" value="rejected" onchange="updateManagerDecisionUI()">
+                <div><strong>ไม่อนุมัติทุน</strong><span class="help">ไม่ผ่านการพิจารณาทุนในรอบนี้</span></div>
+              </label>
+              <label class="decision-card yellow">
+                <input type="radio" name="managerDecisionRadio" value="reserve" onchange="updateManagerDecisionUI()">
+                <div><strong>สำรอง</strong><span class="help">อยู่ในรายชื่อสำรอง ยังไม่รวมวงเงินทุนที่อนุมัติ</span></div>
+              </label>
+            </div>
+          </div>
+
+          <div id="approvedAmountSection">
+            <div class="rate-box">
+              <div style="font-size:12px;color:#667085">ระดับชั้นปีการศึกษา 2570</div>
+              <strong>มัธยมศึกษาตอนต้น (ม.3)</strong>
+              <div style="margin-top:8px;font-size:12px;color:#667085">อัตราทุนมาตรฐาน</div>
+              <div class="big">3,000 บาท</div>
+            </div>
+
+            <div class="field">
+              <label>จำนวนเงินทุนที่อนุมัติ *</label>
+              <div class="decision-group" id="amountGroup">
+                <label class="decision-card blue selected">
+                  <input type="radio" name="managerAmountRadio" value="3000" checked onchange="updateManagerAmountUI()">
+                  <div><strong>3,000 บาท</strong><span class="help">ตามอัตรามาตรฐานของระดับชั้นปี 2570</span></div>
+                </label>
+                <label class="decision-card orange">
+                  <input type="radio" name="managerAmountRadio" value="1000" onchange="updateManagerAmountUI()">
+                  <div><strong>1,000 บาท</strong><span class="help">อัตราอื่น ๆ / อัตราพิเศษ</span></div>
+                </label>
+              </div>
+            </div>
+
+            <div id="specialRateReason" class="hidden warn-rate">
+              <div class="field" style="margin:0">
+                <label>เหตุผลที่ปรับเป็น 1,000 บาท *</label>
+                <textarea id="specialRateNote" placeholder="ระบุเหตุผลที่ใช้อัตราอื่น ๆ เช่น ลักษณะการดูแลของสถานศึกษา/หอพัก หรือเหตุผลประกอบการพิจารณา"></textarea>
+              </div>
+              <div class="help">ระบบจะเก็บยอดมาตรฐาน ยอดที่อนุมัติจริง เหตุผล ผู้แก้ไข และวันเวลาไว้ใน Audit Log</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>หมายเหตุผู้จัดการ</label>
+            <textarea placeholder="เหตุผลหรือหมายเหตุเพิ่มเติม"></textarea>
+          </div>
+          <button class="btn-primary" style="width:100%" onclick="saveManagerDecision()">บันทึกผลการพิจารณา</button>
+        </div>
+
+        <div id="adminPanel" class="review-section hidden">
+          <div class="sticky-title">แอดมินระบบ</div>
+          <div class="info">ดูข้อมูลทั้งหมดและสถานะทุกขั้นตอน รวมถึง Audit Trail</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section id="transfers" class="page">
+  <div class="card">
+    <h2 class="title">ย้ายสถานศึกษา</h2>
+    <p class="subtitle">เจ้าหน้าที่มูลนิธิฯ เป็นผู้บันทึกการได้รับและผลการตรวจหลักฐาน นักเรียนไม่ต้องยืนยันสถานะเอกสารด้วยตนเอง</p>
+
+    <div class="toolbar">
+      <div class="field"><label>ปีทุนการศึกษา</label><select><option>2570</option></select></div>
+      <div class="field"><label>ภาค</label><select><option>ทั้งหมด</option><option>กรุงเทพฯและปริมณฑล</option><option>ภาคเหนือ</option><option>ภาคกลาง</option><option>ภาคตะวันออกเฉียงเหนือ</option><option>ภาคตะวันออก</option><option>ภาคตะวันตก</option><option>ภาคใต้</option></select></div>
+      <div class="field"><label>จังหวัด</label><select><option>ทั้งหมด</option><option>แพร่</option><option>เชียงใหม่</option></select></div>
+      <div class="field"><label>สถานะหลักฐาน</label><select id="transferStatusFilter" onchange="filterTransfers()"><option value="all">ทั้งหมด</option><option value="not_received">ยังไม่ได้รับ</option><option value="received">ได้รับแล้ว / รอตรวจสอบ</option><option value="passed">ผ่าน</option><option value="failed">ไม่ผ่าน</option></select></div>
+      <div class="field"><label>ค้นหา</label><input id="transferKeyword" oninput="filterTransfers()" placeholder="ชื่อ / เลขใบสมัคร / โรงเรียน"></div>
+    </div>
+
+    <div class="transfer-summary">
+      <div class="transfer-stat" onclick="setTransferFilter('all')">ย้ายสถานศึกษาทั้งหมด<strong>186</strong></div>
+      <div class="transfer-stat" onclick="setTransferFilter('not_received')">ยังไม่ได้รับหลักฐาน<strong>42</strong></div>
+      <div class="transfer-stat" onclick="setTransferFilter('received')">ได้รับแล้ว / รอตรวจ<strong>18</strong></div>
+      <div class="transfer-stat" onclick="setTransferFilter('passed')">ผ่าน <span class="help">119</span><strong style="font-size:16px">ไม่ผ่าน 7</strong></div>
+    </div>
+
+    <div class="transfer-layout">
+      <div style="overflow:auto">
+        <table id="transferTable">
+          <thead><tr><th>เลขใบสมัคร</th><th>ชื่อ–นามสกุล</th><th>สถานศึกษาเดิม</th><th>สถานศึกษาปัจจุบัน</th><th>ได้รับหลักฐาน</th><th>ผลตรวจ</th><th>วันที่ได้รับ</th><th></th></tr></thead>
+          <tbody>
+            <tr data-transfer-status="passed"><td>TF2570-001401</td><td>นักเรียน ก</td><td>โรงเรียน A</td><td>โรงเรียน B</td><td><span class="status s-ok">ได้รับแล้ว</span></td><td><span class="status s-ok">ผ่าน</span></td><td>12 พ.ย. 69</td><td><button class="btn-outline" onclick="openTransfer('TF2570-001401','นักเรียน ก','โรงเรียน A','โรงเรียน B','received','passed')">ตรวจสอบ</button></td></tr>
+            <tr data-transfer-status="failed"><td>TF2570-001402</td><td>นักเรียน ข</td><td>โรงเรียน C</td><td>โรงเรียน D</td><td><span class="status s-ok">ได้รับแล้ว</span></td><td><span class="status" style="background:#fff1f1;color:#b42318">ไม่ผ่าน</span></td><td>14 พ.ย. 69</td><td><button class="btn-outline" onclick="openTransfer('TF2570-001402','นักเรียน ข','โรงเรียน C','โรงเรียน D','received','failed')">ตรวจสอบ</button></td></tr>
+            <tr data-transfer-status="received"><td>TF2570-001403</td><td>นักเรียน ค</td><td>โรงเรียน E</td><td>โรงเรียน F</td><td><span class="status s-ok">ได้รับแล้ว</span></td><td><span class="status s-manager">รอตรวจสอบ</span></td><td>16 พ.ย. 69</td><td><button class="btn-outline" onclick="openTransfer('TF2570-001403','นักเรียน ค','โรงเรียน E','โรงเรียน F','received','pending')">ตรวจสอบ</button></td></tr>
+            <tr data-transfer-status="not_received"><td>TF2570-001404</td><td>นักเรียน ง</td><td>โรงเรียน G</td><td>โรงเรียน H</td><td><span class="status s-teacher">ยังไม่ได้รับ</span></td><td>—</td><td>—</td><td><button class="btn-outline" onclick="openTransfer('TF2570-001404','นักเรียน ง','โรงเรียน G','โรงเรียน H','not_received','')">ตรวจสอบ</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside id="transferDetail" class="transfer-detail">
+        <h3>ตรวจหลักฐานการย้ายสถานศึกษา</h3>
+        <div class="help" style="margin-top:4px">เลือกนักเรียนจากตารางเพื่อบันทึกผล</div>
+        <div class="info" style="margin-top:12px">
+          <strong id="transferStudent">นักเรียน ก — TF2570-001401</strong><br>
+          สถานศึกษาเดิม: <span id="transferOldSchool">โรงเรียน A</span><br>
+          สถานศึกษาปัจจุบัน: <span id="transferNewSchool">โรงเรียน B</span>
+        </div>
+
+        <div class="transfer-step">
+          <strong>1. มูลนิธิฯ ได้รับหลักฐานการย้ายสถานศึกษาแล้วหรือไม่ <span class="req">*</span></strong>
+          <div class="transfer-radio">
+            <label><input type="radio" name="transferReceived" value="not_received" onchange="updateTransferEvidenceUI()"> ยังไม่ได้รับ</label>
+            <label><input type="radio" name="transferReceived" value="received" checked onchange="updateTransferEvidenceUI()"> ได้รับแล้ว</label>
+          </div>
+          <div id="transferReceivedDateWrap" class="field" style="margin-top:10px"><label>วันที่ได้รับหลักฐาน <span class="req">*</span></label><input id="transferReceivedDate" type="date" value="2026-11-12"></div>
+        </div>
+
+        <div id="transferReviewStep" class="transfer-step">
+          <strong>2. ผลการตรวจหลักฐาน <span class="req">*</span></strong>
+          <div class="transfer-radio">
+            <label><input type="radio" name="transferReviewResult" value="pending"> รอตรวจสอบ</label>
+            <label><input type="radio" name="transferReviewResult" value="passed" checked onchange="updateTransferResultUI()"> ผ่าน</label>
+            <label><input type="radio" name="transferReviewResult" value="failed" onchange="updateTransferResultUI()"> ไม่ผ่าน</label>
+          </div>
+          <div id="transferFailReason" class="field hidden" style="margin-top:10px"><label>เหตุผลที่ไม่ผ่าน <span class="req">*</span></label><textarea placeholder="กรุณาระบุเหตุผลที่หลักฐานไม่ผ่าน"></textarea></div>
+          <div class="field" style="margin-top:10px"><label>หมายเหตุของเจ้าหน้าที่</label><textarea placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"></textarea></div>
+        </div>
+
+        <div class="actions"><span></span><button class="btn-primary" onclick="saveTransferReview()">บันทึกผลการตรวจสอบ</button></div>
+
+        <div class="transfer-history">
+          <strong>ประวัติหลักฐาน</strong>
+          <div id="transferHistory">
+            <div class="transfer-history-item"><strong>ครั้งที่ 1</strong> · 12 พ.ย. 69 09:18<br>ได้รับหลักฐาน — จนท. 01</div>
+            <div class="transfer-history-item">12 พ.ย. 69 10:04<br>ผลตรวจ: <strong>ผ่าน</strong> — จนท. 01</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section id="reports" class="page">
+  <div class="card">
+    <h2 class="title">รายงาน / Export</h2>
+    <p class="subtitle">สรุปผลการพิจารณา จำนวนทุน และงบประมาณ โดยใช้ข้อมูลชุดเดียวกับผลอนุมัติจริง</p>
+
+    <div class="report-grid">
+      <div class="stat">ผู้สมัครทั้งหมด<strong>4,280</strong></div>
+      <div class="stat">อนุมัติทุน<strong>2,846</strong></div>
+      <div class="stat">วงเงินที่อนุมัติ<strong class="money">15,765,000 บาท</strong></div>
+      <div class="stat">จ่ายทุนแล้ว<strong class="money">0 บาท</strong></div>
+      <div class="stat">ไม่ผ่าน<strong>684</strong></div>
+      <div class="stat">สำรอง<strong>215</strong></div>
+      <div class="stat">ไม่เข้าเกณฑ์<strong>535</strong></div>
+      <div class="stat">อัตราอื่น ๆ 1,000 บาท<strong>126</strong></div>
+    </div>
+
+    <h3 class="section-title">ประเภทรายงาน</h3>
+    <div class="report-tabs">
+      <button class="btn-outline" onclick="setReportType('all')">ผู้สมัครทั้งหมด</button>
+      <button class="btn-outline" onclick="setReportType('approved')">อนุมัติทุน</button>
+      <button class="btn-outline" onclick="setReportType('rejected')">ไม่ผ่าน</button>
+      <button class="btn-outline" onclick="setReportType('reserve')">สำรอง</button>
+      <button class="btn-outline" onclick="setReportType('ineligible')">ไม่เข้าเกณฑ์</button>
+      <button class="btn-outline" onclick="setReportType('special')">อัตราอื่น ๆ 1,000 บาท</button>
+      <button class="btn-outline" onclick="setReportType('budget')">งบประมาณทุน</button>
+      <button class="btn-outline" onclick="setReportType('school')">สถานศึกษา</button>
+      <button class="btn-outline" onclick="setReportType('pending')">งานค้างดำเนินการ</button>
+    </div>
+
+    <h3 class="section-title">สร้างรายงาน</h3>
+    <div class="toolbar">
+      <div class="field"><label>ปีทุนการศึกษา</label><select id="reportYear"><option>2570</option></select></div>
+      <div class="field"><label>ผลพิจารณา</label><select id="reportDecision"><option>ทั้งหมด</option><option>อนุมัติทุน</option><option>ไม่ผ่าน</option><option>สำรอง</option><option>ไม่เข้าเกณฑ์</option></select></div>
+      <div class="field"><label>ประเภททุน</label><select><option>ทั้งหมด</option><option>ทุนใหม่</option><option>ทุนต่อเนื่อง</option></select></div>
+      <div class="field"><label>รอบ</label><select><option>ทั้งหมด</option><option>รอบ 1</option><option>รอบ 2</option></select></div>
+    </div>
+
+    <div class="grid">
+      <div class="field"><label>พื้นที่</label>
+        <div class="grid3">
+          <select><option>ทุกภาค</option><option>ภาคเหนือ</option><option>ภาคกลาง</option><option>ภาคตะวันออกเฉียงเหนือ</option><option>ภาคตะวันออก</option><option>ภาคตะวันตก</option><option>ภาคใต้</option></select>
+          <select><option>ทุกจังหวัด</option></select>
+          <select><option>ทุกอำเภอ/เขต</option></select>
+        </div>
+      </div>
+      <div class="field"><label>ระดับชั้นปี 2570 (เลือกได้มากกว่า 1)</label>
+        <div class="multicheck">
+          <label><input type="checkbox"> ป.6</label><label><input type="checkbox"> ม.ต้น</label>
+          <label><input type="checkbox"> ม.ปลาย</label><label><input type="checkbox"> ปวช.</label>
+          <label><input type="checkbox"> ปวส.</label><label><input type="checkbox"> ปวส. อุตสาหกรรม</label>
+          <label><input type="checkbox"> ป.ตรี</label><label><input type="checkbox"> อื่น ๆ 1,000 บาท</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <div><button class="btn-primary" onclick="alert('ต้นแบบ: สร้างรายงานตามตัวกรอง')">แสดงรายงาน</button></div>
+      <div><button class="btn-outline" onclick="alert('ต้นแบบ: Export Excel')">Export Excel</button> <button class="btn-outline" onclick="window.print()">พิมพ์ / PDF</button></div>
+    </div>
+
+    <h3 class="section-title">อัตราทุน ปีการศึกษา 2570</h3>
+    <table>
+      <thead><tr><th>ระดับชั้นปีที่ได้รับทุน</th><th style="text-align:right">จำนวนเงินทุน/คน/ปี</th></tr></thead>
+      <tbody>
+        <tr><td>ประถมศึกษาปีที่ 6</td><td style="text-align:right">1,000 บาท</td></tr>
+        <tr><td>มัธยมศึกษาตอนต้น</td><td style="text-align:right">3,000 บาท</td></tr>
+        <tr><td>มัธยมศึกษาตอนปลาย</td><td style="text-align:right">3,500 บาท</td></tr>
+        <tr><td>ประกาศนียบัตรวิชาชีพ (ปวช.)</td><td style="text-align:right">7,000 บาท</td></tr>
+        <tr><td>ประกาศนียบัตรวิชาชีพชั้นสูง (ปวส.)</td><td style="text-align:right">9,000 บาท</td></tr>
+        <tr><td>ปวส. สาขาอุตสาหกรรม</td><td style="text-align:right">14,000 บาท</td></tr>
+        <tr><td>ปริญญาตรี</td><td style="text-align:right">15,000 บาท</td></tr>
+        <tr><td>อื่น ๆ / อัตราพิเศษ</td><td style="text-align:right">1,000 บาท</td></tr>
+      </tbody>
+    </table>
+    <div class="help">อัตราทุนอ้างอิง “ระดับชั้นปีการศึกษา 2570” ซึ่งเป็นปีที่ผู้สมัครได้รับทุน ไม่ใช่ระดับชั้นขณะสมัครในปี 2569</div>
+  </div>
+</section>
+
+<section id="privacy" class="page">
+  <div class="card">
+    <h2 class="title">PDPA / Privacy Notice</h2>
+    <div class="grid">
+      <div class="field"><label>เวอร์ชัน Privacy Notice</label><input value="2026-08"></div>
+      <div class="field"><label>วันที่มีผล</label><input type="date" value="2026-08-01"></div>
+    </div>
+    <div class="field"><label>ลิงก์ Privacy Notice</label><input value="https://tiscofoundation.org/wp-content/uploads/pdpa_privacy_notice_tiscof.pdf"></div>
+    <div class="info">ระบบควรบันทึกเวอร์ชัน Privacy Notice และวัน-เวลาที่ผู้สมัครรับทราบ ณ ตอนกดส่งใบสมัคร</div>
+  </div>
+</section>
+
+</main>
+<script>
+let currentAdminRole='reviewer';
+
+const regionLabels={
+  north:'ภาคเหนือ',central:'ภาคกลาง',northeast:'ภาคตะวันออกเฉียงเหนือ',
+  east:'ภาคตะวันออก',west:'ภาคตะวันตก',south:'ภาคใต้'
+};
+
+const thaiRegions={
+  north:['เชียงใหม่','เชียงราย','ลำปาง','ลำพูน','แม่ฮ่องสอน','น่าน','พะเยา','แพร่','อุตรดิตถ์'],
+  central:['กรุงเทพมหานคร','กำแพงเพชร','ชัยนาท','นครนายก','นครปฐม','นครสวรรค์','นนทบุรี','ปทุมธานี','พระนครศรีอยุธยา','พิจิตร','พิษณุโลก','เพชรบูรณ์','ลพบุรี','สมุทรปราการ','สมุทรสงคราม','สมุทรสาคร','สระบุรี','สิงห์บุรี','สุโขทัย','สุพรรณบุรี','อ่างทอง','อุทัยธานี'],
+  northeast:['กาฬสินธุ์','ขอนแก่น','ชัยภูมิ','นครพนม','นครราชสีมา','บึงกาฬ','บุรีรัมย์','มหาสารคาม','มุกดาหาร','ยโสธร','ร้อยเอ็ด','เลย','ศรีสะเกษ','สกลนคร','สุรินทร์','หนองคาย','หนองบัวลำภู','อำนาจเจริญ','อุดรธานี','อุบลราชธานี'],
+  east:['จันทบุรี','ฉะเชิงเทรา','ชลบุรี','ตราด','ปราจีนบุรี','ระยอง','สระแก้ว'],
+  west:['กาญจนบุรี','ตาก','ประจวบคีรีขันธ์','เพชรบุรี','ราชบุรี'],
+  south:['กระบี่','ชุมพร','ตรัง','นครศรีธรรมราช','นราธิวาส','ปัตตานี','พังงา','พัทลุง','ภูเก็ต','ยะลา','ระนอง','สงขลา','สตูล','สุราษฎร์ธานี']
+};
+
+// Prototype: อำเภอ/ตำบลบางส่วนสำหรับทดลองแบบ Offline.
+// ระบบจริงใช้ Master Data ประเทศไทยครบชุดจากฐานข้อมูลภายใน.
+const districtMaster={
+  'แพร่':['เมืองแพร่','ร้องกวาง','ลอง','สูงเม่น','เด่นชัย','สอง','วังชิ้น','หนองม่วงไข่'],
+  'เชียงใหม่':['เมืองเชียงใหม่','จอมทอง','แม่แจ่ม','เชียงดาว','ดอยสะเก็ด','แม่แตง','แม่ริม','สะเมิง'],
+  'กรุงเทพมหานคร':['พระนคร','ดุสิต','หนองจอก','บางรัก','บางเขน','บางกะปิ','ปทุมวัน'],
+  'นครราชสีมา':['เมืองนครราชสีมา','ครบุรี','เสิงสาง','คง','บ้านเหลื่อม'],
+  'นครศรีธรรมราช':['เมืองนครศรีธรรมราช','พรหมคีรี','ลานสกา','ฉวาง','เชียรใหญ่','ร่อนพิบูลย์'],
+  'นครสวรรค์':['เมืองนครสวรรค์','โกรกพระ','ชุมแสง','หนองบัว'],
+  'ประจวบคีรีขันธ์':['เมืองประจวบคีรีขันธ์','กุยบุรี','ทับสะแก','บางสะพาน','หัวหิน']
+};
+const subdistrictMaster={
+  'เมืองแพร่':['ในเวียง','นาจักร','น้ำชำ','ป่าแดง'],
+  'เมืองเชียงใหม่':['ศรีภูมิ','พระสิงห์','หายยา','ช้างม่อย'],
+  'ปทุมวัน':['รองเมือง','วังใหม่','ปทุมวัน','ลุมพินี'],
+  'เชียรใหญ่':['เชียรใหญ่','ท่าขนาน','บ้านกลาง'],
+  'หัวหิน':['หัวหิน','หนองแก','หินเหล็กไฟ']
+};
+
+const institutionMaster=[
+  {id:'SCH-PRE-0001',name:'โรงเรียนพิริยาลัยจังหวัดแพร่',type:'โรงเรียน',region:'north',province:'แพร่',district:'เมืองแพร่',subdistrict:'ในเวียง',levels:['lower','upper'],username:'PRE0001',teacher:'นางสาวสมฤดี ใจดี',position:'ครู',department:'งานแนะแนว',phone:'08X-XXX-XXXX',email:'scholarship@school.ac.th'},
+  {id:'SCH-CMI-0001',name:'โรงเรียนกาวิละวิทยาลัย',type:'โรงเรียน',region:'north',province:'เชียงใหม่',district:'เมืองเชียงใหม่',subdistrict:'หายยา',levels:['lower','upper'],username:'CMI0001',teacher:'นายตัวอย่าง ครูแนะแนว',position:'ครู',department:'งานแนะแนว',phone:'08X-XXX-XXXX',email:'guide@school.ac.th'},
+  {id:'UNI-BKK-0001',name:'มหาวิทยาลัยตัวอย่าง',type:'มหาวิทยาลัย',region:'central',province:'กรุงเทพมหานคร',district:'ปทุมวัน',subdistrict:'ปทุมวัน',levels:['bachelor'],username:'BKKU0001',teacher:'เจ้าหน้าที่ทุนการศึกษา',position:'เจ้าหน้าที่',department:'งานทุนการศึกษา',phone:'02-XXX-XXXX',email:'scholarship@university.ac.th'}
+];
+
+function fillSelect(el,items,placeholder){
+  if(!el) return;
+  el.innerHTML='';
+  const first=document.createElement('option');
+  first.value=''; first.textContent=placeholder; el.appendChild(first);
+  items.forEach(item=>{
+    const o=document.createElement('option');
+    if(typeof item==='string'){o.value=item;o.textContent=item}
+    else{o.value=item.value;o.textContent=item.text}
+    el.appendChild(o);
+  });
+}
+
+function goPage(id){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  const page=document.getElementById(id);
+  if(page) page.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function setRole(role){
+  currentAdminRole=role;
+
+  document.querySelectorAll('.rolebtn').forEach(x=>x.classList.remove('active'));
+  const btn=document.getElementById(
+    role==='reviewer' ? 'roleReviewer' :
+    role==='manager' ? 'roleManager' : 'roleAdmin'
+  );
+  if(btn) btn.classList.add('active');
+
+  const label=document.getElementById('currentAdminRoleLabel');
+  if(label){
+    label.textContent='กำลังใช้งาน: '+
+      (role==='reviewer' ? 'จนท.รีวิว' :
+       role==='manager' ? 'ผจก.อนุมัติทุน' : 'แอดมินระบบ');
+  }
+
+  const reviewer=document.getElementById('reviewerPanel');
+  const manager=document.getElementById('managerPanel');
+  const admin=document.getElementById('adminPanel');
+
+  if(reviewer) reviewer.classList.toggle('hidden',role!=='reviewer');
+  if(manager) manager.classList.toggle('hidden',role!=='manager');
+  if(admin) admin.classList.toggle('hidden',role!=='admin');
+
+  if(role==='manager'){
+    updateManagerDecisionUI();
+    updateManagerAmountUI();
+  }
+
+  const desc=document.getElementById('roleDescription');
+  if(desc){
+    if(role==='reviewer'){
+      desc.textContent='จนท.รีวิว — ตรวจข้อมูล เขียนคอมเมนต์ แยกไม่เข้าเกณฑ์ แยกรอบ 1/2 และส่งต่อให้ผู้จัดการ';
+    }else if(role==='manager'){
+      desc.textContent='ผจก.อนุมัติทุน — พิจารณาข้อมูลผู้สมัครทั้งหมดและความเห็นก่อนหน้า แล้วตัดสิน อนุมัติ / ไม่อนุมัติ / สำรอง';
+    }else{
+      desc.textContent='แอดมินระบบ — เห็นทุกอย่าง ดูแลสถานศึกษา/บัญชีครู ตั้งค่าระบบ รายงาน และสรุปยอดการให้ทุน';
+    }
+  }
+}
+
+function switchRole(role){
+  setRole(role);
+
+  if(role==='reviewer' || role==='manager'){
+    goPage('applications');
+
+    // ถ้ามีแฟ้มรายละเอียดที่เปิดอยู่ ให้คงไว้และสลับแผงด้านขวาตามบทบาท
+    // ถ้ายังไม่เปิด จะแสดงรายการเพื่อให้เลือกผู้สมัครก่อน
+    const detail=document.getElementById('reviewDetail');
+    if(detail && !detail.classList.contains('hidden')){
+      detail.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  }else{
+    goPage('dashboard');
+  }
+}
+
+function toggleReview(){
+  const d=document.getElementById('reviewDetail');
+  if(d){d.classList.toggle('hidden');setRole(currentAdminRole)}
+}
+function toggleSchool(){
+  const el=document.getElementById('schoolEdit');
+  if(el) el.classList.toggle('hidden');
+}
+function toggleApp(){toggleReview()}
+
+function initRegions(){
+  const regions=Object.keys(regionLabels).map(k=>({value:k,text:regionLabels[k]}));
+  fillSelect(document.getElementById('reviewRegion'),regions,'ทุกภาค');
+  fillSelect(document.getElementById('schoolRegion'),regions,'กรุณาเลือกภาค');
+}
+function loadReviewProvinces(){
+  const region=document.getElementById('reviewRegion').value;
+  const p=document.getElementById('reviewProvince');
+  const d=document.getElementById('reviewDistrict');
+  const sc=document.getElementById('reviewSchool');
+  fillSelect(p,region?(thaiRegions[region]||[]):[],'ทุกจังหวัด'); p.disabled=!region;
+  fillSelect(d,[],'ทุกอำเภอ / เขต'); d.disabled=true;
+  loadReviewSchools();
+}
+function loadReviewDistricts(){
+  const province=document.getElementById('reviewProvince').value;
+  const d=document.getElementById('reviewDistrict');
+  fillSelect(d,province?(districtMaster[province]||[]):[],'ทุกอำเภอ / เขต'); d.disabled=!province;
+  loadReviewSchools();
+}
+function loadReviewSubdistricts(){loadReviewSchools()}
+function loadReviewSchools(){
+  const region=document.getElementById('reviewRegion').value;
+  const province=document.getElementById('reviewProvince').value;
+  const district=document.getElementById('reviewDistrict').value;
+  const sc=document.getElementById('reviewSchool');
+  const list=institutionMaster.filter(x=>
+    (!region||x.region===region)&&(!province||x.province===province)&&(!district||x.district===district)
+  );
+  fillSelect(sc,list.map(x=>({value:x.id,text:x.name})),'ทุกโรงเรียน');
+  sc.disabled=list.length===0;
+}
+
+function getSelectedLevels(){
+  return [...document.querySelectorAll('.review-level:checked')].map(x=>x.value);
+}
+function applyReviewFilters(){
+  const region=document.getElementById('reviewRegion').value;
+  const province=document.getElementById('reviewProvince').value;
+  const district=document.getElementById('reviewDistrict').value;
+  const school=document.getElementById('reviewSchool').value;
+  const type=document.getElementById('reviewScholarType').value;
+  const round=document.getElementById('reviewRound').value;
+  const loan=document.getElementById('reviewLoan').value;
+  const workflow=document.getElementById('reviewWorkStatus').value;
+  const decision=document.getElementById('reviewDecisionResult').value;
+  const keyword=(document.getElementById('reviewKeyword').value||'').trim().toLowerCase();
+  const levels=getSelectedLevels();
+
+  let shown=0;
+
+  document.querySelectorAll('#reviewResultTable tbody tr').forEach(row=>{
+    const rowWorkflow=row.dataset.workflow||'';
+    const rowResult=row.dataset.result||'';
+
+    let workflowOK=true;
+    if(workflow!=='all'){
+      if(workflow==='manager_done'){
+        // ผ่านการพิจารณาของผู้จัดการแล้วเท่านั้น
+        workflowOK = rowWorkflow==='manager_done' &&
+                     ['approved','rejected','reserve'].includes(rowResult);
+      }else{
+        workflowOK = rowWorkflow===workflow;
+      }
+    }
+
+    let resultOK=true;
+    if(decision!=='all'){
+      resultOK = rowResult===decision;
+    }
+
+    const ok=
+      workflowOK &&
+      resultOK &&
+      (!region||row.dataset.region===region) &&
+      (!province||row.dataset.province===province) &&
+      (!district||row.dataset.district===district) &&
+      (!school||row.dataset.school===school) &&
+      (!type||type==='ทั้งหมด'||row.dataset.type===type) &&
+      (!round||round==='ทั้งหมด'||row.dataset.round===round) &&
+      (!loan||loan==='ทั้งหมด'||row.dataset.loan===loan.replace(' / ไม่เข้าเกณฑ์','')) &&
+      (levels.length===0||levels.includes(row.dataset.level)) &&
+      (!keyword||row.textContent.toLowerCase().includes(keyword));
+
+    row.style.display=ok?'':'none';
+    if(ok) shown++;
+  });
+
+  const labels=[];
+  const workLabels={
+    all:'ทั้งหมด',
+    student_draft:'นักเรียนกำลังกรอกข้อมูล',
+    waiting_teacher:'รอครูดำเนินการ',
+    waiting_reviewer:'รอเจ้าหน้าที่ดำเนินการ',
+    waiting_manager:'รอผู้จัดการพิจารณา',
+    manager_done:'ผู้จัดการดำเนินการเรียบร้อย'
+  };
+  const resultLabels={
+    all:'ทั้งหมด',
+    approved:'ผ่าน',
+    rejected:'ไม่ผ่าน',
+    reserve:'สำรอง',
+    ineligible:'ไม่เข้าเกณฑ์'
+  };
+
+  if(region) labels.push(regionLabels[region]);
+  if(province) labels.push(province);
+  if(district) labels.push(district);
+  if(school){
+    const inst=institutionMaster.find(x=>x.id===school);
+    if(inst) labels.push(inst.name);
+  }
+
+  const summary=document.getElementById('reviewSearchSummary');
+  if(summary){
+    summary.innerHTML=
+      '<strong>ผลการค้นหา: '+shown+' ราย</strong><br>'+
+      'สถานะการดำเนินงาน: '+workLabels[workflow]+' &nbsp; | &nbsp; ผลการพิจารณา: '+resultLabels[decision]+
+      '<br>'+(labels.length?labels.join(' → '):'ทุกพื้นที่')+
+      (levels.length?'<br>เลือกระดับชั้น '+levels.length+' กลุ่ม':'');
+  }
+}
+function clearReviewFilters(){
+  document.getElementById('reviewRegion').value='';
+  loadReviewProvinces();
+  ['reviewWorkStatus','reviewDecisionResult','reviewRound','reviewLoan','reviewScholarType'].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.selectedIndex=0;
+  });
+  document.getElementById('reviewKeyword').value='';
+  document.querySelectorAll('.review-level').forEach(x=>x.checked=false);
+  document.querySelectorAll('#reviewResultTable tbody tr').forEach(x=>x.style.display='');
+  document.getElementById('reviewSearchSummary').textContent='แสดงรายการทั้งหมด — สามารถเลือกเฉพาะภาค จังหวัด อำเภอ/เขต หรือโรงเรียนก็ได้';
+}
+function printFilteredReviewResults(){
+  applyReviewFilters();
+  const rows=[...document.querySelectorAll('#reviewResultTable tbody tr')].filter(r=>r.style.display!=='none');
+  if(rows.length===0){alert('ไม่พบรายการตามเงื่อนไขที่เลือก');return}
+  const summary=document.getElementById('reviewSearchSummary').innerHTML;
+  const table=document.getElementById('reviewResultTable').cloneNode(true);
+  [...table.querySelectorAll('tr')].forEach(r=>{
+    if(r.style.display==='none') r.remove();
+    const last=r.lastElementChild; if(last) last.remove();
+  });
+  const w=window.open('','','width=1100,height=750');
+  w.document.write(`<html><head><title>ชุดรีวิว</title><style>
+    body{font-family:Tahoma,sans-serif;font-size:11px;padding:16px}
+    table{width:100%;border-collapse:collapse}th,td{border:1px solid #bbb;padding:6px;text-align:left}
+    h2{font-size:17px}@page{size:A4 landscape;margin:10mm}
+  </style></head><body><h2>ชุดข้อมูลสำหรับรีวิวทุนการศึกษา</h2><div>${summary}</div><br>${table.outerHTML}
+<div id="drillModal" class="drill-modal" onclick="if(event.target===this)closeDrilldown()">
+  <div class="drill-card">
+    <div class="actions" style="margin-top:0"><div><h3 id="drillTitle" style="margin:0;color:#164e86">รายละเอียด</h3><div class="help">ข้อมูลตัวอย่างสำหรับ HTML Demo</div></div><button class="btn-secondary" onclick="closeDrilldown()">ปิด</button></div>
+    <table><thead><tr><th>รหัส</th><th>ชื่อ–นามสกุล</th><th>สถานศึกษา</th><th>ผู้ดำเนินการ</th><th>วันที่/เวลา</th><th>ผล/สถานะ</th></tr></thead><tbody id="drillBody"></tbody></table>
+  </div>
+</div>
+
+</body></html>`);
+  w.document.close();w.focus();w.print();
+}
+// backward-compatible alias
+function printSchoolReviewBatch(){printFilteredReviewResults()}
+
+function resetSchoolForm(){
+  document.getElementById('institutionId').value='AUTO';
+  document.getElementById('institutionName').value='';
+  document.getElementById('institutionType').selectedIndex=0;
+  document.getElementById('schoolRegion').value='';
+  loadSchoolProvinces();
+  document.getElementById('rawSchoolAddress').value='';
+  document.getElementById('schoolAddressLine').value='';
+  document.getElementById('schoolPostalCode').value='';
+  document.getElementById('schoolUsername').value='';
+  document.getElementById('teacherName').value='';
+  document.getElementById('teacherPosition').value='';
+  document.getElementById('teacherDepartment').value='';
+  document.getElementById('teacherPhone').value='';
+  document.getElementById('teacherEmail').value='';
+}
+function openNewSchool(){
+  resetSchoolForm();
+  const el=document.getElementById('schoolEdit');
+  el.classList.remove('hidden');
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function openEditSchool(id){
+  const x=institutionMaster.find(a=>a.id===id);
+  if(!x) return;
+  document.getElementById('institutionId').value=x.id;
+  document.getElementById('institutionName').value=x.name;
+  document.getElementById('institutionType').value=x.type;
+  document.getElementById('schoolRegion').value=x.region;
+  loadSchoolProvinces();
+  document.getElementById('schoolProvince').value=x.province;
+  loadSchoolDistricts();
+  document.getElementById('schoolDistrict').value=x.district;
+  loadSchoolSubdistricts();
+  document.getElementById('schoolSubdistrict').value=x.subdistrict||'';
+  document.getElementById('schoolUsername').value=x.username||'';
+  document.getElementById('teacherName').value=x.teacher||'';
+  document.getElementById('teacherPosition').value=x.position||'';
+  document.getElementById('teacherDepartment').value=x.department||'';
+  document.getElementById('teacherPhone').value=x.phone||'';
+  document.getElementById('teacherEmail').value=x.email||'';
+  const el=document.getElementById('schoolEdit');
+  el.classList.remove('hidden');
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function loadSchoolProvinces(){
+  const region=document.getElementById('schoolRegion').value;
+  const p=document.getElementById('schoolProvince');
+  const d=document.getElementById('schoolDistrict');
+  const sd=document.getElementById('schoolSubdistrict');
+  fillSelect(p,region?(thaiRegions[region]||[]):[],'กรุณาเลือกจังหวัด'); p.disabled=!region;
+  fillSelect(d,[],'กรุณาเลือกอำเภอ / เขต'); d.disabled=true;
+  fillSelect(sd,[],'กรุณาเลือกตำบล / แขวง'); sd.disabled=true;
+}
+function loadSchoolDistricts(){
+  const province=document.getElementById('schoolProvince').value;
+  const d=document.getElementById('schoolDistrict');
+  const sd=document.getElementById('schoolSubdistrict');
+  fillSelect(d,province?(districtMaster[province]||[]):[],'กรุณาเลือกอำเภอ / เขต'); d.disabled=!province;
+  fillSelect(sd,[],'กรุณาเลือกตำบล / แขวง'); sd.disabled=true;
+}
+function loadSchoolSubdistricts(){
+  const district=document.getElementById('schoolDistrict').value;
+  const sd=document.getElementById('schoolSubdistrict');
+  fillSelect(sd,district?(subdistrictMaster[district]||[]):[],'กรุณาเลือกตำบล / แขวง'); sd.disabled=!district;
+}
+function parseSchoolAddress(){
+  const raw=(document.getElementById('rawSchoolAddress').value||'').trim();
+  if(!raw){alert('กรุณาวางที่อยู่ก่อน');return}
+  const postal=(raw.match(/\d{5}/)||[])[0]||'';
+  document.getElementById('schoolPostalCode').value=postal;
+
+  let province='';
+  for(const list of Object.values(thaiRegions)){
+    const found=list.find(x=>raw.includes(x));
+    if(found){province=found;break}
+  }
+  if(province){
+    const region=Object.keys(thaiRegions).find(k=>thaiRegions[k].includes(province));
+    document.getElementById('schoolRegion').value=region||'';
+    loadSchoolProvinces();
+    document.getElementById('schoolProvince').value=province;
+    loadSchoolDistricts();
+    const district=(districtMaster[province]||[]).find(x=>raw.includes(x));
+    if(district){
+      document.getElementById('schoolDistrict').value=district;
+      loadSchoolSubdistricts();
+      const sd=(subdistrictMaster[district]||[]).find(x=>raw.includes(x));
+      if(sd) document.getElementById('schoolSubdistrict').value=sd;
+    }
+  }
+  document.getElementById('schoolAddressLine').value=raw.replace(/\d{5}/,'').trim();
+}
+
+
+
+function markSelectedCards(groupId, name){
+  const group=document.getElementById(groupId);
+  if(!group) return;
+  group.querySelectorAll('.decision-card').forEach(card=>card.classList.remove('selected'));
+  const checked=document.querySelector('input[name="'+name+'"]:checked');
+  if(checked) checked.closest('.decision-card')?.classList.add('selected');
+}
+
+function updateManagerDecisionUI(){
+  markSelectedCards('decisionGroup','managerDecisionRadio');
+  const decision=document.querySelector('input[name="managerDecisionRadio"]:checked')?.value;
+  const amountSection=document.getElementById('approvedAmountSection');
+  if(amountSection) amountSection.classList.toggle('hidden',decision!=='approved');
+  if(decision!=='approved'){
+    document.getElementById('specialRateReason')?.classList.add('hidden');
+  }else{
+    updateManagerAmountUI();
+  }
+}
+
+function updateManagerAmountUI(){
+  markSelectedCards('amountGroup','managerAmountRadio');
+  const amount=document.querySelector('input[name="managerAmountRadio"]:checked')?.value;
+  const reason=document.getElementById('specialRateReason');
+  if(reason) reason.classList.toggle('hidden',amount!=='1000');
+}
+
+function saveManagerDecision(){
+  const decision=document.querySelector('input[name="managerDecisionRadio"]:checked')?.value;
+  const amount=document.querySelector('input[name="managerAmountRadio"]:checked')?.value || '';
+  const note=(document.getElementById('specialRateNote')?.value||'').trim();
+
+  if(decision==='approved' && amount==='1000' && !note){
+    alert('กรุณาระบุเหตุผลที่ปรับจำนวนเงินทุนเป็น 1,000 บาท');
+    document.getElementById('specialRateNote')?.focus();
+    return;
+  }
+
+  if(decision==='approved'){
+    alert('ต้นแบบ: บันทึกผล “อนุมัติทุน” จำนวน '+Number(amount).toLocaleString('th-TH')+' บาท\\nพร้อมเก็บ Audit Log');
+  }else if(decision==='rejected'){
+    alert('ต้นแบบ: บันทึกผล “ไม่อนุมัติทุน”');
+  }else{
+    alert('ต้นแบบ: บันทึกผล “สำรอง” โดยยังไม่รวมวงเงินทุนที่อนุมัติ');
+  }
+}
+
+
+function setTransferFilter(v){
+  const el=document.getElementById('transferStatusFilter');
+  if(el){el.value=v;filterTransfers();}
+}
+function filterTransfers(){
+  const status=document.getElementById('transferStatusFilter')?.value||'all';
+  const kw=(document.getElementById('transferKeyword')?.value||'').trim().toLowerCase();
+  document.querySelectorAll('#transferTable tbody tr').forEach(row=>{
+    const okStatus=status==='all'||row.dataset.transferStatus===status;
+    const okKw=!kw||row.textContent.toLowerCase().includes(kw);
+    row.style.display=okStatus&&okKw?'':'none';
+  });
+}
+function openTransfer(id,name,oldSchool,newSchool,received,result){
+  document.getElementById('transferStudent').textContent=name+' — '+id;
+  document.getElementById('transferOldSchool').textContent=oldSchool;
+  document.getElementById('transferNewSchool').textContent=newSchool;
+  const rec=document.querySelector('input[name="transferReceived"][value="'+received+'"]');
+  if(rec) rec.checked=true;
+  if(result){
+    const rr=document.querySelector('input[name="transferReviewResult"][value="'+result+'"]');
+    if(rr) rr.checked=true;
+  }
+  updateTransferEvidenceUI();
+  updateTransferResultUI();
+  document.getElementById('transferDetail')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function updateTransferEvidenceUI(){
+  const received=document.querySelector('input[name="transferReceived"]:checked')?.value==='received';
+  document.getElementById('transferReceivedDateWrap')?.classList.toggle('hidden',!received);
+  document.getElementById('transferReviewStep')?.classList.toggle('disabled',!received);
+}
+function updateTransferResultUI(){
+  const result=document.querySelector('input[name="transferReviewResult"]:checked')?.value;
+  document.getElementById('transferFailReason')?.classList.toggle('hidden',result!=='failed');
+}
+function saveTransferReview(){
+  const received=document.querySelector('input[name="transferReceived"]:checked')?.value;
+  if(!received){alert('กรุณาระบุว่าได้รับหลักฐานแล้วหรือยัง');return;}
+  if(received==='received'&&!document.getElementById('transferReceivedDate')?.value){alert('กรุณาระบุวันที่ได้รับหลักฐาน');return;}
+  if(received==='received'&&!document.querySelector('input[name="transferReviewResult"]:checked')){alert('กรุณาระบุผลการตรวจหลักฐาน');return;}
+  alert('HTML Demo: บันทึกผลการตรวจหลักฐานแล้ว\nระบบจริงจะเพิ่มเหตุการณ์นี้ใน Timeline ของนักเรียนโดยไม่เขียนทับประวัติเดิม');
+}
+
+function setReportType(type){
+  const d=document.getElementById('reportDecision');
+  if(!d) return;
+  const map={approved:'อนุมัติทุน',rejected:'ไม่ผ่าน',reserve:'สำรอง',ineligible:'ไม่เข้าเกณฑ์'};
+  if(map[type]){
+    [...d.options].forEach((o,i)=>{if(o.textContent===map[type]) d.selectedIndex=i});
+  }else d.selectedIndex=0;
+  alert('เลือกประเภทรายงานแล้ว: '+({
+    all:'ผู้สมัครทั้งหมด',approved:'อนุมัติทุน',rejected:'ไม่ผ่าน',reserve:'สำรอง',
+    ineligible:'ไม่เข้าเกณฑ์',special:'อัตราอื่น ๆ 1,000 บาท',budget:'งบประมาณทุน',
+    school:'สถานศึกษา',pending:'งานค้างดำเนินการ'
+  }[type]||type));
+}
+
+
+const trendDaily=[
+{date:'1 พ.ย. 69',start:128,toTeacher:42,foundation:0,reviewer:0,toManager:0,manager:0},{date:'2 พ.ย. 69',start:214,toTeacher:105,foundation:3,reviewer:0,toManager:0,manager:0},{date:'3 พ.ย. 69',start:186,toTeacher:132,foundation:18,reviewer:2,toManager:0,manager:0},{date:'4 พ.ย. 69',start:201,toTeacher:154,foundation:36,reviewer:14,toManager:10,manager:0},{date:'5 พ.ย. 69',start:175,toTeacher:149,foundation:48,reviewer:31,toManager:26,manager:5},{date:'6 พ.ย. 69',start:167,toTeacher:151,foundation:61,reviewer:40,toManager:35,manager:9},{date:'7 พ.ย. 69',start:143,toTeacher:136,foundation:70,reviewer:51,toManager:43,manager:18},{date:'8 พ.ย. 69',start:155,toTeacher:142,foundation:76,reviewer:58,toManager:49,manager:24},{date:'9 พ.ย. 69',start:180,toTeacher:160,foundation:84,reviewer:66,toManager:57,manager:29},{date:'10 พ.ย. 69',start:194,toTeacher:171,foundation:91,reviewer:72,toManager:63,manager:35},{date:'11 พ.ย. 69',start:205,toTeacher:188,foundation:102,reviewer:81,toManager:70,manager:43},{date:'12 พ.ย. 69',start:219,toTeacher:202,foundation:118,reviewer:93,toManager:82,manager:57},{date:'13 พ.ย. 69',start:198,toTeacher:190,foundation:125,reviewer:102,toManager:89,manager:65},{date:'14 พ.ย. 69',start:176,toTeacher:168,foundation:132,reviewer:110,toManager:97,manager:72},{date:'15 พ.ย. 69',start:190,toTeacher:181,foundation:139,reviewer:116,toManager:104,manager:80},{date:'16 พ.ย. 69',start:163,toTeacher:158,foundation:141,reviewer:121,toManager:110,manager:85},{date:'17 พ.ย. 69',start:150,toTeacher:148,foundation:146,reviewer:126,toManager:115,manager:90},{date:'18 พ.ย. 69',start:172,toTeacher:165,foundation:151,reviewer:130,toManager:119,manager:96},{date:'19 พ.ย. 69',start:189,toTeacher:179,foundation:158,reviewer:138,toManager:125,manager:101},{date:'20 พ.ย. 69',start:203,toTeacher:192,foundation:164,reviewer:145,toManager:132,manager:108}
+];
+let trendMode='daily',trendView='chart';
+function cumulativeRows(){let sums={start:0,toTeacher:0,foundation:0,reviewer:0,toManager:0,manager:0};return trendDaily.map(r=>{Object.keys(sums).forEach(k=>sums[k]+=r[k]);return {date:r.date,...sums};});}
+function currentTrendRows(){return trendMode==='daily'?trendDaily:cumulativeRows();}
+function setTrendMode(mode){trendMode=mode;document.getElementById('dailyBtn').classList.toggle('active',mode==='daily');document.getElementById('cumBtn').classList.toggle('active',mode==='cumulative');renderTrend();}
+function setTrendView(view){trendView=view;document.getElementById('chartBtn').classList.toggle('active',view==='chart');document.getElementById('tableBtn').classList.toggle('active',view==='table');document.getElementById('trendChartWrap').classList.toggle('hidden',view!=='chart');document.getElementById('trendTableWrap').classList.toggle('hidden',view!=='table');renderTrend();}
+function renderTrend(){const rows=currentTrendRows();const tbody=document.querySelector('#trendTable tbody');if(tbody)tbody.innerHTML=rows.map(r=>`<tr><td>${r.date}</td><td>${r.start}</td><td>${r.toTeacher}</td><td>${r.foundation}</td><td>${r.reviewer}</td><td>${r.toManager}</td><td>${r.manager}</td></tr>`).join('');const svg=document.getElementById('trendSvg');if(!svg)return;const W=900,H=280,pL=45,pR=15,pT=20,pB=35,keys=['toTeacher','foundation','reviewer','manager'];const max=Math.max(...rows.flatMap(r=>keys.map(k=>r[k])),1);const x=i=>pL+i*(W-pL-pR)/(rows.length-1),y=v=>pT+(H-pT-pB)*(1-v/max);let html='';for(let i=0;i<=4;i++){const val=Math.round(max*i/4),yy=y(val);html+=`<line x1="${pL}" y1="${yy}" x2="${W-pR}" y2="${yy}" stroke="#e7edf3"/><text x="${pL-8}" y="${yy+4}" text-anchor="end" font-size="10" fill="#667085">${val}</text>`;}const series=[['toTeacher','#4f83cc','นักเรียนส่งครู'],['foundation','#7a5af8','มูลนิธิฯ รับ'],['reviewer','#d97706','จนท.ดำเนินการ'],['manager','#16804a','ผจก.ดำเนินการ']];series.forEach(([k,c,l])=>{const pts=rows.map((r,i)=>`${x(i)},${y(r[k])}`).join(' ');html+=`<polyline fill="none" stroke="${c}" stroke-width="2.5" points="${pts}"/>`;});const step=Math.max(1,Math.ceil(rows.length/8));rows.forEach((r,i)=>{if(i%step===0||i===rows.length-1)html+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="9" fill="#667085">${r.date}</text>`;});series.forEach(([k,c,l],idx)=>{const xx=pL+idx*160;html+=`<rect x="${xx}" y="2" width="10" height="3" fill="${c}"/><text x="${xx+15}" y="8" font-size="10" fill="#475467">${l}</text>`;});svg.innerHTML=html;}
+const drillRows=[['TF2570-001284','สมชาย ใจดี','โรงเรียนพิริยาลัยจังหวัดแพร่','จนท. 01','21 ส.ค. 69 09:14','ส่งผู้จัดการ'],['TF2570-001301','สุภาวดี แสงดี','โรงเรียนกาวิละวิทยาลัย','จนท. 02','21 ส.ค. 69 10:22','ไม่เข้าเกณฑ์'],['TF2570-001325','ธนกร สมพงษ์','โรงเรียนพิริยาลัยจังหวัดแพร่','จนท. 01','21 ส.ค. 69 11:46','ส่งผู้จัดการ'],['TF2570-001336','กานต์พิชชา ตัวอย่าง','มหาวิทยาลัยตัวอย่าง','ผู้จัดการ','21 ส.ค. 69 13:05','ผ่าน']];
+function showDrilldown(title,key){document.getElementById('drillTitle').textContent=title;document.getElementById('drillBody').innerHTML=drillRows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('');document.getElementById('drillModal').classList.add('open');}
+function closeDrilldown(){document.getElementById('drillModal').classList.remove('open');}
+renderTrend();
+
+initRegions();
+setRole('reviewer');
+</script>
+</body>
+</html>
