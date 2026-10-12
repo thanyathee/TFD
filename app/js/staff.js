@@ -445,29 +445,53 @@ App.on('transfer-save', function (form) {
 
 /* ---------- สถานศึกษาและบัญชีครู ---------- */
 App.views['staff-schools'] = function (p) {
-  const pv = p.province || '';
+  const rg = p.region || '', pv = p.province || '', ds = p.district || '';
   const q = (p.q || '').toLowerCase();
-  const list = this.db.schools.filter(s => (!pv || s.province === pv) && (!q || (s.name + ((this.teacherOf(s.id) || {}).username || '')).toLowerCase().includes(q)));
-  const provinces = [...new Set(this.db.schools.map(s => s.province))].sort((a, b) => a.localeCompare(b, 'th'));
+  const all = this.db.schools;
+  const th = (a, b) => a.localeCompare(b, 'th');
+  const count = (arr, key) => arr.reduce((m, s) => (m[s[key]] = (m[s[key]] || 0) + 1, m), {});
+  /* ตัวเลือกแสดงเฉพาะพื้นที่ที่มีสถานศึกษา พร้อมจำนวนแห่ง */
+  const rgCount = count(all, 'region');
+  const inRg = all.filter(s => !rg || s.region === rg);
+  const pvCount = count(inRg, 'province');
+  const inPv = inRg.filter(s => !pv || s.province === pv);
+  const dsCount = count(inPv, 'district');
+  const list = inPv.filter(s => (!ds || s.district === ds) && (!q || (s.name + s.id + ((this.teacherOf(s.id) || {}).username || '')).toLowerCase().includes(q)))
+    .sort((a, b) => th(a.province, b.province) || th(a.district, b.district) || th(a.name, b.name));
+  const opts = (cnt, label) => Object.keys(cnt).sort((a, b) => th(label(a), label(b))).map(k => [k, `${label(k)} (${cnt[k]})`]);
+  const area = rg || pv || ds ? [rg && this.regionName(rg), pv && 'จ.' + pv, ds].filter(Boolean).join(' › ') : 'ทั้งประเทศ';
   return {nav: this.staffNav(), html: `${this.roleBar()}
-    <div class="page-head"><div><h1>สถานศึกษาและบัญชีครู</h1><p class="sub">1 โรงเรียน = 1 Username · ${this.db.schools.length} สถานศึกษา</p></div>
+    <div class="page-head"><div><h1>สถานศึกษาและบัญชีครู</h1><p class="sub">1 โรงเรียน = 1 Username · ${all.length} สถานศึกษา</p></div>
       <button class="btn primary" data-go="staff-school" data-id="new">+ เพิ่มสถานศึกษา</button></div>
-    <div class="note info small"><b>Master Data พื้นที่:</b> ภาค → จังหวัด → อำเภอ/เขต → ตำบล/แขวง ใช้ข้อมูลของระบบครบทั้งประเทศ ส่วน “สถานศึกษา” เป็นข้อมูลที่ Admin เพิ่มไว้ในระบบ</div>
-    <div class="grid-2">
-      ${field('s_prov', 'จังหวัด', select('s_prov', provinces, pv, 'ทั้งหมด', 'data-onchange="schools-filter"'))}
-      ${field('s_q', 'ค้นหา', input('s_q', p.q || '', 'placeholder="ชื่อโรงเรียน / Username" data-oninput="schools-search"'))}
+    <div class="filters sch-filters">
+      ${field('s_q', 'ค้นหา', input('s_q', p.q || '', 'placeholder="ชื่อสถานศึกษา / รหัส / Username" data-oninput="schools-search"'))}
+      ${field('s_rg', 'ภาค', select('s_rg', opts(rgCount, k => this.regionName(k)), rg, 'ทุกภาค', 'data-onchange="schools-filter" data-level="rg"'))}
+      ${field('s_prov', 'จังหวัด', select('s_prov', opts(pvCount, k => k), pv, 'ทุกจังหวัด', 'data-onchange="schools-filter" data-level="pv"'))}
+      ${field('s_dist', 'อำเภอ / เขต', select('s_dist', opts(dsCount, k => k), ds, pv ? 'ทุกอำเภอ' : 'เลือกจังหวัดก่อน', `data-onchange="schools-filter" data-level="ds" ${pv ? '' : 'disabled'}`))}
     </div>
-    ${listRows(list.map(s => { const t = this.teacherOf(s.id);
-      return `<button class="li" data-go="staff-school" data-id="${s.id}"><span class="av">${esc(s.name.replace(/^(โรงเรียน|วิทยาลัย|มหาวิทยาลัย)/, '').slice(0, 1))}</span>
-        <span class="main"><span class="t">${esc(s.name)}</span><span class="s">${s.id} · ${esc(this.regionName(s.region))} · ${esc(s.district)} · ${esc(s.province)} · ${(s.levels || []).map(l => GROUP_SHORT[l]).join(', ')}</span>
-          <span class="s">${t ? `${esc(t.username)} · ${esc(t.name)} · ${esc(t.position || '')} / ${esc(t.department || '')}` : 'ยังไม่มีบัญชีครู'}</span></span>
-        <span class="end">${t ? `<span class="badge ${t.active === false ? 't-bad' : 't-ok'}">${t.active === false ? 'ปิดใช้งาน' : 'ใช้งาน'}</span>` : ''}${icon('chev', 'chev')}</span></button>`; }), 'ไม่พบสถานศึกษา')}`,
-    after() { const el = document.getElementById('s_q'); if (p.q != null && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }};
+    <div class="small muted"><b>${esc(area)}</b> · พบ <b>${list.length}</b> แห่ง</div>
+    <div class="tlist sch-list" role="table" aria-label="รายชื่อสถานศึกษา">
+      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>สถานศึกษา</span><span>อำเภอ / จังหวัด</span><span>บัญชีครู</span><span>สถานะ</span></div>
+      ${list.length ? list.map((s, i) => { const t = this.teacherOf(s.id);
+        return `<button class="trow" role="row" data-go="staff-school" data-id="${s.id}">
+          <span class="n">${i + 1}</span>
+          <span class="c-name">${esc(s.name)}<small>${s.id} · ${(s.levels || []).map(l => GROUP_SHORT[l]).join(', ')}</small></span>
+          <span class="c-area">${esc(s.district)}<small>จ.${esc(s.province)} · ${esc(this.regionName(s.region))}</small></span>
+          <span class="c-acc">${t ? `${esc(t.username)}<small>${esc(t.name)}</small>` : '<span class="muted">ยังไม่มีบัญชีครู</span>'}</span>
+          <span class="c-status">${t ? `<span class="badge ${t.active === false ? 't-bad' : 't-ok'}">${t.active === false ? 'ปิดใช้งาน' : 'ใช้งาน'}</span>` : ''}</span></button>`; }).join('')
+        : '<div class="empty">ไม่พบสถานศึกษาตามเงื่อนไขนี้</div>'}
+    </div>`,
+    after() { const el = document.getElementById('s_q'); if (p.q != null && p.focusQ && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }};
 };
-App.on('schools-filter', function (el) { this.go('staff-schools', {province: el.value, q: document.getElementById('s_q').value}); });
+const schoolFilters = level => {
+  const v = id => document.getElementById(id).value;
+  /* เปลี่ยนระดับบน ล้างระดับล่าง */
+  return {region: v('s_rg'), province: level === 'rg' ? '' : v('s_prov'), district: level === 'ds' ? v('s_dist') : '', q: v('s_q')};
+};
+App.on('schools-filter', function (el) { this.go('staff-schools', schoolFilters(el.dataset.level)); });
 App.on('schools-search', function (el) {
   clearTimeout(this._sq);
-  this._sq = setTimeout(() => this.go('staff-schools', {province: document.getElementById('s_prov').value, q: el.value}), 250);
+  this._sq = setTimeout(() => this.go('staff-schools', {...schoolFilters('ds'), focusQ: 1}), 250);
 });
 App.views['staff-school'] = function (p) {
   const isNew = p.id === 'new';

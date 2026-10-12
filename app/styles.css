@@ -393,3 +393,19 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .paper.a4 td:nth-child(4),.paper.a4 th:nth-child(4){width:70px}
 .paper.a4 td:nth-child(2),.paper.a4 th:nth-child(2){width:150px;white-space:nowrap}
 @media print{.a4-sub{break-after:avoid}}
+/* เจ้าหน้าที่: รายชื่อสถานศึกษา */
+.sch-filters{grid-template-columns:2fr 1fr 1fr 1fr}
+.sch-list .tlist-head,.sch-list .trow{grid-template-columns:56px minmax(220px,2fr) minmax(160px,1.2fr) minmax(160px,1.2fr) 100px}
+.sch-list .n{text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
+.sch-list small{display:block;font-size:12.5px;color:var(--muted);font-weight:500}
+.sch-list .c-name{font-weight:600}
+@media (max-width:900px){
+  .sch-filters{grid-template-columns:1fr 1fr}
+  .sch-list .trow{display:grid;grid-template-columns:32px 1fr auto;grid-template-areas:"n name status" "n area area" "n acc acc";row-gap:2px}
+  .sch-list .n{grid-area:n;align-self:start}.sch-list .c-name{grid-area:name}.sch-list .c-area{grid-area:area}.sch-list .c-acc{grid-area:acc}.sch-list .c-status{grid-area:status}
+  .sch-list .c-area,.sch-list .c-acc{font-size:13px}
+}
+@media (max-width:900px){
+  .sch-list .c-area small,.sch-list .c-acc small{display:inline}
+  .sch-list .c-area small::before,.sch-list .c-acc small::before{content:" · "}
+}
