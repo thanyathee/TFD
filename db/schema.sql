@@ -327,6 +327,8 @@ CREATE TABLE application_other_funding (
   application_id uuid NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
   kind           text NOT NULL CHECK (kind IN ('loan','scholarship')),
   provider       text NOT NULL,        -- กยศ. / กรอ. / ชื่อหน่วยงาน
+  borrower_name  text,                 -- กยศ./กรอ.: ชื่อ-สกุลผู้กู้ (1 แถวต่อ 1 คน)
+  borrower       text CHECK (borrower IN ('self','sibling')),  -- ผู้ขอทุน / พี่น้อง
   amount         integer,
   period         text                  -- ต่อภาคเรียน / ต่อปี
 );

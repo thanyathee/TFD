@@ -306,7 +306,7 @@ def main():
             'cont_since_year': rng.choice([2566, 2567, 2568]) if cont else None, 'cont_years': None,
             'daily_allowance': rng.choice([20, 30, 40, 50, 60, 80]),
             'has_student_loan': loan, 'loan_people_count': 1 if loan else None,
-            'loan_people_names': ('ผู้ขอทุน' if res == 'ineligible' else 'พี่สาว') if loan else None,
+            'loan_people_names': (f"{students[-1]['first_name']} {last}" if res == 'ineligible' else f'{rng.choice(GIRL)} {last}') if loan else None,
             'loan_amount': rng.choice([18000, 25000, 30000]) if res == 'ineligible' else None, 'loan_period': 'ต่อปี' if res == 'ineligible' else None,
             'part_time': part, 'part_job': rng.choice(['ช่วยขายของที่ตลาด', 'ล้างจานร้านอาหาร', 'รับจ้างเก็บผลไม้']) if part else None,
             'part_income': rng.choice([100, 150, 200, 300]) if part else None, 'part_income_per': 'day' if part else None,
@@ -328,10 +328,11 @@ def main():
         })
         if cont:
             apps[-1]['cont_years'] = 2570 - apps[-1]['cont_since_year'] - 1 + 1
-        if res == 'ineligible':
-            funding.append({'application_id': aid, 'kind': 'loan', 'provider': 'กยศ.', 'amount': apps[-1]['loan_amount'], 'period': 'ต่อปี'})
+        if loan:
+            funding.append({'application_id': aid, 'kind': 'loan', 'provider': 'กยศ.', 'borrower_name': apps[-1]['loan_people_names'],
+                            'borrower': 'self' if res == 'ineligible' else 'sibling', 'amount': apps[-1]['loan_amount'], 'period': 'ต่อปี'})
         if other_sch:
-            funding.append({'application_id': aid, 'kind': 'scholarship', 'provider': rng.choice(['องค์การบริหารส่วนจังหวัด', 'มูลนิธิตัวอย่าง', 'สถานศึกษา']),
+            funding.append({'application_id': aid, 'kind': 'scholarship', 'borrower_name': None, 'borrower': None, 'provider': rng.choice(['องค์การบริหารส่วนจังหวัด', 'มูลนิธิตัวอย่าง', 'สถานศึกษา']),
                             'amount': rng.choice([2000, 3000, 5000]), 'period': rng.choice(['ต่อเทอม', 'ต่อปี'])})
 
         # ครอบครัว (ข้อ 2–8)
@@ -501,6 +502,8 @@ def main():
             'cont_since': str(a['cont_since_year'] or ''), 'cont_years': str(a['cont_years'] or ''),
             'allowance': str(a['daily_allowance']), 'loan': 'yes' if a['has_student_loan'] else 'no', 'loan_count': str(a['loan_people_count'] or ''),
             'loan_names': a['loan_people_names'] or '', 'loan_amount': str(a['loan_amount'] or ''),
+            'loans': [{'name': x['borrower_name'], 'who': x['borrower'], 'fund': x['provider'], 'amount': str(x['amount'] or '')}
+                      for x in fund_by.get(a['id'], []) if x['kind'] == 'loan'],
             'other': 'yes' if other else 'no', 'other_org': other and other['provider'] or '', 'other_amount': other and str(other['amount']) or '',
             'other_period': other and other['period'] or '', 'part_time': 'yes' if a['part_time'] else 'no', 'part_job': a['part_job'] or '',
             'part_income': str(a['part_income'] or ''), 'part_per': a['part_income_per'] or '', 'round': a['review_round'],

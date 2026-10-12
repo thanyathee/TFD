@@ -132,7 +132,9 @@ function applicantSections(s, o = {}) {
     <section class="card"><h3>${n(4)}ข้อมูลเพิ่มเติม</h3><dl class="kv">
       <div><dt>ได้เงินมาใช้จ่ายวันละ</dt><dd>${baht(s.allowance)}</dd></div>
       <div><dt>ทุนต่อเนื่องอื่น</dt><dd>${s.other === 'yes' ? `${esc(s.other_org || '')} ${s.other_amount ? baht(s.other_amount) + ' ' + esc(s.other_period || '') : ''}` : s.other === 'no' ? 'ไม่ได้รับ' : '-'}</dd></div>
-      <div><dt>กยศ. / กรอ. (ผู้ขอทุนหรือพี่น้อง)</dt><dd>${s.loan === 'yes' ? `<span class="badge t-warn">มี ${esc(s.loan_count || '')} คน</span> ${esc(s.loan_names || '')}${s.loan_amount ? ` · ผู้ขอทุนได้รับ ${baht(s.loan_amount)}/ปี` : ''}` : s.loan === 'no' ? 'ไม่มี' : '-'}</dd></div>
+      <div><dt>กยศ. / กรอ. (ผู้ขอทุนหรือพี่น้อง)</dt><dd>${s.loan === 'yes' ? `<span class="badge t-warn">มี ${esc(s.loan_count || (s.loans || []).length || '')} คน</span>${(s.loans || []).length
+        ? s.loans.map(x => `<div class="small">${esc(x.name || '-')} (${x.who === 'self' ? 'ผู้ขอทุน' : 'พี่น้อง'}) · ${esc(x.fund || 'กยศ.')}${x.amount ? ` · ${baht(x.amount)}/ปี` : ''}</div>`).join('')
+        : ` ${esc(s.loan_names || '')}${s.loan_amount ? ` · ผู้ขอทุนได้รับ ${baht(s.loan_amount)}/ปี` : ''}`}` : s.loan === 'no' ? 'ไม่มี' : '-'}</dd></div>
       <div><dt>หลังเลิกเรียน / วันหยุด</dt><dd>${s.part_time === 'yes' ? `ทำงานพิเศษ: ${esc(s.part_job || '')} ${s.part_income ? baht(s.part_income) + '/' + (s.part_per === 'month' ? 'เดือน' : 'วัน') : ''}` : s.part_time === 'no' ? 'ไม่ได้ทำงานหารายได้พิเศษ' : '-'}</dd></div>
     </dl></section>
     <section class="card"><h3>${n(5)}เขียนเล่าประวัติและสภาพความเป็นอยู่</h3>

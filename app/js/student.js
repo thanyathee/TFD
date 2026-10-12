@@ -65,7 +65,10 @@ App.views['student-form'] = function (p) {
   const s = this.me();
   const step = Number(p.step) || 1;
   const e = p.errors || {};
-  const body = [null, stepStudent, stepFamily, stepMore][step].call(this, s, e);
+  const fns = [null, stepStudent, stepFamily, stepMore];
+  let start = 0;
+  for (let i = 1; i < step; i++) start += numberSections(fns[i].call(this, s, {}), 0).count;
+  const body = numberSections(fns[step].call(this, s, e), start).html;
   return {nav: this.studentNav(), html: `
     <div class="page-head"><div><h1>${STEPS[step - 1]}</h1><p class="sub"><span class="num">${s.code}</span> · แบบฟอร์มการขอรับทุนเพื่อการศึกษา-${TYPE[s.type]} · ขั้นตอน ${step} จาก 3</p></div></div>
     <ol class="stepper" style="--n:4">${STEPS.map((t, i) => `<li class="${i + 1 < step ? 'done' : i + 1 === step ? 'now' : ''}"><span>${i + 1}. ${t}</span></li>`).join('')}</ol>
@@ -80,13 +83,24 @@ App.views['student-form'] = function (p) {
     </form>`, after() { const f = document.querySelector('form'); applyWhen(f); recalcIncome(); focusFirstError(); }};
 };
 
+/* ใส่เลขข้อให้หัวข้อทุกการ์ด ต่อเนื่องกันทุกขั้นตอน (คำถามย่อยใช้ § แทนเลขข้อ เช่น §.1 → 12.1) */
+function numberSections(html, start) {
+  let n = start;
+  const parts = html.split('<section class="card">');
+  const out = parts.map((c, i) => {
+    if (!i || !c.includes('<h3>')) return c;
+    n++;
+    return c.replace('<h3>', `<h3><span class="qno">${n}.</span> `).replace(/§\./g, `${n}.`);
+  });
+  return {html: out.join('<section class="card">'), count: n - start};
+}
 function stepStudent(s, e) {
   const sc = this.schoolById[s.school];
   const area = sc ? {region: sc.region, province: sc.province, district: sc.district, school: sc.id} : {};
   const age = ageAt(s.birth_date);
   const y = this.db.cycle.year;
   return `
-  <section class="card"><h3>1. ข้อมูลผู้ขอทุน</h3>
+  <section class="card"><h3>ข้อมูลผู้ขอทุน</h3>
     <div class="grid-3">
       ${field('title', 'คำนำหน้าชื่อ', select('title', ['เด็กชาย', 'เด็กหญิง', 'นาย', 'นางสาว'], s.title, 'กรุณาเลือก'), {req: 1, err: e.title})}
       ${field('first_name', 'ชื่อ', input('first_name', s.first_name, 'placeholder="กรอกชื่อให้ตรงกับบัตรประจำตัวประชาชน"'), {req: 1, err: e.first_name})}
@@ -465,26 +479,53 @@ document.addEventListener('change', e => {
 });
 
 /* ---------- ข้อมูลเพิ่มเติม + เขียนเล่าประวัติ ---------- */
+const LOAN_WHO = [['self', 'ผู้ขอทุน'], ['sibling', 'พี่น้อง']];
+const LOAN_FUND = ['กยศ.', 'กรอ.'];
+function loanRows(list, e = {}) {
+  return list.map((x, i) => `<div class="subcard" data-loan="${i}">
+    <b>ผู้กู้ยืมคนที่ ${i + 1}</b>
+    <div class="grid-2">
+      ${field(`loan${i}_name`, 'ชื่อ-สกุล', input(`loan${i}_name`, x.name), {req: 1, err: e[`loan${i}_name`]})}
+      ${radioField(`loan${i}_who`, 'เป็น', LOAN_WHO, x.who, {req: 1, err: e[`loan${i}_who`]})}
+      ${radioField(`loan${i}_fund`, 'กองทุน', LOAN_FUND.map(f => [f, f]), x.fund || 'กยศ.')}
+      ${field(`loan${i}_amount`, 'ได้รับ (บาท / ปี)', input(`loan${i}_amount`, x.amount, 'type="number" min="0" inputmode="numeric"'))}
+    </div></div>`).join('');
+}
+function readLoans(form) {
+  const v = formData(form);
+  const out = [];
+  for (let i = 0; i < 10; i++) {
+    if (v[`loan${i}_name`] === undefined) continue;
+    out.push({name: v[`loan${i}_name`] || '', who: v[`loan${i}_who`] || '', fund: v[`loan${i}_fund`] || 'กยศ.', amount: v[`loan${i}_amount`] || ''});
+  }
+  return out;
+}
+App.on('loan-count', function (el) {
+  const n = Math.max(1, Math.min(10, Number(el.value) || 1));
+  const list = readLoans(el.form).slice(0, n);
+  while (list.length < n) list.push({});
+  document.getElementById('loans').innerHTML = loanRows(list);
+  el.value = n;
+});
 function stepMore(s, e) {
   const pd = this.db.pdpa;
   const req = storiesRequired(s);
   return `
   <section class="card"><h3>ข้อมูลเพิ่มเติม</h3>
-    ${field('allowance', '9. นักเรียนได้เงินมาใช้จ่ายวันละ (บาท)', input('allowance', s.allowance, 'type="number" min="0" inputmode="numeric"'), {req: 1, err: e.allowance})}
-    ${radioField('other', '10. ปัจจุบันผู้ขอทุนได้รับทุนต่อเนื่องอื่น ๆ หรือไม่', [['no', 'ไม่ได้รับ'], ['yes', 'ได้รับ']], s.other, {req: 1, err: e.other})}
+    ${field('allowance', '§.1 นักเรียนได้เงินมาใช้จ่ายวันละ (บาท)', input('allowance', s.allowance, 'type="number" min="0" inputmode="numeric"'), {req: 1, err: e.allowance})}
+    ${radioField('other', '§.2 ปัจจุบันผู้ขอทุนได้รับทุนต่อเนื่องอื่น ๆ หรือไม่', [['no', 'ไม่ได้รับ'], ['yes', 'ได้รับ']], s.other, {req: 1, err: e.other})}
     <div class="grid-3" data-when="other=yes">
       ${field('other_org', 'ชื่อทุน', input('other_org', s.other_org), {req: 1, err: e.other_org})}
       ${field('other_amount', 'ทุนละ (บาท)', input('other_amount', s.other_amount, 'type="number" min="0" inputmode="numeric"'))}
       ${field('other_period', 'ต่อ', select('other_period', ['ต่อเทอม', 'ต่อปี'], s.other_period || 'ต่อปี'))}
     </div>
-    ${radioField('loan', '11. ปัจจุบันผู้ขอทุนหรือพี่น้องของผู้ขอทุนที่กำลังศึกษาอยู่ ได้รับทุนกู้ยืม กยศ. หรือ กรอ. บ้างหรือไม่', [['no', 'ไม่มี'], ['yes', 'มี']], s.loan,
+    ${radioField('loan', '§.3 ปัจจุบันผู้ขอทุนหรือพี่น้องของผู้ขอทุนที่กำลังศึกษาอยู่ ได้รับทุนกู้ยืม กยศ. หรือ กรอ. บ้างหรือไม่', [['no', 'ไม่มี'], ['yes', 'มี']], s.loan,
       {req: 1, err: e.loan, hint: 'ต้องระบุตามความเป็นจริง มิฉะนั้นจะไม่ได้รับการพิจารณา — มูลนิธิฯ จะพิจารณาเป็นรายกรณี'})}
-    <div class="grid-3" data-when="loan=yes">
-      ${field('loan_count', 'จำนวน (คน)', input('loan_count', s.loan_count, 'type="number" min="1" inputmode="numeric"'), {req: 1, err: e.loan_count})}
-      ${field('loan_names', 'โปรดระบุชื่อ', input('loan_names', s.loan_names, 'placeholder="ชื่อผู้ที่กู้ยืม"'), {req: 1, err: e.loan_names})}
-      ${field('loan_amount', 'กรณีผู้ขอทุนกู้เอง: ได้รับ (บาท / ปี)', input('loan_amount', s.loan_amount, 'type="number" min="0" inputmode="numeric"'))}
+    <div class="stack" data-when="loan=yes">
+      ${field('loan_count', 'จำนวน (คน)', stepper('loan_count', (s.loans || []).length || 1, 10, 'data-onchange="loan-count"'), {req: 1, err: e.loan_count, hint: 'กด − / + ระบบจะแสดงช่องให้กรอกตามจำนวน'})}
+      <div id="loans" class="stack">${loanRows((s.loans || []).length ? s.loans : [{}], e)}</div>
     </div>
-    ${radioField('part_time', '13. หลังเลิกเรียน / วันหยุด / ปิดเทอม', [['no', 'ไม่ได้ทำงานหารายได้พิเศษ'], ['yes', 'ทำงานพิเศษ']], s.part_time, {req: 1, err: e.part_time})}
+    ${radioField('part_time', '§.4 หลังเลิกเรียน / วันหยุด / ปิดเทอม', [['no', 'ไม่ได้ทำงานหารายได้พิเศษ'], ['yes', 'ทำงานพิเศษ']], s.part_time, {req: 1, err: e.part_time})}
     <div class="grid-3" data-when="part_time=yes">
       ${field('part_job', 'ระบุงานที่ทำ', input('part_job', s.part_job, 'placeholder="เช่น ช่วยขายของ ล้างจาน รับจ้างเก็บผลไม้"'), {req: 1, err: e.part_job})}
       ${field('part_income', 'รายได้ (บาท)', input('part_income', s.part_income, 'type="number" min="0" inputmode="numeric"'))}
@@ -493,11 +534,11 @@ function stepMore(s, e) {
   </section>
   <section class="card"><h3>เขียนเล่าประวัติและสภาพความเป็นอยู่</h3>
     <p class="small muted">${req ? 'กรุณาเล่าเรื่องราวตามจริง ข้อมูลนี้ใช้ประกอบการพิจารณาทุน' : 'ระดับประถมศึกษาปีที่ 5 ไม่บังคับกรอกส่วนนี้'}</p>
-    ${STORY_Q.map(([t, h], i) => field('story_' + i, `${i + 1}. ${t}`,
+    ${STORY_Q.map(([t, h], i) => field('story_' + i, `§.${i + 1} ${t}`,
       textarea('story_' + i, (s.stories || [])[i], `rows="4" data-oninput="count" maxlength="2000" aria-describedby="cnt_${i}"`) +
       `<div class="counter" id="cnt_${i}">${((s.stories || [])[i] || '').length} / 2000</div>`, {req: req && i < 5, hint: h, err: e['story_' + i]})).join('')}
-    ${field('reason', `${STORY_Q.length + 1}. เหตุผลในการขอรับทุน${s.type === 'CONT' ? 'ต่อเนื่อง' : ''}`, textarea('reason', s.reason, 'rows="3"'), {req: req, err: e.reason})}
-    ${needsGoal(s) ? field('goal', `${STORY_Q.length + 2}. เป้าหมายในการขอรับทุนเพื่อการศึกษาต่อในระดับอุดมศึกษา`, textarea('goal', s.goal, 'rows="3"'), {req: 1, err: e.goal, hint: 'สำหรับผู้ขอทุนระดับ ม.6 / ปวช. / ปวส.'}) : ''}
+    ${field('reason', `§.${STORY_Q.length + 1} เหตุผลในการขอรับทุน${s.type === 'CONT' ? 'ต่อเนื่อง' : ''}`, textarea('reason', s.reason, 'rows="3"'), {req: req, err: e.reason})}
+    ${needsGoal(s) ? field('goal', `§.${STORY_Q.length + 2} เป้าหมายในการขอรับทุนเพื่อการศึกษาต่อในระดับอุดมศึกษา`, textarea('goal', s.goal, 'rows="3"'), {req: 1, err: e.goal, hint: 'สำหรับผู้ขอทุนระดับ ม.6 / ปวช. / ปวส.'}) : ''}
   </section>
   <section class="card"><h3>ยืนยันก่อนส่ง</h3>
     <label class="check ${e.confirm ? 'invalid' : ''}"><input type="checkbox" name="confirm" ${s.confirmed ? 'checked' : ''}> <span>ข้าพเจ้าขอรับรองว่าข้อมูลทั้งหมดที่ได้ให้ไว้ในแบบฟอร์มนี้ เป็นความจริงทุกประการ <span class="req">*</span></span></label>
@@ -586,15 +627,20 @@ App.on('student-step', function (form, ev) {
     });
   } else {
     Object.assign(s, {allowance: v.allowance || '', other: v.other, other_org: v.other === 'yes' ? v.other_org || '' : '', other_amount: v.other === 'yes' ? v.other_amount || '' : '',
-      other_period: v.other === 'yes' ? v.other_period : '', loan: v.loan, loan_count: v.loan === 'yes' ? v.loan_count || '' : '', loan_names: v.loan === 'yes' ? v.loan_names || '' : '',
-      loan_amount: v.loan === 'yes' ? v.loan_amount || '' : '', part_time: v.part_time, part_job: v.part_time === 'yes' ? v.part_job || '' : '',
+      other_period: v.other === 'yes' ? v.other_period : '', loan: v.loan, loans: v.loan === 'yes' ? readLoans(form) : [], part_time: v.part_time, part_job: v.part_time === 'yes' ? v.part_job || '' : '',
       part_income: v.part_time === 'yes' ? v.part_income || '' : '', part_per: v.part_time === 'yes' ? v.part_per : '',
       stories: STORY_Q.map((_, i) => v['story_' + i] || ''), reason: v.reason || '', goal: v.goal || '', confirmed: !!v.confirm, pdpa_ack: !!v.pdpa});
     need('allowance');
     need('other', 'กรุณาเลือกคำตอบ');
     if (v.other === 'yes') need('other_org', 'กรุณาระบุชื่อทุน');
     need('loan', 'กรุณาเลือกคำตอบ');
-    if (v.loan === 'yes') { need('loan_count'); need('loan_names'); }
+    s.loan_count = String(s.loans.length || '');
+    s.loan_names = s.loans.map(x => x.name).filter(Boolean).join(', ');
+    s.loan_amount = (s.loans.find(x => x.who === 'self') || {}).amount || '';
+    s.loans.forEach((x, i) => {
+      if (!x.name.trim()) e[`loan${i}_name`] = 'กรุณาระบุชื่อผู้กู้ยืม';
+      if (!x.who) e[`loan${i}_who`] = 'กรุณาเลือกว่าเป็นผู้ขอทุนหรือพี่น้อง';
+    });
     need('part_time', 'กรุณาเลือกคำตอบ');
     if (v.part_time === 'yes') need('part_job', 'กรุณาระบุงานที่ทำ');
     if (storiesRequired(s)) {
