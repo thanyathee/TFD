@@ -16,4 +16,6 @@ python3 app/build_data.py              # สร้าง app/data/ ใหม่ 
 cd app && python3 -m http.server 8000  # แล้วเปิด http://localhost:8000
 ```
 
-บัญชีทดลอง: ครู `t001`–`t100`, เจ้าหน้าที่ `reviewer01` `manager01` `admin01` รหัสผ่าน `Demo@1234`
+บัญชีทดลอง: ครู (1 โรงเรียน = 1 Username) `sch001`–`sch100`, เจ้าหน้าที่ `reviewer01` `manager01` `admin01` รหัสผ่าน `Demo@1234`
+
+เงื่อนไขในแอปยึดตามต้นแบบ `prototypes/` (v28 สำหรับนักเรียนและครู, Admin v14 สำหรับเจ้าหน้าที่)

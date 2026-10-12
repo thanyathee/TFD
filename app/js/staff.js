@@ -1,4 +1,4 @@
-/* บทบาทเจ้าหน้าที่มูลนิธิฯ: ภาพรวม, พิจารณาใบสมัคร, ย้ายสถานศึกษา, สถานศึกษาและครู, รายงาน, ตั้งค่า */
+/* บทบาทเจ้าหน้าที่มูลนิธิฯ (ตาม Admin v14): Dashboard, รอบรับสมัคร, สถานศึกษา/ครู, ใบสมัคร, ย้ายสถานศึกษา, รายงาน/Export, PDPA */
 'use strict';
 
 const STAFF = [
@@ -7,177 +7,371 @@ const STAFF = [
   {username: 'manager01', name: 'ผู้จัดการทุน', role: 'manager'},
   {username: 'admin01', name: 'ผู้ดูแลระบบ', role: 'admin'},
 ];
-const ROLE_NAME = {reviewer: 'เจ้าหน้าที่พิจารณา', manager: 'ผู้จัดการ', admin: 'ผู้ดูแลระบบ'};
+const ROLE = {
+  reviewer: ['จนท.รีวิว', 'ตรวจข้อมูล เขียนคอมเมนต์ แยกไม่เข้าเกณฑ์ แยกรอบ 1/2 และส่งต่อให้ผู้จัดการ'],
+  manager: ['ผจก.อนุมัติทุน', 'เห็นข้อมูลนักเรียนทั้งหมด ความเห็นครู และความเห็นของ จนท.รีวิว ก่อนพิจารณาผลและกำหนดจำนวนเงินทุน'],
+  admin: ['แอดมินระบบ', 'ดูข้อมูลทั้งหมดและสถานะทุกขั้นตอน รวมถึง Audit Trail'],
+};
+const WORK = [['all', 'ทั้งหมด'], ['draft', 'นักเรียนกำลังกรอกข้อมูล'], ['waiting_teacher', 'รอครูดำเนินการ'],
+  ['waiting_reviewer', 'รอเจ้าหน้าที่ดำเนินการ'], ['waiting_manager', 'รอผู้จัดการพิจารณา'], ['manager_done', 'ดำเนินการเรียบร้อย']];
+const WORK_TEST = {
+  all: () => true, draft: s => ['draft', 'returned_to_student'].includes(s.status), waiting_teacher: s => s.status === 'waiting_teacher',
+  waiting_reviewer: s => ['waiting_staff', 'need_more_info'].includes(s.status), waiting_manager: s => s.status === 'waiting_manager',
+  manager_done: s => s.status === 'decided',
+};
 const PIPE = ['draft', 'waiting_teacher', 'returned_to_student', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'];
-const PIPE_COLOR = {idle: 'var(--idle)', warn: 'var(--warn)', bad: 'var(--bad)', info: 'var(--info)', violet: 'var(--violet)', ok: 'var(--ok)'};
+const TONE_COLOR = {idle: 'var(--idle)', warn: 'var(--warn)', bad: 'var(--bad)', info: 'var(--info)', violet: 'var(--violet)', ok: 'var(--ok)'};
+const ACTIVITY = [
+  ['started', 'นักเรียนเริ่มกรอกใบสมัคร', k => k === 'started'],
+  ['submitted', 'นักเรียนส่งข้อมูลให้ครู', k => k === 'submitted'],
+  ['teacher_sent', 'ครูส่งข้อมูลให้มูลนิธิฯ', k => k === 'teacher_sent'],
+  ['reviewer_done', 'เจ้าหน้าที่ดำเนินการเรียบร้อย', k => k === 'reviewer_forward' || k === 'reviewer_ineligible'],
+  ['forward', 'ส่งต่อให้ผู้จัดการพิจารณา', k => k === 'reviewer_forward'],
+  ['manager_done', 'ผู้จัดการดำเนินการเรียบร้อย', k => /^manager_/.test(k)],
+];
+const SCHOOL_TYPES = [['school', 'โรงเรียน'], ['college', 'วิทยาลัย'], ['university', 'มหาวิทยาลัย'], ['other', 'อื่น ๆ']];
 
 App.staffNav = function () {
-  return [['staff-dash', 'ภาพรวม'], ['staff-apps', 'ใบสมัคร'], ['staff-transfer', 'ย้ายสถานศึกษา'], ['staff-schools', 'สถานศึกษาและครู'],
-    ['staff-reports', 'รายงาน'], ['staff-settings', 'ตั้งค่ารอบ']];
+  return [['staff-dash', 'Dashboard'], ['staff-cycle', 'รอบรับสมัคร'], ['staff-schools', 'สถานศึกษา/ครู', ['staff-school']],
+    ['staff-apps', 'ใบสมัคร', ['staff-app']], ['staff-transfer', 'ย้ายสถานศึกษา'], ['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA']];
 };
+/* สลับบทบาทสำหรับทดลอง (เหมือนปุ่มบทบาทใน v14) */
+App.roleBar = function () {
+  const r = this.session.staffRole;
+  return `<div class="row between no-print"><div class="seg" role="group" aria-label="บทบาท">${Object.entries(ROLE).map(([k, [t]]) =>
+    `<button type="button" data-action="staff-role" data-role="${k}" aria-pressed="${k === r}">${t}</button>`).join('')}</div>
+    <span class="small muted">กำลังใช้งาน: ${ROLE[r][0]}</span></div>`;
+};
+App.on('staff-role', function (el) {
+  const u = STAFF.find(s => s.role === el.dataset.role);
+  Object.assign(this.session, {staff: u.username, staffRole: u.role, name: u.name, who: `${u.name} · ${ROLE[u.role][0]}`});
+  this.render();
+});
 
 App.views['staff-entry'] = function (p) {
   this.session = {role: null};
   const v = p.values || {};
   const e = p.errors || {};
   return {html: `
-    <div class="page-head"><div><h1>เข้าสู่ระบบเจ้าหน้าที่มูลนิธิฯ</h1><p class="sub">สิทธิ์การใช้งานขึ้นกับบทบาทของบัญชี</p></div></div>
+    <div class="page-head"><div><h1>office.tiscofoundation.org</h1><p class="sub">ระบบสำนักงานมูลนิธิทิสโก้ เพื่อการกุศล</p></div></div>
     <div class="split">
       <form class="card" data-submit="staff-login" novalidate>
-        ${field('username', 'ชื่อผู้ใช้', input('username', v.username, 'autocomplete="username" autocapitalize="off"'), {req: 1, err: e.username})}
-        ${field('password', 'รหัสผ่าน', input('password', v.password, 'type="password" autocomplete="current-password"'), {req: 1, err: e.password})}
+        ${field('username', 'Username', input('username', v.username, 'autocomplete="username" autocapitalize="off"'), {req: 1, err: e.username})}
+        ${field('password', 'Password', input('password', v.password, 'type="password" autocomplete="current-password"'), {req: 1, err: e.password})}
         <div class="row end"><button class="btn primary" type="submit">เข้าสู่ระบบ</button></div>
       </form>
-      <aside class="card"><h3>บัญชีทดลอง</h3><p class="small muted">รหัสผ่านทุกบัญชี <b>Demo@1234</b></p>
-        ${STAFF.map(s => `<button class="btn" data-action="staff-sample" data-u="${s.username}">${s.username} · ${ROLE_NAME[s.role]}</button>`).join('')}</aside>
-    </div>`};
+      <aside class="card"><h3>บัญชีทดลอง</h3><p class="small muted">Password ทุกบัญชี <b>Demo@1234</b> · สลับบทบาทได้ภายในระบบ</p>
+        ${STAFF.map(s => `<button class="btn" data-action="staff-sample" data-u="${s.username}">${s.username} · ${ROLE[s.role][0]}</button>`).join('')}</aside>
+    </div>`, after: focusFirstError};
 };
 App.on('staff-sample', function (el) { this.go('staff-entry', {values: {username: el.dataset.u, password: 'Demo@1234'}}); });
 App.on('staff-login', function (form) {
   const v = formData(form);
-  const u = STAFF.find(s => s.username === v.username.toLowerCase());
+  const u = STAFF.find(s => s.username === (v.username || '').toLowerCase());
   const e = {};
-  if (!u) e.username = v.username ? 'ไม่พบชื่อผู้ใช้นี้' : 'กรุณากรอกชื่อผู้ใช้';
-  if (v.password !== 'Demo@1234') e.password = v.password ? 'รหัสผ่านไม่ถูกต้อง' : 'กรุณากรอกรหัสผ่าน';
+  if (!u) e.username = v.username ? 'ไม่พบ Username นี้' : 'กรุณากรอก Username';
+  if (v.password !== 'Demo@1234') e.password = v.password ? 'Password ไม่ถูกต้อง' : 'กรุณากรอก Password';
   if (Object.keys(e).length) { this.go('staff-entry', {values: {username: v.username}, errors: e}); return; }
-  this.session = {role: 'staff', staff: u.username, staffRole: u.role, who: `${u.name} · ${ROLE_NAME[u.role]}`, name: u.name};
+  this.session = {role: 'staff', staff: u.username, staffRole: u.role, name: u.name, who: `${u.name} · ${ROLE[u.role][0]}`};
   this.go('staff-dash');
 });
 
-/* ---------- ภาพรวม ---------- */
-App.views['staff-dash'] = function () {
-  const all = this.db.students;
-  const count = st => all.filter(s => s.status === st).length;
-  const approved = all.filter(s => s.decision && s.decision.result === 'approved');
-  const budget = approved.reduce((a, s) => a + (s.decision.approved_amount || 0), 0);
-  const mine = this.session.staffRole === 'manager' ? ['waiting_manager', 'รอคุณพิจารณาอนุมัติ']
-    : this.session.staffRole === 'reviewer' ? ['waiting_staff', 'รอคุณตรวจสอบ'] : null;
-  const regions = this.data.geo.regions.map(r => {
-    const list = all.filter(s => (this.schoolById[s.school] || {}).region === r.code);
-    const ap = list.filter(s => s.decision && s.decision.result === 'approved');
-    return {cells: [esc(r.name), list.length, list.filter(s => SENT.includes(s.status)).length, ap.length,
-      baht(ap.reduce((a, s) => a + s.decision.approved_amount, 0))]};
-  });
-  return {nav: this.staffNav(), html: `
-    <div class="page-head"><div><h1>ภาพรวมทุนการศึกษา ปี ${this.db.cycle.year}</h1><p class="sub">ข้อมูล ณ ขณะนี้</p></div></div>
-    ${mine ? `<div class="note info row between"><span><b>${mine[1]}:</b> ${count(mine[0])} ใบสมัคร</span>
-      <button class="btn primary sm" data-go="staff-apps" data-status="${mine[0]}">เปิดรายการ</button></div>` : ''}
-    <div class="stats">
-      <div class="stat"><span>ผู้สมัครทั้งหมด</span><b>${all.length}</b></div>
-      <div class="stat"><span>ส่งถึงมูลนิธิฯ แล้ว</span><b>${all.filter(s => SENT.includes(s.status)).length}</b></div>
-      <div class="stat"><span>รอผู้จัดการ</span><b>${count('waiting_manager')}</b></div>
-      <div class="stat"><span>อนุมัติทุน</span><b>${approved.length}</b></div>
-      <div class="stat"><span>งบประมาณที่อนุมัติ</span><b class="num">${budget.toLocaleString('th-TH')}</b></div>
-    </div>
-    <section class="card"><h3>สถานะใบสมัคร</h3>
-      <div class="bar" role="img" aria-label="สัดส่วนใบสมัครตามสถานะ">${PIPE.map(st => { const n = count(st);
-        return n ? `<span style="width:${n / all.length * 100}%;background:${PIPE_COLOR[STATUS[st].tone]}" title="${STATUS[st].label} ${n}"></span>` : ''; }).join('')}</div>
-      <div class="legend">${PIPE.map(st => `<button class="btn ghost sm" data-go="staff-apps" data-status="${st}"><i style="background:${PIPE_COLOR[STATUS[st].tone]}"></i>${STATUS[st].label} <b class="num">${count(st)}</b></button>`).join('')}</div>
-    </section>
-    <section class="stack"><h3>แยกตามภาค</h3>
-      ${table([{t: 'ภาค'}, {t: 'ผู้สมัคร', r: 1}, {t: 'ส่งถึงมูลนิธิฯ', r: 1}, {t: 'อนุมัติ', r: 1}, {t: 'งบประมาณ', r: 1}], regions)}</section>`};
+/* ---------- Dashboard ---------- */
+App.allEvents = function (list) {
+  const out = [];
+  list.forEach(s => (s.history || []).forEach(h => { if (h.kind) out.push({...h, code: s.code}); }));
+  return out;
 };
-
-/* ---------- รายการใบสมัคร ---------- */
-App.views['staff-apps'] = function (p) {
-  const f = {status: p.status || '', type: p.type || '', q: p.q || '', region: p.region || '', province: p.province || '', district: p.district || ''};
-  const rows = this.db.students.filter(s => {
+App.views['staff-dash'] = function (p) {
+  const f = {round: p.round || '', region: p.region || '', province: p.province || '', reviewer: p.reviewer || ''};
+  const list = this.db.students.filter(s => {
     const sc = this.schoolById[s.school] || {};
-    return (!f.status || s.status === f.status) && (!f.type || s.type === f.type) && (!f.region || sc.region === f.region)
-      && (!f.province || sc.province === f.province) && (!f.district || sc.district === f.district)
-      && (!f.q || (s.code + fullName(s) + (sc.name || '')).toLowerCase().includes(f.q.toLowerCase()));
+    return (!f.round || String(s.round) === f.round) && (!f.region || sc.region === f.region) && (!f.province || sc.province === f.province)
+      && (!f.reviewer || (s.staff_review && s.staff_review.reviewer === f.reviewer));
   });
+  const events = this.allEvents(list);
+  const ref = events.reduce((m, e) => e.at > m ? e.at : m, this.db.cycle.open);
+  const refDay = ref.slice(0, 10);
+  const period = p.period || 'today';
+  const from = {today: refDay, week: shiftDay(refDay, -6), month: shiftDay(refDay, -29), all: this.db.cycle.open}[period];
+  const inP = events.filter(e => e.at.slice(0, 10) >= from && e.at.slice(0, 10) <= refDay);
+  const cnt = test => inP.filter(e => test(e.kind));
+  const act = ACTIVITY.map(([k, t, test]) => [k, t, cnt(test)]);
+  const dec = r => inP.filter(e => r === 'ineligible' ? e.kind === 'reviewer_ineligible' : e.kind === 'manager_' + r).length;
+  const backlog = [['draft', 'นักเรียนกำลังกรอกข้อมูล'], ['waiting_teacher', 'รอครูดำเนินการ'], ['waiting_reviewer', 'รอเจ้าหน้าที่ดำเนินการ'], ['waiting_manager', 'รอผู้จัดการพิจารณา']];
+  const provs = f.region ? this.provincesOf(f.region) : [];
+  const pl = {today: `วันนี้ ${thDate(refDay)}`, week: '7 วันล่าสุด', month: '30 วันล่าสุด', all: 'ตลอดรอบทุน'}[period];
+  const done = act.find(a => a[0] === 'reviewer_done')[2];
   return {nav: this.staffNav(), html: `
-    <div class="page-head"><div><h1>ใบสมัคร</h1><p class="sub">พบ ${rows.length} รายการ</p></div></div>
-    <form class="card" data-submit="staff-filter" novalidate>
-      <div class="grid-3">
-        ${field('f_q', 'ค้นหา', input('f_q', f.q, 'placeholder="เลขใบสมัคร ชื่อ หรือสถานศึกษา"'))}
-        ${field('f_status', 'สถานะ', select('f_status', PIPE.map(s => [s, STATUS[s].label]), f.status, 'ทุกสถานะ'))}
-        ${field('f_type', 'ประเภททุน', select('f_type', [['NEW', 'ทุนใหม่'], ['CONT', 'ทุนต่อเนื่อง']], f.type, 'ทุกประเภท'))}
-      </div>
-      <div class="grid-3" data-area='{"any":true}'>${this.areaPicker('fa', f, {any: true})}</div>
-      <div class="row end"><button class="btn" type="button" data-go="staff-apps">ล้างตัวกรอง</button><button class="btn primary" type="submit">ค้นหา</button></div>
-    </form>
-    ${table([{t: 'เลขใบสมัคร'}, {t: 'ชื่อ–นามสกุล'}, {t: 'สถานศึกษา'}, {t: 'ชั้น'}, {t: 'ประเภท'}, {t: 'สถานะ'}], rows.map(s => ({
-      attrs: `class="click" data-go="staff-app" data-code="${s.code}"`,
-      cells: [`<span class="num">${s.code}</span>`, esc(fullName(s)), esc(this.schoolName(s.school)), esc(s.next_class || s.class), TYPE[s.type], badge(s.status, s.decision)]})),
-      {empty: 'ไม่พบใบสมัครตามเงื่อนไข'})}`};
+    ${this.roleBar()}
+    <div class="page-head"><div><h1>Dashboard — ภาพรวมทุนการศึกษา ปี ${this.db.cycle.year}</h1>
+      <p class="sub">ติดตามสถานะปัจจุบัน งานที่ดำเนินการในแต่ละวัน ผลการพิจารณา และแนวโน้มตลอดรอบทุน</p></div></div>
+    <form class="card" data-submit="dash-filter" novalidate><div class="grid-4">
+      ${field('d_year', 'ปีทุนการศึกษา', select('d_year', [String(this.db.cycle.year)], String(this.db.cycle.year)))}
+      ${field('d_round', 'รอบพิจารณา', select('d_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], f.round, 'ทั้งหมด', 'data-onchange="dash-filter-auto"'))}
+      ${field('d_region', 'ภาค', select('d_region', this.data.geo.regions.map(r => [r.code, r.name]), f.region, 'ทั่วประเทศ', 'data-onchange="dash-filter-auto"'))}
+      ${field('d_province', 'จังหวัด', select('d_province', provs, f.province, 'ทั้งหมด', `data-onchange="dash-filter-auto" ${f.region ? '' : 'disabled'}`))}
+      ${field('d_reviewer', 'เจ้าหน้าที่', select('d_reviewer', ['จนท. 01', 'จนท. 02'], f.reviewer, 'ทั้งหมด', 'data-onchange="dash-filter-auto"'))}
+    </div></form>
+    <div class="stats">
+      <div class="stat"><span>ผู้สมัครทั้งหมด ปี ${this.db.cycle.year}</span><b>${list.length.toLocaleString('th-TH')}</b>
+        <small>ทุนใหม่ ${list.filter(s => s.type === 'NEW').length} | ทุนต่อเนื่อง ${list.filter(s => s.type === 'CONT').length}</small></div>
+    </div>
+    <section class="stack"><h3>สถานะปัจจุบัน — งานคงค้าง</h3><div class="stats">${backlog.map(([k, t]) =>
+      `<button class="stat" data-go="staff-apps" data-work="${k}"><span>${t}</span><b>${list.filter(WORK_TEST[k]).length}</b><small>กดเพื่อดูรายชื่อ</small></button>`).join('')}</div></section>
+    <div class="grid-2">
+      <section class="card"><div class="card-head"><div><h3>การดำเนินงานในช่วงเวลาที่เลือก</h3><span class="sub">${pl}</span></div></div>
+        <div class="seg">${[['today', 'วันนี้'], ['week', '7 วัน'], ['month', '30 วัน'], ['all', 'ทั้งรอบ']].map(([k, t]) =>
+          `<button type="button" data-action="dash-period" data-period="${k}" aria-pressed="${k === period}">${t}</button>`).join('')}</div>
+        ${tbl([{t: 'ขั้นตอนที่ดำเนินการ'}, {t: 'จำนวน', r: 1}], act.map(([k, t, ev]) => [
+          k === 'reviewer_done' ? `<b>${t}</b><div class="small muted">ส่งต่อผู้จัดการ ${ev.filter(e => e.kind === 'reviewer_forward').length} คน + ไม่เข้าเกณฑ์ ${ev.filter(e => e.kind === 'reviewer_ineligible').length} คน</div>` : k === 'manager_done' ? `<b>${t}</b>` : t,
+          `<button class="link" data-action="dash-drill" data-k="${k}">${ev.length} คน</button>`]))}
+      </section>
+      <section class="card"><h3>ผลการพิจารณาในช่วงเวลาที่เลือก</h3>
+        <div class="grid-2">${[['approved', 'ผ่าน', 'ผู้จัดการอนุมัติ'], ['rejected', 'ไม่ผ่าน', 'ผู้จัดการไม่อนุมัติ'], ['reserve', 'สำรอง', 'ผู้จัดการพิจารณา'], ['ineligible', 'ไม่เข้าเกณฑ์', 'จบที่เจ้าหน้าที่รีวิว']].map(([k, t, sub]) =>
+          `<div class="stat" style="box-shadow:none;background:var(--fill)"><span>${t}</span><b>${dec(k)}</b><small>${sub}</small></div>`).join('')}</div>
+        <p class="small muted">ผู้จัดการดำเนินการแล้ว ${dec('approved') + dec('rejected') + dec('reserve')} คน = ผ่าน ${dec('approved')} + ไม่ผ่าน ${dec('rejected')} + สำรอง ${dec('reserve')} · เจ้าหน้าที่ดำเนินการเรียบร้อย ${done.length} คน</p>
+      </section>
+    </div>
+    ${p.drill ? drillBox.call(this, act.find(a => a[0] === p.drill), pl) : ''}
+    ${trendCard.call(this, events, refDay, p)}`};
 };
-App.on('staff-filter', function (form) {
-  const v = formData(form);
-  const a = this.readArea('fa');
-  this.go('staff-apps', {q: v.f_q, status: v.f_status, type: v.f_type, region: a.region, province: a.province, district: a.district});
+function shiftDay(day, n) { const d = new Date(day + 'T00:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+function drillBox(a, pl) {
+  if (!a) return '';
+  const rows = a[2].map(e => [e, this.studentByCode[e.code]]).filter(x => x[1]);
+  return `<section class="card" id="drill"><div class="card-head"><h3>รายละเอียด: ${a[1]}</h3><span class="sub">${pl} · ${rows.length} คน</span></div>
+    ${listRows(rows.map(([e, s]) => studentRow(s, `data-go="staff-app" data-code="${s.code}"`, `<span class="num">${s.code}</span> · ${esc(this.schoolName(s.school))} · ${thDate(e.at, true)}`)), 'ไม่มีรายการในช่วงเวลานี้')}</section>`;
+}
+function trendCard(events, refDay, p) {
+  const mode = p.tmode || 'cum', view = p.tview || 'chart';
+  const series = [['started', 'เริ่มสมัคร', 'var(--idle)'], ['submitted', 'ส่งให้ครู', 'var(--warn)'], ['teacher_sent', 'มูลนิธิฯ รับ', 'var(--info)'],
+    ['reviewer_done', 'จนท.ดำเนินการ', 'var(--violet)'], ['manager_done', 'ผจก.ดำเนินการ', 'var(--ok)']];
+  const tests = Object.fromEntries(ACTIVITY.map(a => [a[0], a[2]]));
+  const days = [];
+  for (let d = this.db.cycle.open; d <= refDay; d = shiftDay(d, 1)) days.push(d);
+  const byDay = series.map(([k]) => days.map(d => events.filter(e => e.at.slice(0, 10) === d && tests[k](e.kind)).length));
+  const data = mode === 'cum' ? byDay.map(a => a.reduce((acc, x, i) => (acc.push((acc[i - 1] || 0) + x), acc), [])) : byDay;
+  const max = Math.max(1, ...data.flat());
+  const W = 900, H = 260, L = 36, B = 28, T = 10;
+  const x = i => L + (days.length > 1 ? i * (W - L - 10) / (days.length - 1) : 0);
+  const y = v => T + (H - T - B) * (1 - v / max);
+  const ticks = [0, Math.round(max / 2), max];
+  const lab = days.map((d, i) => [d, i]).filter(([, i]) => i % Math.ceil(days.length / 6) === 0);
+  const chart = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="แนวโน้มการดำเนินงาน">
+    ${ticks.map(t => `<line x1="${L}" x2="${W - 10}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${L - 6}" y="${y(t) + 4}" text-anchor="end">${t}</text>`).join('')}
+    ${lab.map(([d, i]) => `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${new Date(d + 'T00:00:00').toLocaleDateString('th-TH', {day: 'numeric', month: 'short'})}</text>`).join('')}
+    ${data.map((a, si) => `<polyline fill="none" stroke="${series[si][2]}" stroke-width="2.2" stroke-linejoin="round" points="${a.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}"/>`).join('')}
+  </svg><div class="legend">${series.map(s => `<span><i style="background:${s[2]}"></i>${s[1]}</span>`).join('')}</div>`;
+  const table = tbl([{t: 'วันที่'}].concat(series.map(s => ({t: s[1], r: 1}))),
+    days.map((d, i) => [thDate(d)].concat(data.map(a => a[i]))).filter(r => r.slice(1).some(Boolean)).reverse());
+  return `<section class="card"><div class="card-head"><div><h3>แนวโน้มการดำเนินงานตลอดรอบทุน</h3>
+      <span class="sub">ตั้งแต่วันเปิดรับสมัคร ${thDate(this.db.cycle.open)} ถึงวันที่ ${thDate(refDay)}</span></div>
+      <div class="row"><div class="seg">${[['daily', 'รายวัน'], ['cum', 'สะสม']].map(([k, t]) => `<button type="button" data-action="dash-trend" data-tmode="${k}" aria-pressed="${k === mode}">${t}</button>`).join('')}</div>
+        <div class="seg">${[['chart', 'กราฟ'], ['table', 'ตาราง']].map(([k, t]) => `<button type="button" data-action="dash-trend" data-tview="${k}" aria-pressed="${k === view}">${t}</button>`).join('')}</div></div></div>
+    ${view === 'chart' ? chart : table}</section>`;
+}
+App.on('dash-filter-auto', function (el) {
+  const v = formData(el.form);
+  if (el.name === 'd_region') v.d_province = '';
+  this.go('staff-dash', {...this.view.params, round: v.d_round, region: v.d_region, province: v.d_province, reviewer: v.d_reviewer, drill: ''});
+});
+App.on('dash-period', function (el) { this.go('staff-dash', {...this.view.params, period: el.dataset.period, drill: ''}); });
+App.on('dash-trend', function (el) {
+  const {tmode, tview} = el.dataset;
+  this.view.params = {...this.view.params, ...(tmode ? {tmode} : {}), ...(tview ? {tview} : {})};
+  this.render();
+});
+App.on('dash-drill', function (el) {
+  this.view.params = {...this.view.params, drill: el.dataset.k};
+  this.render();
+  document.getElementById('drill').scrollIntoView({behavior: 'smooth', block: 'start'});
 });
 
-/* ---------- รายละเอียดใบสมัคร + การพิจารณา ---------- */
+/* ---------- รอบรับสมัคร ---------- */
+App.views['staff-cycle'] = function () {
+  const c = this.db.cycle;
+  return {nav: this.staffNav(), html: `${this.roleBar()}
+    <div class="page-head"><div><h1>ตั้งค่ารอบรับสมัคร</h1></div></div>
+    <form class="stack" data-submit="cycle-save" novalidate>
+      <section class="card"><div class="grid-3">
+        ${field('c_year', 'ปีการศึกษาที่เปิดรับ', input('c_year', c.year, 'type="number" inputmode="numeric"'))}
+        ${field('c_hist', 'ปีที่ใช้ในคำถามประวัติทุน', input('c_hist', c.history_year, 'type="number" inputmode="numeric"'))}
+        ${field('c_status', 'สถานะรอบ', select('c_status', [['open', 'เปิดรับสมัคร'], ['closed', 'ปิดรับสมัคร'], ['preparing', 'เตรียมระบบ']], c.status))}
+      </div><div class="grid-2">
+        ${field('c_open', 'วันเปิดรับสมัคร', input('c_open', c.open, 'type="date"'))}
+        ${field('c_close', 'วันปิดรับสมัคร', input('c_close', c.close, 'type="date"'))}
+      </div></section>
+      <section class="card"><h3>กำหนดการย้ายสถานศึกษา</h3><div class="grid-3">
+        ${field('c_topen', 'วันเปิดรับหลักฐานย้าย', input('c_topen', c.transfer_open, 'type="date"'))}
+        ${field('c_cut', 'วันตัดรอบแรก ป.6 / ม.3', input('c_cut', c.first_cutoff, 'type="date"'))}
+        ${field('c_tclose', 'วันสุดท้ายรับหลักฐาน', input('c_tclose', c.transfer_close, 'type="date"'))}
+      </div></section>
+      <div class="row end"><button class="btn primary" type="submit">บันทึก</button></div>
+    </form>`};
+};
+App.on('cycle-save', function (form) {
+  const v = formData(form);
+  if (v.c_open && v.c_close && v.c_close <= v.c_open) { this.toast('วันปิดรับสมัครต้องอยู่หลังวันเปิดรับสมัคร'); return; }
+  Object.assign(this.db.cycle, {year: Number(v.c_year), history_year: Number(v.c_hist), status: v.c_status, open: v.c_open, close: v.c_close,
+    transfer_open: v.c_topen, first_cutoff: v.c_cut, transfer_close: v.c_tclose});
+  this.save();
+  this.toast('บันทึกการตั้งค่ารอบรับสมัครแล้ว');
+  this.go('staff-cycle');
+});
+
+/* ---------- ใบสมัคร ---------- */
+App.appFilter = function (f) {
+  return this.db.students.filter(s => {
+    const sc = this.schoolById[s.school] || {};
+    return WORK_TEST[f.work || 'all'](s) && (!f.result || (s.decision && s.decision.result === f.result))
+      && (!f.round || String(s.round || '') === f.round) && (!f.loan || s.loan === f.loan) && (!f.type || s.type === f.type)
+      && (!f.region || sc.region === f.region) && (!f.province || sc.province === f.province) && (!f.district || sc.district === f.district)
+      && (!f.school || s.school === f.school) && (!f.levels || !f.levels.length || f.levels.includes(s.group || groupOfClass(s.class)))
+      && (!f.q || (s.code + fullName(s)).toLowerCase().includes(f.q.toLowerCase()));
+  });
+};
+App.views['staff-apps'] = function (p) {
+  const f = p.work || p.reset ? {work: p.work || 'all', levels: []} : (this._appF || {work: 'all', levels: []});
+  this._appF = f;
+  const rows = this.appFilter(f);
+  const role = this.session.staffRole;
+  return {nav: this.staffNav(), html: `${this.roleBar()}
+    <div class="page-head"><div><h1>งานพิจารณาใบสมัคร</h1><p class="sub">${ROLE[role][0]} — ${ROLE[role][1]}</p></div></div>
+    <form class="card no-print" data-submit="apps-filter" novalidate>
+      <div class="grid-3">
+        ${field('f_work', 'สถานะการดำเนินงาน', select('f_work', WORK, f.work || 'all'))}
+        ${field('f_result', 'ผลการพิจารณา', select('f_result', Object.entries(DECISION).map(([k, d]) => [k, d.label === 'อนุมัติทุน' ? 'ผ่าน' : d.label]), f.result, 'ทั้งหมด'))}
+        ${field('f_round', 'รอบพิจารณา', select('f_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], f.round, 'ทั้งหมด'))}
+        ${field('f_loan', 'กยศ./กรอ.', select('f_loan', [['no', 'ไม่กู้'], ['yes', 'กู้ / ไม่เข้าเกณฑ์']], f.loan, 'ทั้งหมด'))}
+        ${field('f_type', 'ประเภททุน', select('f_type', [['NEW', 'ทุนใหม่'], ['CONT', 'ทุนต่อเนื่อง']], f.type, 'ทั้งหมด'))}
+        ${field('f_q', 'ค้นหาเพิ่มเติม', input('f_q', f.q, 'placeholder="รหัสผู้สมัคร / ชื่อ–นามสกุล"'))}
+      </div>
+      <div class="field"><span class="label">เลือกโรงเรียนที่ต้องการรีวิว</span>
+        <div class="grid-4" data-area='{"any":true,"school":true}'>${this.areaPicker('fa', f, {any: true, school: true})}</div>
+        <div class="hint">ช่อง “โรงเรียน” จะแสดงเฉพาะสถานศึกษาที่ถูกเพิ่มไว้ในระบบของมูลนิธิฯ เท่านั้น</div></div>
+      <div class="field"><span class="label">ระดับชั้น (เลือกได้มากกว่า 1 ระดับ)</span>
+        <div class="choices">${EDU_GROUPS.map(([k]) => `<label class="choice"><input type="checkbox" name="f_levels" value="${k}" ${(f.levels || []).includes(k) ? 'checked' : ''}> ${GROUP_SHORT[k]}</label>`).join('')}</div></div>
+      <div class="row between"><button class="btn" type="button" data-action="print">${icon('print')} พิมพ์ผลการค้นหา</button>
+        <div class="row"><button class="btn" type="button" data-go="staff-apps" data-reset="1">ล้างตัวกรอง</button><button class="btn primary" type="submit">ค้นหา / แสดงผล</button></div></div>
+    </form>
+    <p class="small muted">พบ ${rows.length} รายการ — เลือกสถานะการดำเนินงานและผลการพิจารณาแยกกันได้</p>
+    ${listRows(rows.map(s => { const sc = this.schoolById[s.school] || {};
+      return studentRow(s, `data-go="staff-app" data-code="${s.code}"`,
+        `<span class="num">${s.code}</span> · ${esc(this.regionName(sc.region))} / ${esc(sc.province || '')} · ${esc(sc.name || '')} · ${esc(s.class || '-')} · ${TYPE[s.type]}${s.round ? ' · รอบ ' + s.round : ''}${s.loan === 'yes' ? ' · กู้ กยศ.' : ''}`); }),
+      'ไม่พบใบสมัครตามเงื่อนไข')}`};
+};
+App.on('apps-filter', function (form) {
+  const v = formData(form);
+  const a = this.readArea('fa');
+  this._appF = {work: v.f_work, result: v.f_result, round: v.f_round, loan: v.f_loan, type: v.f_type, q: v.f_q,
+    region: a.region, province: a.province, district: a.district, school: a.school, levels: arr(v.f_levels)};
+  this.go('staff-apps');
+});
+
 App.views['staff-app'] = function (p) {
   const s = this.studentByCode[p.code];
+  const role = this.session.staffRole;
   const e = p.errors || {};
   const v = p.values || {};
-  const role = this.session.staffRole;
-  const tr = s.teacher_review;
-  const std = this.rateAmount(s.rate);
-  let action = '<p class="small muted">ใบสมัครนี้ไม่มีงานที่ต้องทำสำหรับบทบาทของคุณในขณะนี้</p>';
-  if (role === 'reviewer' && ['waiting_staff', 'need_more_info'].includes(s.status)) {
-    action = `<form class="stack" data-submit="staff-review" data-code="${s.code}" novalidate>
-      <div class="field"><span class="label">ผลการตรวจสอบ <span class="req">*</span></span>
-        ${radios('result', [['pass', 'ครบถ้วน ส่งผู้จัดการพิจารณา'], ['need_more_info', 'ขอข้อมูลเพิ่มเติม']], v.result)}${e.result ? `<div class="err">${e.result}</div>` : ''}</div>
-      ${field('note', 'หมายเหตุ', textarea('note', v.note, 'rows="3"'), {hint: 'จำเป็นเมื่อขอข้อมูลเพิ่มเติม', err: e.note})}
-      <div class="row end"><button class="btn primary" type="submit">บันทึกผลการตรวจสอบ</button></div></form>`;
-  } else if (role === 'manager' && s.status === 'waiting_manager') {
-    action = `<form class="stack" data-submit="staff-decide" data-code="${s.code}" novalidate>
-      <div class="field"><span class="label">ผลการพิจารณา <span class="req">*</span></span>
-        ${radios('result', Object.entries(DECISION).map(([k, d]) => [k, d.label]), v.result)}${e.result ? `<div class="err">${e.result}</div>` : ''}</div>
-      <div class="field"><span class="label">จำนวนเงินทุน (เมื่ออนุมัติ)</span>
-        ${radios('amount', [['std', `${baht(std)} ตามอัตรามาตรฐาน`], ['special', `${baht(this.rateAmount('SPECIAL'))} อัตราพิเศษ`]], v.amount || 'std')}</div>
-      ${field('reason', 'เหตุผล', textarea('reason', v.reason, 'rows="3"'), {hint: 'จำเป็นเมื่อใช้อัตราพิเศษ หรือไม่อนุมัติ', err: e.reason})}
-      <div class="row end"><button class="btn primary" type="submit">บันทึกผลการพิจารณา</button></div></form>`;
-  } else if (s.decision) {
-    action = `<dl class="kv"><div><dt>ผลการพิจารณา</dt><dd>${badge('decided', s.decision)}</dd></div>
-      <div><dt>จำนวนเงินทุน</dt><dd>${baht(s.decision.approved_amount)}</dd></div>${s.decision.reason ? `<div><dt>เหตุผล</dt><dd>${esc(s.decision.reason)}</dd></div>` : ''}</dl>`;
-  }
-  return {nav: this.staffNav(), html: `
-    <div class="row"><button class="btn ghost sm" data-go="staff-apps">← รายการใบสมัคร</button></div>
-    <div class="page-head"><div><h1>${esc(fullName(s))}</h1><p class="sub"><span class="num">${s.code}</span> · ${esc(s.class)} → ${esc(s.next_class)} · ${TYPE[s.type]}</p></div>${badge(s.status, s.decision)}</div>
-    <div class="split">
-      <div class="stack">${studentSummary.call(this, s)}
-        <section class="card"><h3>ความเห็นครู</h3>${tr ? `<dl class="kv"><div><dt>ผลการเรียน</dt><dd>${tr.grade_type === 'gpa' ? 'เกรดเฉลี่ย ' : 'ร้อยละ '}${tr.grade_value}</dd></div>
-          <div><dt>ส่งเมื่อ</dt><dd>${thDate(tr.sent_at, true)}</dd></div></dl><p>${esc(tr.comment)}</p>` : '<p class="small muted">ครูยังไม่ได้ตรวจ</p>'}</section>
+  const tr = s.teacher_review, sr = s.staff_review;
+  const files = s.docFiles || {};
+  let panel;
+  if (role === 'reviewer') {
+    const can = ['waiting_staff', 'need_more_info'].includes(s.status);
+    panel = can ? `<form class="stack" data-submit="staff-review" data-code="${s.code}" novalidate>
+      ${field('r_comment', 'ความคิดเห็นของเจ้าหน้าที่รีวิว', textarea('r_comment', v.r_comment ?? (sr && sr.comment) ?? '', 'rows="4" placeholder="สรุปข้อเท็จจริง ความจำเป็น ประเด็นสำคัญ หรือเหตุผลที่ไม่เข้าเกณฑ์"'), {err: e.r_comment})}
+      ${field('r_result', 'ผลการรีวิว', select('r_result', [['forward', 'ส่งต่อให้ผู้จัดการพิจารณา'], ['ineligible', 'ไม่เข้าเกณฑ์'], ['need_more_info', 'รอข้อมูลเพิ่มเติม']], v.r_result || 'forward'))}
+      ${field('r_round', 'จัดเข้ารอบ', select('r_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], v.r_round || s.round || (['ป.6', 'ม.3'].includes(s.class) ? '1' : '1')), {hint: `วันตัดรอบแรก ป.6 / ม.3: ${thDate(this.db.cycle.first_cutoff)}`})}
+      <button class="btn primary block" type="submit">บันทึกและส่งต่อผู้จัดการ</button></form>`
+      : `<p class="small muted">ใบสมัครนี้อยู่สถานะ “${STATUS[s.status].label}” — จนท.รีวิวดำเนินการได้เมื่อสถานะเป็น “รอเจ้าหน้าที่ดำเนินการ”</p>${reviewSummary(s)}`;
+  } else if (role === 'manager') {
+    const can = s.status === 'waiting_manager';
+    const std = this.rateAmount(s.rate);
+    const dec = v.m_decision || 'approved';
+    panel = (sr ? `<div class="subcard"><span class="label">ความเห็น จนท.รีวิว (${esc(sr.reviewer)}) · รอบ ${sr.round || s.round || '-'}</span><span class="small">${esc(sr.comment || '—')}</span></div>` : '') + (can ? `
+      <form class="stack" data-submit="staff-decide" data-code="${s.code}" novalidate>
+      ${radioField('m_decision', 'ผลการพิจารณา', [['approved', 'อนุมัติทุน', 'ผ่านการพิจารณาและกำหนดจำนวนเงินทุน'], ['rejected', 'ไม่อนุมัติทุน', 'ไม่ผ่านการพิจารณาทุนในรอบนี้'],
+        ['reserve', 'สำรอง', 'อยู่ในรายชื่อสำรอง ยังไม่รวมวงเงินทุนที่อนุมัติ']], dec, {req: 1, col: 1, attrs: 'data-onchange="manager-ui"'})}
+      <div class="stack" id="amount_box" ${dec === 'approved' ? '' : 'hidden'}>
+        <div class="subcard"><span class="small muted">ระดับชั้นปีการศึกษา ${this.db.cycle.year}</span><b>${esc(this.rateName(s.rate))} (${esc(s.next_class || '-')})</b>
+          <span class="small muted">อัตราทุนมาตรฐาน</span><b>${baht(std)}</b></div>
+        ${radioField('m_amount', 'จำนวนเงินทุนที่อนุมัติ', [['std', baht(std), `ตามอัตรามาตรฐานของระดับชั้นปี ${this.db.cycle.year}`],
+          ['special', baht(this.rateAmount('SPECIAL')), 'อัตราอื่น ๆ / อัตราพิเศษ']], v.m_amount || 'std', {req: 1, col: 1, attrs: 'data-onchange="manager-ui"'})}
+        <div id="special_box" ${v.m_amount === 'special' ? '' : 'hidden'}>
+          ${field('m_reason', `เหตุผลที่ปรับเป็น ${baht(this.rateAmount('SPECIAL'))}`, textarea('m_reason', v.m_reason, 'rows="3" placeholder="ระบุเหตุผลที่ใช้อัตราอื่น ๆ เช่น ลักษณะการดูแลของสถานศึกษา/หอพัก หรือเงื่อนไขพิเศษ"'), {req: 1, err: e.m_reason,
+            hint: 'ระบบจะเก็บยอดมาตรฐาน ยอดที่อนุมัติจริง เหตุผล ผู้แก้ไข และวันเวลาไว้ใน Audit Log'})}</div>
       </div>
-      <aside class="stack">
-        <section class="card"><h3>${ROLE_NAME[role]}</h3>${action}</section>
-        <section class="card"><h3>ประวัติ</h3>${s.history.length ? `<ol class="timeline">${s.history.map(h =>
+      ${field('m_note', 'หมายเหตุผู้จัดการ', textarea('m_note', v.m_note, 'rows="2" placeholder="เหตุผลหรือหมายเหตุเพิ่มเติม"'))}
+      <button class="btn primary block" type="submit">บันทึกผลการพิจารณา</button></form>`
+      : `<p class="small muted">ใบสมัครนี้อยู่สถานะ “${STATUS[s.status].label}” — ผู้จัดการบันทึกผลได้เมื่อสถานะเป็น “รอผู้จัดการพิจารณา”</p>${reviewSummary(s)}`);
+  } else {
+    panel = `<p class="small muted">ดูข้อมูลทั้งหมดและสถานะทุกขั้นตอน รวมถึง Audit Trail</p>${reviewSummary(s)}`;
+  }
+  return {nav: this.staffNav(), html: `${this.roleBar()}
+    <button class="back" data-go="staff-apps">${icon('back')} รายการใบสมัคร</button>
+    <div class="page-head"><div><h1><span class="num">${s.code}</span> — ${esc(fullName(s))}</h1><p class="sub">หน้าพิจารณาแบบเต็ม: ข้อมูลผู้สมัครทุกส่วน + เอกสาร + ความเห็นครู</p></div>${badge(s)}</div>
+    <div class="split">
+      <div class="stack">${applicantSections.call(this, s, {numbered: true})}
+        <section class="card"><h3>5. ความคิดเห็นของครูผู้ดูแลทุน</h3>${tr ? `<p>${esc(tr.comment)}</p><p class="small muted">ส่งเมื่อ ${thDate(tr.sent_at, true)}</p>`
+          : `<p class="small muted">${s.group === 'bachelor' ? 'ระดับปริญญาตรีส่งตรงถึงมูลนิธิฯ ไม่ผ่านครู' : 'ครูยังไม่ได้ดำเนินการ'}</p>`}</section>
+        <section class="card"><h3>6. ประวัติสถานะใบสมัคร</h3>${(s.history || []).length ? `<ol class="timeline">${s.history.map(h =>
           `<li class="done">${esc(h.text)}<small>${thDate(h.at, true)}</small></li>`).join('')}</ol>` : '<p class="small muted">ยังไม่มีประวัติ</p>'}</section>
-      </aside>
-    </div>`};
+        <section class="card"><h3>7. เอกสารแนบ</h3><div>${docsFor(s).map(([code, name]) => { const fl = files[code] || [];
+          return `<div class="doc-row"><div><div>${code} — ${name}</div><div class="code">${fl.length ? esc(fl.length > 1 ? fl.length + ' ไฟล์' : fl[0]) : 'ยังไม่ได้แนบ'}</div></div>
+            ${fl.length ? `<button class="btn sm" type="button" data-action="preview">Preview</button>` : ''}</div>`; }).join('')}</div></section>
+      </div>
+      <aside class="stack"><section class="card"><h3>${ROLE[role][0]}</h3>${panel}</section></aside>
+    </div>`, after: focusFirstError};
 };
+function reviewSummary(s) {
+  const sr = s.staff_review, d = s.decision;
+  return `<dl class="kv">${sr ? `<div><dt>ผลจากเจ้าหน้าที่</dt><dd>${{forward: 'ส่งต่อให้ผู้จัดการพิจารณา', ineligible: 'ไม่เข้าเกณฑ์', need_more_info: 'รอข้อมูลเพิ่มเติม', pass: 'ส่งต่อให้ผู้จัดการพิจารณา'}[sr.result] || sr.result} · ${esc(sr.reviewer)}</dd></div>
+    ${sr.round || s.round ? `<div><dt>รอบ</dt><dd>รอบ ${sr.round || s.round}</dd></div>` : ''}${sr.comment ? `<div><dt>ความคิดเห็น</dt><dd>${esc(sr.comment)}</dd></div>` : ''}` : ''}
+    ${d ? `<div><dt>ผลการพิจารณา</dt><dd>${badge(s)}</dd></div>${d.approved_amount ? `<div><dt>จำนวนเงินทุน</dt><dd>${baht(d.approved_amount)}${d.standard_amount && d.standard_amount !== d.approved_amount ? ` (มาตรฐาน ${baht(d.standard_amount)})` : ''}</dd></div>` : ''}
+    ${d.reason ? `<div><dt>เหตุผล</dt><dd>${esc(d.reason)}</dd></div>` : ''}${d.note ? `<div><dt>หมายเหตุผู้จัดการ</dt><dd>${esc(d.note)}</dd></div>` : ''}` : ''}</dl>`;
+}
+App.on('preview', function () { this.toast('ต้นแบบ: ระบบจริงจะเปิดดูไฟล์เอกสารในหน้าต่างใหม่'); });
+App.on('manager-ui', function () {
+  const dec = (document.querySelector('[name=m_decision]:checked') || {}).value;
+  const amt = (document.querySelector('[name=m_amount]:checked') || {}).value;
+  document.getElementById('amount_box').hidden = dec !== 'approved';
+  document.getElementById('special_box').hidden = amt !== 'special';
+});
 App.on('staff-review', function (form) {
   const s = this.studentByCode[form.dataset.code];
   const v = formData(form);
-  const e = {};
-  if (!v.result) e.result = 'กรุณาเลือกผลการตรวจสอบ';
-  if (v.result === 'need_more_info' && !v.note) e.note = 'กรุณาระบุข้อมูลที่ต้องการเพิ่ม';
-  if (Object.keys(e).length) { this.go('staff-app', {code: s.code, values: v, errors: e}); return; }
-  s.status = v.result === 'pass' ? 'waiting_manager' : 'need_more_info';
-  s.staff_review = {reviewer: this.session.name, result: v.result, note: v.note};
-  s.history.push({at: nowIso(), text: (v.result === 'pass' ? 'เจ้าหน้าที่ตรวจแล้ว ส่งผู้จัดการ' : 'เจ้าหน้าที่ขอข้อมูลเพิ่มเติม') + (v.note ? ': ' + v.note : '') + ' — ' + this.session.name});
+  if (v.r_result !== 'forward' && !v.r_comment) { this.go('staff-app', {code: s.code, values: v, errors: {r_comment: 'กรุณาระบุเหตุผล / ข้อมูลที่ต้องการเพิ่มเติม'}}); return; }
+  s.staff_review = {reviewer: this.session.name, result: v.r_result, round: Number(v.r_round), comment: v.r_comment};
+  s.round = Number(v.r_round);
+  if (v.r_result === 'forward') {
+    s.status = 'waiting_manager';
+    addHistory(s, 'เจ้าหน้าที่รีวิวเรียบร้อย ส่งให้ผู้จัดการพิจารณา — ' + this.session.name, 'reviewer_forward');
+  } else if (v.r_result === 'ineligible') {
+    s.status = 'decided';
+    s.decision = {result: 'ineligible', standard_amount: null, approved_amount: null, reason: v.r_comment, by: this.session.name};
+    addHistory(s, 'เจ้าหน้าที่รีวิว: ไม่เข้าเกณฑ์ — ' + this.session.name, 'reviewer_ineligible');
+  } else {
+    s.status = 'need_more_info';
+    addHistory(s, 'เจ้าหน้าที่ขอข้อมูลเพิ่มเติม — ' + this.session.name, 'reviewer_need_more_info');
+  }
   this.save();
-  this.toast('บันทึกผลการตรวจสอบแล้ว');
+  this.toast('บันทึกผลการรีวิวแล้ว');
   this.go('staff-app', {code: s.code});
 });
 App.on('staff-decide', function (form) {
   const s = this.studentByCode[form.dataset.code];
   const v = formData(form);
-  const e = {};
-  if (!v.result) e.result = 'กรุณาเลือกผลการพิจารณา';
-  if (v.result === 'approved' && v.amount === 'special' && !v.reason) e.reason = 'กรุณาระบุเหตุผลที่ใช้อัตราพิเศษ';
-  if (v.result && v.result !== 'approved' && !v.reason) e.reason = 'กรุณาระบุเหตุผล';
-  if (Object.keys(e).length) { this.go('staff-app', {code: s.code, values: v, errors: e}); return; }
+  if (v.m_decision === 'approved' && v.m_amount === 'special' && !v.m_reason) {
+    this.go('staff-app', {code: s.code, values: v, errors: {m_reason: `กรุณาระบุเหตุผลที่ปรับจำนวนเงินทุนเป็น ${baht(this.rateAmount('SPECIAL'))}`}});
+    return;
+  }
   const std = this.rateAmount(s.rate);
-  s.decision = {result: v.result, standard_amount: v.result === 'approved' ? std : null,
-    approved_amount: v.result === 'approved' ? (v.amount === 'special' ? this.rateAmount('SPECIAL') : std) : null, reason: v.reason};
+  const ok = v.m_decision === 'approved';
+  s.decision = {result: v.m_decision, standard_amount: ok ? std : null, approved_amount: ok ? (v.m_amount === 'special' ? this.rateAmount('SPECIAL') : std) : null,
+    reason: ok && v.m_amount === 'special' ? v.m_reason : '', note: v.m_note, by: this.session.name};
   s.status = 'decided';
-  s.history.push({at: nowIso(), text: 'ผู้จัดการบันทึกผล: ' + DECISION[v.result].label + (s.decision.approved_amount ? ' ' + baht(s.decision.approved_amount) : '')});
+  addHistory(s, `ผู้จัดการพิจารณาเรียบร้อย — ผลการพิจารณา: ${{approved: 'อนุมัติทุน', rejected: 'ไม่อนุมัติทุน', reserve: 'สำรอง'}[v.m_decision]}${ok ? ' ' + baht(s.decision.approved_amount) : ''}`, 'manager_' + v.m_decision);
   this.save();
   this.toast('บันทึกผลการพิจารณาแล้ว');
   this.go('staff-app', {code: s.code});
@@ -190,37 +384,35 @@ App.views['staff-transfer'] = function (p) {
   const v = p.values || {};
   const q = (p.q || '').toLowerCase();
   const found = q ? this.db.students.filter(x => (x.code + fullName(x) + this.schoolName(x.school)).toLowerCase().includes(q)).slice(0, 30) : [];
-  const list = this.db.transfers.slice().reverse();
+  const recent = this.db.transfers.slice().reverse();
   const mine = s ? this.db.transfers.filter(t => t.code === s.code) : [];
-  return {nav: this.staffNav(), html: `
-    <div class="page-head"><div><h1>ย้ายสถานศึกษา</h1><p class="sub">บันทึกว่านักเรียนย้ายไปเรียนที่ใด (ตรวจสอบหลักฐานภายนอกแล้ว)</p></div></div>
+  return {nav: this.staffNav(), html: `${this.roleBar()}
+    <div class="page-head"><div><h1>ย้ายสถานศึกษา</h1><p class="sub">เจ้าหน้าที่มูลนิธิฯ บันทึกว่านักเรียนย้ายไปเรียนที่สถานศึกษาใด (ตรวจสอบข้อมูลภายนอกเรียบร้อยแล้วก่อนบันทึก)</p></div></div>
     <div class="split">
       <div class="stack">
         <section class="card"><h3>1. ค้นหานักเรียน</h3>
-          ${field('tq', 'เลขใบสมัคร ชื่อ–นามสกุล หรือชื่อสถานศึกษา', input('tq', p.q || '', 'autocomplete="off" data-oninput="transfer-search" placeholder="พิมพ์อย่างน้อย 2 ตัวอักษร"'))}
+          ${field('tq', 'เลขใบสมัคร / ชื่อ–นามสกุล / ชื่อสถานศึกษา', input('tq', p.q || '', 'autocomplete="off" data-oninput="transfer-search" placeholder="พิมพ์อย่างน้อย 2 ตัวอักษร"'))}
           ${q && !s ? (found.length ? `<div class="results">${found.map(x => `<button type="button" data-go="staff-transfer" data-code="${x.code}">
-            <span class="num">${x.code}</span> — ${esc(fullName(x))}<small>${esc(this.schoolName(x.school))}</small></button>`).join('')}</div>`
-            : '<p class="small muted">ไม่พบนักเรียน</p>') : ''}
-          ${s ? `<div class="note info row between"><span><b>${esc(fullName(s))}</b> · <span class="num">${s.code}</span><br>
-            <span class="small">สถานศึกษาปัจจุบัน: ${esc(this.schoolName(s.school))}</span></span>
-            <button class="btn sm" data-go="staff-transfer">เปลี่ยนนักเรียน</button></div>` : ''}
+            <span class="num">${x.code}</span> — ${esc(fullName(x))}<small>${esc(this.schoolName(x.school))}</small></button>`).join('')}</div>` : '<p class="small muted">ไม่พบนักเรียน</p>') : ''}
+          ${s ? `<div class="subcard"><div class="row between"><div><b>${esc(fullName(s))}</b> · <span class="num">${s.code}</span>
+            <div class="small">สถานศึกษาปัจจุบัน (ก่อนย้าย): ${esc(this.schoolName(s.school))}</div></div><button class="btn sm" data-go="staff-transfer">เปลี่ยนนักเรียน</button></div></div>` : ''}
         </section>
-        <form class="card" data-submit="transfer-save" data-code="${s ? s.code : ''}" novalidate ${s ? '' : 'hidden'}>
-          <h3>2. สถานศึกษาใหม่</h3>
-          <div class="grid-2" data-area='{"school":true,"required":true}'>${this.areaPicker('tr', v, {school: true, required: true})}</div>
+        ${s ? `<form class="card" data-submit="transfer-save" data-code="${s.code}" novalidate>
+          <h3>2. ข้อมูลสถานศึกษาใหม่</h3>
+          <div class="grid-2" data-area='{"school":true,"required":true,"schoolLabel":"สถานศึกษาใหม่"}'>${this.areaPicker('tr', v, {school: true, required: true, schoolLabel: 'สถานศึกษาใหม่'})}</div>
           ${e.school ? `<div class="err">${e.school}</div>` : ''}
           <p class="small muted">ไม่พบสถานศึกษา? <button class="btn ghost sm" type="button" data-action="transfer-addschool">+ เพิ่มสถานศึกษาใหม่</button></p>
+          <h3>3. รายละเอียดการย้าย</h3>
           <div class="grid-2">${field('notified', 'วันที่แจ้งย้ายสถานศึกษา', input('notified', v.notified, 'type="date"'), {req: 1, err: e.notified})}</div>
-          ${field('note', 'หมายเหตุ', textarea('note', v.note, 'rows="2"'))}
-          <div class="row end"><button class="btn primary" type="submit">บันทึกการย้ายสถานศึกษา</button></div>
-          ${mine.length ? `<details class="more"><summary>ประวัติการย้ายของนักเรียนรายนี้ (${mine.length})</summary><div><ol class="timeline">${mine.map(t =>
-            `<li class="done">${esc(this.schoolName(t.from))} → ${esc(this.schoolName(t.to))}<small>แจ้งย้าย ${thDate(t.date)} · ${esc(t.by)}</small></li>`).join('')}</ol></div></details>` : ''}
-        </form>
+          ${field('note', 'หมายเหตุของเจ้าหน้าที่', textarea('note', v.note, 'rows="2" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"'))}
+          <button class="btn primary block" type="submit">บันทึกการย้ายสถานศึกษา</button>
+          ${mine.length ? `<details class="more"><summary>ประวัติการย้ายของนักเรียนรายนี้ (${mine.length})</summary><div><ol class="timeline">${mine.map((t, i) =>
+            `<li class="done">ครั้งที่ ${i + 1}: ${esc(this.schoolName(t.from))} → ${esc(this.schoolName(t.to))}<small>แจ้งย้าย ${thDate(t.date)} · บันทึกโดย ${esc(t.by)}${t.note ? ' · ' + esc(t.note) : ''}</small></li>`).join('')}</ol></div></details>` : ''}
+        </form>` : ''}
       </div>
-      <aside class="stack"><h3>บันทึกล่าสุด (${list.length})</h3>
-        ${table([{t: 'นักเรียน'}, {t: 'ย้ายไป'}, {t: 'วันที่แจ้ง'}], list.slice(0, 20).map(t => ({
-          attrs: `class="click" data-go="staff-transfer" data-code="${t.code}"`,
-          cells: [esc(fullName(this.studentByCode[t.code])), esc(this.schoolName(t.to)), thDate(t.date)]})), {empty: 'ยังไม่มีการบันทึก'})}</aside>
+      <aside class="stack"><h3>บันทึกล่าสุด (${recent.length})</h3>
+        ${listRows(recent.slice(0, 20).map(t => { const x = this.studentByCode[t.code];
+          return studentRow(x, `data-go="staff-transfer" data-code="${t.code}"`, `→ ${esc(this.schoolName(t.to))} · ${thDate(t.date)}`, ''); }), 'ยังไม่มีการบันทึก')}</aside>
     </div>`, after() { const el = document.getElementById('tq'); if (p.q != null && !s && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }};
 };
 App.on('transfer-search', function (el) {
@@ -229,7 +421,7 @@ App.on('transfer-search', function (el) {
 });
 App.on('transfer-addschool', function () {
   const a = this.readArea('tr');
-  this.go('staff-schools', {add: '1', region: a.region, province: a.province, district: a.district, back: this.view.params.code});
+  this.go('staff-school', {id: 'new', back: this.view.params.code, region: a.region, province: a.province, district: a.district});
 });
 App.on('transfer-save', function (form) {
   const s = this.studentByCode[form.dataset.code];
@@ -237,111 +429,241 @@ App.on('transfer-save', function (form) {
   const a = this.readArea('tr');
   const e = {};
   if (!a.school) e.school = 'กรุณาเลือกสถานศึกษาใหม่';
-  else if (a.school === s.school) e.school = 'สถานศึกษาใหม่ต้องไม่ใช่สถานศึกษาปัจจุบัน';
-  if (!v.notified) e.notified = 'กรุณาระบุวันที่แจ้งย้าย';
+  else if (a.school === s.school) e.school = 'สถานศึกษาใหม่ต้องไม่ใช่สถานศึกษาเดิม';
+  if (!v.notified) e.notified = 'กรุณาระบุวันที่แจ้งย้ายสถานศึกษา';
   if (Object.keys(e).length) { this.go('staff-transfer', {code: s.code, values: {...a, ...v}, errors: e}); return; }
   this.db.transfers.push({code: s.code, from: s.school, to: a.school, date: v.notified, note: v.note, by: this.session.name, at: nowIso()});
-  s.history.push({at: nowIso(), text: `ย้ายสถานศึกษา: ${this.schoolName(s.school)} → ${this.schoolName(a.school)} — ${this.session.name}`});
+  addHistory(s, `ย้ายสถานศึกษา: ${this.schoolName(s.school)} → ${this.schoolName(a.school)} — ${this.session.name}`, 'transfer');
   s.school = a.school;
   this.save();
-  this.toast(`บันทึกการย้ายของ ${fullName(s)} แล้ว`);
+  this.toast(`บันทึกการย้ายสถานศึกษาของ ${fullName(s)} แล้ว`);
   this.go('staff-transfer', {code: s.code});
 });
 
-/* ---------- สถานศึกษาและครู ---------- */
+/* ---------- สถานศึกษาและบัญชีครู ---------- */
 App.views['staff-schools'] = function (p) {
+  const pv = p.province || '';
   const q = (p.q || '').toLowerCase();
-  const list = this.db.schools.filter(s => !q || (s.name + s.province + s.district).toLowerCase().includes(q));
-  const open = p.id ? this.schoolById[p.id] : null;
-  const e = p.errors || {};
-  const v = p.values || {region: p.region, province: p.province, district: p.district};
-  return {nav: this.staffNav(), html: `
-    <div class="page-head"><div><h1>สถานศึกษาและครู</h1><p class="sub">${this.db.schools.length} สถานศึกษา · ${this.data.teachers.length} บัญชีครู</p></div>
-      <button class="btn primary" data-go="staff-schools" data-add="1">+ เพิ่มสถานศึกษา</button></div>
-    ${p.add ? `<form class="card" data-submit="school-save" data-back="${esc(p.back || '')}" novalidate><h3>เพิ่มสถานศึกษาใหม่</h3>
-      <div class="grid-2">${field('sname', 'ชื่อสถานศึกษา', input('sname', v.sname, 'placeholder="เช่น โรงเรียนบ้านหนองบัว"'), {req: 1, err: e.sname})}
-        ${field('stype', 'ประเภท', select('stype', [['school', 'โรงเรียน'], ['college', 'วิทยาลัย'], ['university', 'มหาวิทยาลัย']], v.stype || 'school'), {req: 1})}</div>
-      <div class="grid-3" data-area="{}">${this.areaPicker('ns', v)}</div>${e.area ? `<div class="err">${e.area}</div>` : ''}
-      <div class="row end"><button class="btn" type="button" data-go="${p.back ? 'staff-transfer' : 'staff-schools'}" data-code="${esc(p.back || '')}">ยกเลิก</button>
-        <button class="btn primary" type="submit">บันทึกสถานศึกษา</button></div></form>` : ''}
-    ${open ? `<section class="card"><div class="card-head"><h3>${esc(open.name)}</h3><button class="btn ghost sm" data-go="staff-schools">ปิด</button></div>
-      <p class="small muted">${esc(open.district)} จังหวัด${esc(open.province)} · ${esc(this.regionName(open.region))}</p>
-      ${table([{t: 'ชื่อผู้ใช้'}, {t: 'ชื่อครู'}, {t: 'ตำแหน่ง'}, {t: 'ติดต่อ'}], this.teachersOf(open.id).map(t => ({
-        cells: [esc(t.username), esc(t.name), esc(t.position), `<span class="num">${esc(t.phone)}</span><br><span class="small muted">${esc(t.email)}</span>`]})),
-        {empty: 'ยังไม่มีบัญชีครู'})}</section>` : ''}
-    ${field('sq', 'ค้นหาสถานศึกษา', input('sq', p.q || '', 'placeholder="ชื่อ จังหวัด หรืออำเภอ" data-oninput="school-search"'))}
-    ${table([{t: 'สถานศึกษา'}, {t: 'จังหวัด'}, {t: 'ครู', r: 1}, {t: 'นักเรียน', r: 1}], list.map(s => ({
-      attrs: `class="click" data-go="staff-schools" data-id="${s.id}"`,
-      cells: [esc(s.name), esc(s.province), this.teachersOf(s.id).length, this.db.students.filter(x => x.school === s.id).length]})),
-      {empty: 'ไม่พบสถานศึกษา'})}`,
-  after() { const el = document.getElementById('sq'); if (p.q != null && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }};
+  const list = this.db.schools.filter(s => (!pv || s.province === pv) && (!q || (s.name + ((this.teacherOf(s.id) || {}).username || '')).toLowerCase().includes(q)));
+  const provinces = [...new Set(this.db.schools.map(s => s.province))].sort((a, b) => a.localeCompare(b, 'th'));
+  return {nav: this.staffNav(), html: `${this.roleBar()}
+    <div class="page-head"><div><h1>สถานศึกษาและบัญชีครู</h1><p class="sub">1 โรงเรียน = 1 Username · ${this.db.schools.length} สถานศึกษา</p></div>
+      <button class="btn primary" data-go="staff-school" data-id="new">+ เพิ่มสถานศึกษา</button></div>
+    <div class="note info small"><b>Master Data พื้นที่:</b> ภาค → จังหวัด → อำเภอ/เขต → ตำบล/แขวง ใช้ข้อมูลของระบบครบทั้งประเทศ ส่วน “สถานศึกษา” เป็นข้อมูลที่ Admin เพิ่มไว้ในระบบ</div>
+    <div class="grid-2">
+      ${field('s_prov', 'จังหวัด', select('s_prov', provinces, pv, 'ทั้งหมด', 'data-onchange="schools-filter"'))}
+      ${field('s_q', 'ค้นหา', input('s_q', p.q || '', 'placeholder="ชื่อโรงเรียน / Username" data-oninput="schools-search"'))}
+    </div>
+    ${listRows(list.map(s => { const t = this.teacherOf(s.id);
+      return `<button class="li" data-go="staff-school" data-id="${s.id}"><span class="av">${esc(s.name.replace(/^(โรงเรียน|วิทยาลัย|มหาวิทยาลัย)/, '').slice(0, 1))}</span>
+        <span class="main"><span class="t">${esc(s.name)}</span><span class="s">${s.id} · ${esc(this.regionName(s.region))} · ${esc(s.district)} · ${esc(s.province)} · ${(s.levels || []).map(l => GROUP_SHORT[l]).join(', ')}</span>
+          <span class="s">${t ? `${esc(t.username)} · ${esc(t.name)} · ${esc(t.position || '')} / ${esc(t.department || '')}` : 'ยังไม่มีบัญชีครู'}</span></span>
+        <span class="end">${t ? `<span class="badge ${t.active === false ? 't-bad' : 't-ok'}">${t.active === false ? 'ปิดใช้งาน' : 'ใช้งาน'}</span>` : ''}${icon('chev', 'chev')}</span></button>`; }), 'ไม่พบสถานศึกษา')}`,
+    after() { const el = document.getElementById('s_q'); if (p.q != null && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }};
 };
-App.on('school-search', function (el) {
+App.on('schools-filter', function (el) { this.go('staff-schools', {province: el.value, q: document.getElementById('s_q').value}); });
+App.on('schools-search', function (el) {
   clearTimeout(this._sq);
-  this._sq = setTimeout(() => this.go('staff-schools', {q: el.value}), 250);
+  this._sq = setTimeout(() => this.go('staff-schools', {province: document.getElementById('s_prov').value, q: el.value}), 250);
 });
+App.views['staff-school'] = function (p) {
+  const isNew = p.id === 'new';
+  const sc = isNew ? {id: 'SCH-' + String(this.db.schools.length + 1).padStart(3, '0'), type: 'school', levels: [],
+    region: p.region || '', province: p.province || '', district: p.district || ''} : this.schoolById[p.id];
+  const t = (isNew ? null : this.teacherOf(sc.id)) || {};
+  const v = p.values || {name: sc.name, type: sc.type, address: sc.address, postcode: sc.postcode, levels: sc.levels, username: t.username || '',
+    active: t.active === false ? 'no' : 'yes', t_name: t.name, t_position: t.position, t_dept: t.department, t_phone: t.phone, t_email: t.email,
+    region: sc.region, province: sc.province, district: sc.district, sub: sc.subdistrict};
+  const e = p.errors || {};
+  return {nav: this.staffNav(), html: `${this.roleBar()}
+    <button class="back" data-go="${p.back ? 'staff-transfer' : 'staff-schools'}" data-code="${esc(p.back || '')}">${icon('back')} ${p.back ? 'กลับไปบันทึกการย้าย' : 'สถานศึกษาทั้งหมด'}</button>
+    <div class="page-head"><div><h1>${isNew ? 'เพิ่ม' : 'แก้ไข'}ข้อมูลสถานศึกษา</h1><p class="sub">${esc(isNew ? '' : sc.name)}</p></div></div>
+    ${errNote(e)}
+    <form class="stack" data-submit="school-save" data-id="${esc(p.id)}" data-back="${esc(p.back || '')}" novalidate>
+      <section class="card"><div class="grid-2">
+        ${field('sid', 'InstitutionID', input('sid', sc.id, 'readonly'), {hint: 'ใช้รหัสเดียวกันสำหรับโรงเรียน วิทยาลัย และมหาวิทยาลัย'})}
+        ${field('stype', 'ประเภทสถานศึกษา', select('stype', SCHOOL_TYPES, v.type))}
+      </div>${field('sname', 'ชื่อสถานศึกษา', input('sname', v.name), {req: 1, err: e.sname})}</section>
+      <section class="card"><h3>พื้นที่และที่อยู่สถานศึกษา</h3>
+        <div class="subcard">${field('raw', 'วางที่อยู่แบบยาวเพื่อให้ระบบช่วยแยก (ไม่บังคับ)', textarea('raw', '', 'rows="2" placeholder="เช่น 151 ถนน... ตำบลในเวียง อำเภอเมืองแพร่ จังหวัดแพร่ 54000"'))}
+          <div class="row between"><span class="hint">ระบบช่วยกรอกให้เบื้องต้นเท่านั้น Admin ต้องตรวจสอบก่อนบันทึก</span><button class="btn sm" type="button" data-action="school-parse">ช่วยแยกที่อยู่</button></div></div>
+        <div class="grid-2" data-area='{"sub":true,"required":true}' data-after="school-zip">${this.areaPicker('sa', v, {sub: true, required: true, err: {district: e.area}})}</div>
+        <div class="grid-2">${field('saddr', 'ที่อยู่', input('saddr', v.address, 'placeholder="บ้านเลขที่ หมู่ ถนน อาคาร ฯลฯ"'))}
+          ${field('szip', 'รหัสไปรษณีย์', input('szip', v.postcode, 'maxlength="5" inputmode="numeric" placeholder="เช่น 54000"'))}</div></section>
+      <section class="card"><h3>ช่วงชั้นที่เปิดสอน</h3>
+        <div class="choices">${EDU_GROUPS.map(([k, t]) => `<label class="choice"><input type="checkbox" name="levels" value="${k}" ${(v.levels || []).includes(k) ? 'checked' : ''}> ${t}</label>`).join('')}</div>
+        <div class="hint">เลือกได้มากกว่า 1 ช่วงชั้น ใช้เป็นตัวช่วยกรองสถานศึกษาในหน้าสมัครของนักเรียนและหน้ารีวิวของเจ้าหน้าที่</div></section>
+      <section class="card"><h3>บัญชีครู / ผู้ประสานงานทุน</h3>
+        <div class="grid-3">
+          ${field('username', 'Username', input('username', v.username, 'autocapitalize="off"'), {req: 1, err: e.username})}
+          ${field('active', 'สถานะบัญชี', select('active', [['yes', 'ใช้งาน'], ['no', 'ปิดใช้งาน']], v.active))}
+          <div class="field"><span class="label">Password</span><button class="btn" type="button" data-action="school-pw">ตั้ง / รีเซ็ตรหัสผ่าน</button></div>
+        </div>
+        <div class="grid-2">
+          ${field('t_name', 'ชื่อครูผู้ดูแลทุน', input('t_name', v.t_name))}
+          ${field('t_position', 'ตำแหน่งครู', input('t_position', v.t_position, 'placeholder="เช่น ครู / อาจารย์ / เจ้าหน้าที่"'))}
+          ${field('t_dept', 'งาน / ฝ่ายที่รับผิดชอบ', input('t_dept', v.t_dept, 'placeholder="เช่น งานแนะแนว / งานทุนการศึกษา / กองพัฒนานักศึกษา"'))}
+          ${field('t_phone', 'หมายเลขโทรศัพท์', input('t_phone', v.t_phone, 'inputmode="tel"'))}
+          ${field('t_email', 'อีเมล', input('t_email', v.t_email, 'type="email"'))}
+        </div></section>
+      <div class="row end"><button class="btn" type="button" data-go="${p.back ? 'staff-transfer' : 'staff-schools'}" data-code="${esc(p.back || '')}">ปิด</button>
+        <button class="btn primary" type="submit">บันทึกสถานศึกษา</button></div>
+    </form>`, after: focusFirstError};
+};
+App.on('school-zip', function () {
+  const a = this.readArea('sa');
+  const sub = this.subdistrictsOf(a.province, a.district).find(x => x.th === a.sub);
+  if (sub) document.getElementById('szip').value = sub.zip;
+});
+App.on('school-parse', function () {
+  const raw = document.getElementById('raw').value.replace(/\s+/g, ' ').trim();
+  if (!raw) { this.toast('กรุณาวางที่อยู่ก่อน'); return; }
+  const pv = (/(?:จังหวัด|จ\.)\s*([^\s\d]+)/.exec(raw) || [])[1] || (/กรุงเทพ/.test(raw) ? 'กรุงเทพมหานคร' : '');
+  const prov = this.data.geo.provinces.find(p => p.th === pv);
+  if (!prov) { this.toast('ไม่พบชื่อจังหวัดในที่อยู่ กรุณาเลือกเอง'); return; }
+  const region = this.data.geo.regions.find(r => r.id === prov.r).code;
+  const dn = (/(?:อำเภอ|อ\.|เขต)\s*([^\s\d]+)/.exec(raw) || [])[1] || '';
+  const dist = this.districtsOf(pv).find(d => d.replace(/^(อำเภอ|เขต)/, '') === dn) || '';
+  const sn = (/(?:ตำบล|ต\.|แขวง)\s*([^\s\d]+)/.exec(raw) || [])[1] || '';
+  const sub = dist ? this.subdistrictsOf(pv, dist).find(x => x.th.replace(/^(ตำบล|แขวง)/, '') === sn) : null;
+  const line = raw.split(/\s(?:ตำบล|ต\.|แขวง|อำเภอ|อ\.|เขต|จังหวัด|จ\.)/)[0];
+  const zip = (/\b(\d{5})\b/.exec(raw) || [])[1] || (sub ? sub.zip : '');
+  const form = document.querySelector('form[data-submit=school-save]');
+  const v = {...formData(form), name: document.getElementById('sname').value, type: document.getElementById('stype').value, levels: arr(formData(form).levels),
+    username: document.getElementById('username').value, active: document.getElementById('active').value,
+    region, province: pv, district: dist, sub: sub ? sub.th : '', address: line, postcode: zip};
+  this.go('staff-school', {...this.view.params, values: v});
+  this.toast('แยกที่อยู่แล้ว กรุณาตรวจสอบก่อนบันทึก');
+});
+App.on('school-pw', function () { this.toast('ต้นแบบ: ระบบจริงจะส่งลิงก์ตั้งรหัสผ่านใหม่ให้ครูผู้ดูแลทุน (รหัสทดลองคือ Demo@1234)'); });
 App.on('school-save', function (form) {
   const v = formData(form);
-  const a = this.readArea('ns');
+  const a = this.readArea('sa');
+  const isNew = form.dataset.id === 'new';
+  const id = isNew ? 'SCH-' + String(this.db.schools.length + 1).padStart(3, '0') : form.dataset.id;
   const e = {};
   if (!v.sname) e.sname = 'กรุณากรอกชื่อสถานศึกษา';
-  else if (this.db.schools.some(s => s.name === v.sname && s.district === a.district)) e.sname = 'มีสถานศึกษาชื่อนี้ในอำเภอนี้แล้ว';
-  if (!a.district) e.area = 'กรุณาเลือกภาค จังหวัด และอำเภอ';
-  if (Object.keys(e).length) { this.go('staff-schools', {add: '1', back: form.dataset.back, values: {...v, ...a}, errors: e}); return; }
-  const id = 'NEW-' + String(this.db.schools.length + 1).padStart(3, '0');
-  this.db.schools.push({id, name: v.sname, type: v.stype, region: a.region, province: a.province, district: a.district});
+  else if (this.db.schools.some(s => s.id !== id && s.name === v.sname && s.district === a.district)) e.sname = 'มีสถานศึกษาชื่อนี้ในอำเภอนี้แล้ว';
+  if (!a.district) e.area = 'กรุณาเลือกภาค จังหวัด และอำเภอ / เขต';
+  const uname = (v.username || '').toLowerCase();
+  if (!uname) e.username = 'กรุณากำหนด Username';
+  else if (this.db.teachers.some(t => t.username === uname && t.school !== id)) e.username = 'Username นี้ถูกใช้แล้ว (1 โรงเรียน = 1 Username)';
+  const values = {name: v.sname, type: v.stype, address: v.saddr, postcode: v.szip, levels: arr(v.levels), username: v.username, active: v.active,
+    t_name: v.t_name, t_position: v.t_position, t_dept: v.t_dept, t_phone: v.t_phone, t_email: v.t_email, ...a};
+  if (Object.keys(e).length) { this.go('staff-school', {...this.view.params, values, errors: e}); return; }
+  const rec = {id, name: v.sname, type: v.stype, region: a.region, province: a.province, district: a.district, subdistrict: a.sub,
+    address: v.saddr, postcode: v.szip, levels: arr(v.levels)};
+  if (isNew) this.db.schools.push(rec); else Object.assign(this.schoolById[id], rec);
+  const t = this.db.teachers.find(x => x.school === id);
+  const trec = {username: uname, name: v.t_name, position: v.t_position, department: v.t_dept, phone: v.t_phone, email: v.t_email, school: id, active: v.active !== 'no'};
+  if (t) Object.assign(t, trec); else this.db.teachers.push(trec);
   this.save();
-  this.toast('เพิ่มสถานศึกษาแล้ว');
+  this.toast('บันทึกสถานศึกษาแล้ว');
   if (form.dataset.back) this.go('staff-transfer', {code: form.dataset.back, values: {region: a.region, province: a.province, district: a.district, school: id}});
-  else this.go('staff-schools', {id});
+  else this.go('staff-schools');
 });
 
-/* ---------- รายงาน ---------- */
-App.views['staff-reports'] = function () {
-  const all = this.db.students;
-  const levels = this.db.rates.filter(r => r.code !== 'SPECIAL').map(r => {
-    const list = all.filter(s => s.rate === r.code);
-    const ap = list.filter(s => s.decision && s.decision.result === 'approved');
-    return {cells: [esc(r.name), list.length, ap.length, baht(ap.reduce((a, s) => a + s.decision.approved_amount, 0))]};
+/* ---------- รายงาน / Export ---------- */
+const REPORT_TYPES = [['all', 'ผู้สมัครทั้งหมด'], ['approved', 'อนุมัติทุน'], ['rejected', 'ไม่ผ่าน'], ['reserve', 'สำรอง'], ['ineligible', 'ไม่เข้าเกณฑ์'],
+  ['special', 'อัตราอื่น ๆ 1,000 บาท'], ['budget', 'งบประมาณทุน'], ['schools', 'สถานศึกษา'], ['backlog', 'งานค้างดำเนินการ']];
+App.reportData = function (f) {
+  const list = this.db.students.filter(s => {
+    const sc = this.schoolById[s.school] || {};
+    const d = s.decision;
+    return (!f.decision || (d && d.result === f.decision)) && (!f.type || s.type === f.type) && (!f.round || String(s.round || '') === f.round)
+      && (!f.region || sc.region === f.region) && (!f.province || sc.province === f.province) && (!f.district || sc.district === f.district)
+      && (!f.levels.length || f.levels.includes(s.rate) || (f.levels.includes('SPECIAL') && d && d.approved_amount === this.rateAmount('SPECIAL')));
   });
-  const dec = Object.entries(DECISION).map(([k, d]) => ({cells: [`<span class="badge t-${d.tone}">${d.label}</span>`,
-    all.filter(s => s.decision && s.decision.result === k).length]}));
-  return {nav: this.staffNav(), html: `
-    <div class="page-head"><div><h1>รายงาน</h1><p class="sub">สรุปจากข้อมูลชุดเดียวกับผลอนุมัติจริง</p></div></div>
-    <div class="grid-2">
-      <section class="stack"><h3>ผลการพิจารณา</h3>${table([{t: 'ผล'}, {t: 'จำนวน', r: 1}], dec)}</section>
-      <section class="stack"><h3>การย้ายสถานศึกษา</h3>${table([{t: 'รายการ'}, {t: 'จำนวน', r: 1}], [{cells: ['บันทึกการย้ายทั้งหมด', this.db.transfers.length]}])}</section>
-    </div>
-    <section class="stack"><h3>แยกตามระดับชั้นที่ได้รับทุน</h3>
-      ${table([{t: 'ระดับชั้น'}, {t: 'ผู้สมัคร', r: 1}, {t: 'อนุมัติ', r: 1}, {t: 'งบประมาณ', r: 1}], levels)}</section>`};
+  const k = f.kind;
+  const pick = {approved: s => s.decision && s.decision.result === 'approved', rejected: s => s.decision && s.decision.result === 'rejected',
+    reserve: s => s.decision && s.decision.result === 'reserve', ineligible: s => s.decision && s.decision.result === 'ineligible',
+    special: s => s.decision && s.decision.result === 'approved' && s.decision.approved_amount !== s.decision.standard_amount,
+    backlog: s => s.status !== 'decided'}[k] || (() => true);
+  if (k === 'budget') {
+    const ap = list.filter(s => s.decision && s.decision.result === 'approved');
+    const cols = [{t: 'ระดับชั้นปีที่ได้รับทุน'}, {t: 'อัตรา', r: 1}, {t: 'จำนวน (คน)', r: 1}, {t: 'งบประมาณ', r: 1}];
+    const rows = this.db.rates.map(r => { const g = ap.filter(s => r.code === 'SPECIAL' ? s.decision.approved_amount !== s.decision.standard_amount : s.rate === r.code && s.decision.approved_amount === s.decision.standard_amount);
+      return [esc(r.name), baht(r.amount), g.length, baht(g.reduce((a, s) => a + s.decision.approved_amount, 0))]; });
+    return {cols, rows, foot: ['รวม', '', ap.length, baht(ap.reduce((a, s) => a + s.decision.approved_amount, 0))],
+      csv: [cols.map(c => c.t)].concat(this.db.rates.map((r, i) => [r.name, r.amount, rows[i][2], rows[i][3].replace(/[^\d]/g, '')]))};
+  }
+  if (k === 'schools') {
+    const cols = [{t: 'สถานศึกษา'}, {t: 'จังหวัด'}, {t: 'ผู้สมัคร', r: 1}, {t: 'ส่งถึงมูลนิธิฯ', r: 1}, {t: 'อนุมัติ', r: 1}, {t: 'งบประมาณ', r: 1}];
+    const by = {};
+    list.forEach(s => (by[s.school] = by[s.school] || []).push(s));
+    const data = Object.entries(by).map(([id, g]) => { const ap = g.filter(s => s.decision && s.decision.result === 'approved');
+      return [this.schoolName(id), (this.schoolById[id] || {}).province || '', g.length, g.filter(s => SENT.includes(s.status)).length, ap.length, ap.reduce((a, s) => a + s.decision.approved_amount, 0)]; })
+      .sort((a, b) => b[2] - a[2]);
+    return {cols, rows: data.map(r => [esc(r[0]), esc(r[1]), r[2], r[3], r[4], baht(r[5])]), csv: [cols.map(c => c.t)].concat(data)};
+  }
+  const rows = list.filter(pick);
+  const cols = [{t: 'รหัส'}, {t: 'ชื่อ–นามสกุล'}, {t: 'สถานศึกษา'}, {t: 'จังหวัด'}, {t: 'ชั้นปี ' + this.db.cycle.year}, {t: 'ทุน'}, {t: 'รอบ'}, {t: 'สถานะ / ผล'}, {t: 'จำนวนเงิน', r: 1}];
+  const data = rows.map(s => [s.code, fullName(s), this.schoolName(s.school), (this.schoolById[s.school] || {}).province || '', s.next_class || '', TYPE[s.type], s.round || '',
+    s.decision ? DECISION[s.decision.result].label : STATUS[s.status].label, s.decision && s.decision.approved_amount || '']);
+  return {cols, rows: data.map(r => r.map((x, i) => i === 8 ? (x ? baht(x) : '—') : esc(x))),
+    foot: k === 'approved' || k === 'special' ? ['รวม', `${rows.length} คน`, '', '', '', '', '', '', baht(rows.reduce((a, s) => a + (s.decision.approved_amount || 0), 0))] : null,
+    csv: [cols.map(c => c.t)].concat(data)};
 };
+App.views['staff-reports'] = function (p) {
+  const f = this._repF || {kind: 'all', levels: []};
+  const r = this.reportData(f);
+  this._lastCsv = r.csv;
+  return {nav: this.staffNav(), html: `${this.roleBar()}
+    <div class="page-head"><div><h1>รายงาน / Export</h1><p class="sub">สรุปผลการพิจารณา จำนวนทุน และงบประมาณ โดยใช้ข้อมูลชุดเดียวกับผลอนุมัติจริง</p></div></div>
+    <section class="stack no-print"><h3>ประเภทรายงาน</h3><div class="choices">${REPORT_TYPES.map(([k, t]) =>
+      `<button class="btn sm ${k === f.kind ? 'primary' : ''}" type="button" data-action="report-kind" data-kind="${k}">${t}</button>`).join('')}</div></section>
+    <form class="card no-print" data-submit="report-filter" novalidate><h3>สร้างรายงาน</h3>
+      <div class="grid-4">
+        ${field('r_year', 'ปีทุนการศึกษา', select('r_year', [String(this.db.cycle.year)], String(this.db.cycle.year)))}
+        ${field('r_dec', 'ผลพิจารณา', select('r_dec', Object.entries(DECISION).map(([k, d]) => [k, d.label]), f.decision, 'ทั้งหมด'))}
+        ${field('r_type', 'ประเภททุน', select('r_type', [['NEW', 'ทุนใหม่'], ['CONT', 'ทุนต่อเนื่อง']], f.type, 'ทั้งหมด'))}
+        ${field('r_round', 'รอบ', select('r_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], f.round, 'ทั้งหมด'))}
+      </div>
+      <div class="field"><span class="label">พื้นที่</span><div class="grid-3" data-area='{"any":true}'>${this.areaPicker('ra', f, {any: true})}</div></div>
+      <div class="field"><span class="label">ระดับชั้นปี ${this.db.cycle.year} (เลือกได้มากกว่า 1)</span>
+        <div class="choices">${[['P6', 'ป.6'], ['M_LOWER', 'ม.ต้น'], ['M_UPPER', 'ม.ปลาย'], ['PVC', 'ปวช.'], ['PVS', 'ปวส.'], ['PVS_IND', 'ปวส. อุตสาหกรรม'], ['BACHELOR', 'ป.ตรี'], ['SPECIAL', 'อื่น ๆ 1,000 บาท']]
+          .map(([k, t]) => `<label class="choice"><input type="checkbox" name="r_levels" value="${k}" ${f.levels.includes(k) ? 'checked' : ''}> ${t}</label>`).join('')}</div></div>
+      <div class="row between"><button class="btn primary" type="submit">แสดงรายงาน</button>
+        <div class="row"><button class="btn" type="button" data-action="report-export">Export Excel</button><button class="btn" type="button" data-action="print">${icon('print')} พิมพ์ / PDF</button></div></div>
+    </form>
+    <section class="stack"><h3>${REPORT_TYPES.find(x => x[0] === f.kind)[1]} · ${r.rows.length} รายการ</h3>${tbl(r.cols, r.rows, r.foot)}</section>
+    <section class="stack no-print"><h3>อัตราทุน ปีการศึกษา ${this.db.cycle.year}</h3>
+      ${tbl([{t: 'ระดับชั้นปีที่ได้รับทุน'}, {t: 'จำนวนเงินทุน/คน/ปี', r: 1}], this.db.rates.map(x => [esc(x.name), baht(x.amount)]))}
+      <p class="small muted">อัตราทุนอ้างอิง “ระดับชั้นปีการศึกษา ${this.db.cycle.year}” ซึ่งเป็นปีที่ผู้สมัครได้รับทุน ไม่ใช่ระดับชั้นขณะสมัครในปี ${this.db.cycle.history_year}</p></section>`};
+};
+App.on('report-kind', function (el) { this._repF = {...(this._repF || {levels: []}), kind: el.dataset.kind}; this.go('staff-reports'); });
+App.on('report-filter', function (form) {
+  const v = formData(form);
+  const a = this.readArea('ra');
+  this._repF = {kind: (this._repF || {}).kind || 'all', decision: v.r_dec, type: v.r_type, round: v.r_round, region: a.region, province: a.province, district: a.district, levels: arr(v.r_levels)};
+  this.go('staff-reports');
+});
+App.on('report-export', function () {
+  const csv = '﻿' + this._lastCsv.map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
+    a.download = `report-${this.db.cycle.year}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+  } catch (e) { /* ดาวน์โหลดไม่ได้ในหน้าต่างนี้ */ }
+  this.toast('สร้างไฟล์ CSV (เปิดด้วย Excel ได้) — ถ้าไม่ดาวน์โหลด ให้เปิดไฟล์บนเครื่องโดยตรง');
+});
 
-/* ---------- ตั้งค่ารอบ ---------- */
-App.views['staff-settings'] = function () {
-  const admin = this.session.staffRole === 'admin';
-  const c = this.db.cycle;
-  const ro = admin ? '' : 'disabled';
-  return {nav: this.staffNav(), html: `
-    <div class="page-head"><div><h1>ตั้งค่ารอบรับสมัคร</h1><p class="sub">${admin ? 'แก้ไขได้เฉพาะผู้ดูแลระบบ' : 'ดูได้อย่างเดียว เฉพาะผู้ดูแลระบบที่แก้ไขได้'}</p></div></div>
-    <form class="stack" data-submit="settings-save" novalidate>
-      <section class="card"><h3>รอบรับสมัคร</h3>
-        <div class="grid-3">
-          ${field('c_open', 'วันเปิดรับสมัคร', input('c_open', c.open, 'type="date" ' + ro))}
-          ${field('c_close', 'วันปิดรับสมัคร', input('c_close', c.close, 'type="date" ' + ro))}
-          ${field('c_status', 'สถานะรอบ', select('c_status', [['preparing', 'เตรียมระบบ'], ['open', 'เปิดรับสมัคร'], ['closed', 'ปิดรับสมัคร']], c.status, null, ro))}
-        </div></section>
-      <section class="stack"><h3>อัตราทุน ปีการศึกษา ${c.year}</h3>
-        ${table([{t: 'ระดับชั้นปีที่ได้รับทุน'}, {t: 'บาท / คน / ปี', r: 1}], this.db.rates.map(r => ({
-          cells: [esc(r.name), `<input class="input num" style="max-width:140px;text-align:right" name="rate_${r.code}" value="${r.amount}" type="number" min="0" step="500" inputmode="numeric" aria-label="${esc(r.name)}" ${ro}>`]})))}</section>
-      ${admin ? '<div class="row end"><button class="btn primary" type="submit">บันทึกการตั้งค่า</button></div>' : ''}
+/* ---------- PDPA ---------- */
+App.views['staff-pdpa'] = function () {
+  const d = this.db.pdpa;
+  return {nav: this.staffNav(), html: `${this.roleBar()}
+    <div class="page-head"><div><h1>PDPA / Privacy Notice</h1></div></div>
+    <form class="card" data-submit="pdpa-save" novalidate>
+      <div class="grid-2">${field('p_ver', 'เวอร์ชัน Privacy Notice', input('p_ver', d.version))}${field('p_eff', 'วันที่มีผล', input('p_eff', d.effective, 'type="date"'))}</div>
+      ${field('p_url', 'ลิงก์ Privacy Notice', input('p_url', d.url, 'type="url"'))}
+      <div class="note info small">ระบบควรบันทึกเวอร์ชัน Privacy Notice และวัน-เวลาที่ผู้สมัครรับทราบ ณ ตอนกดส่งใบสมัคร</div>
+      <div class="row end"><button class="btn primary" type="submit">บันทึก</button></div>
     </form>`};
 };
-App.on('settings-save', function (form) {
+App.on('pdpa-save', function (form) {
   const v = formData(form);
-  if (v.c_close && v.c_open && v.c_close <= v.c_open) { this.toast('วันปิดรับสมัครต้องอยู่หลังวันเปิดรับสมัคร'); return; }
-  Object.assign(this.db.cycle, {open: v.c_open, close: v.c_close, status: v.c_status});
-  this.db.rates.forEach(r => { if (v['rate_' + r.code] !== undefined) r.amount = Number(v['rate_' + r.code]); });
+  Object.assign(this.db.pdpa, {version: v.p_ver, effective: v.p_eff, url: v.p_url});
   this.save();
-  this.toast('บันทึกการตั้งค่าแล้ว');
-  this.go('staff-settings');
+  this.toast('บันทึก Privacy Notice แล้ว');
 });

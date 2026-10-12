@@ -51,7 +51,7 @@ applications 1─* siblings / other_funding / documents / staff_reviews / status
 
 1. **เลขบัตรประชาชน** เก็บ 13 หลักตามจริง (`students.citizen_id`, ตัวเลขล้วน ไม่มีขีด) เพื่อนำไปใช้ต่อได้ทันที ควบคุมการเข้าถึงด้วยสิทธิ์ (§4) และบันทึก `audit_log` เมื่อ export
 2. **นักเรียนไม่มีรหัสผ่าน** ใช้เลขบัตร + วันเกิด + เบอร์โทรยืนยันตัวตน แล้วออก session/OTP
-3. **ครู 1 คน = 1 บัญชี** ผูกกับ `school_id` ครูจึงเห็นเฉพาะนักเรียนในโรงเรียนตัวเอง
+3. **1 โรงเรียน = 1 Username** (ตาม Admin v14) ผูกกับ `school_id` บัญชีจึงเห็นเฉพาะนักเรียนในโรงเรียนตัวเอง
 4. **บทบาทผูกกับบัญชี** (`teacher` / `reviewer` / `manager` / `admin`) แทนปุ่มสลับบทบาทในต้นแบบ
 5. **อัตราทุนคิดจากชั้นปีถัดไป** (`next_class` → `rate_level_code`) และเก็บทั้ง `standard_amount` และ `approved_amount` ถ้ายอดไม่ตรงอัตรามาตรฐาน ต้องใส่ `amount_reason` (บังคับด้วย CHECK)
 6. **ไฟล์แนบ** เก็บใน Object Storage แบบ private ฐานข้อมูลเก็บแค่ path ชนิดไฟล์ และขนาด โดยตรวจตามที่ตั้งไว้ใน `document_types`
@@ -77,7 +77,7 @@ applications 1─* siblings / other_funding / documents / staff_reviews / status
 
 ## ข้อมูลจำลองสำหรับทดสอบ
 
-`db/seed_mock.sql` (สร้างด้วย `db/tools/build_mock_data.py`): นักเรียน 100 คนพร้อมใบสมัคร, ครู 100 คน (สถานศึกษาจำลอง 50 แห่ง แห่งละ 2 คน), เจ้าหน้าที่ 4 บัญชี (`reviewer01` `reviewer02` `manager01` `admin01`) รหัสผ่านทุกบัญชี `Demo@1234`
+`db/seed_mock.sql` (สร้างด้วย `db/tools/build_mock_data.py`): นักเรียน 100 คนพร้อมใบสมัคร, สถานศึกษาจำลอง 100 แห่ง + บัญชีครู 100 บัญชี (1 โรงเรียน = 1 Username ตาม Admin v14: `sch001`–`sch100`), เจ้าหน้าที่ 4 บัญชี (`reviewer01` `reviewer02` `manager01` `admin01`) รหัสผ่านทุกบัญชี `Demo@1234`
 ลำดับการรัน: `schema.sql` → `seed_geography.sql` → `seed_mock.sql` · ข้อมูลชุดเดียวกันสำหรับหน้า HTML อยู่ที่ `db/mock/mock_data.json`
 
 ## 5. ขั้นถัดไป

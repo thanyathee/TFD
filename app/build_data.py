@@ -3,7 +3,7 @@
 
     python3 app/build_data.py
 
-    app/data/geo.json   ภาค / จังหวัด / อำเภอ-เขต (จาก db/geography/thailand_geography.json)
+    app/data/geo.json   ภาค / จังหวัด / อำเภอ-เขต / ตำบล-แขวง (จาก db/geography/thailand_geography.json)
     app/data/mock.json  ข้อมูลจำลอง (จาก db/mock/mock_data.json)
 """
 import json
@@ -20,6 +20,7 @@ def main():
         'regions': geo['regions'],
         'provinces': [{'id': p['id'], 'r': p['r'], 'th': p['th']} for p in geo['provinces']],
         'districts': [{'id': d['id'], 'p': d['p'], 'th': d['pre'] + d['th']} for d in geo['districts']],
+        'subdistricts': [{'d': x['d'], 'th': x['pre'] + x['th'], 'zip': x['zip']} for x in geo['subdistricts']],
     }
     (OUT / 'geo.json').write_text(json.dumps(slim, ensure_ascii=False, separators=(',', ':')), 'utf-8')
     mock = json.loads((ROOT / 'db/mock/mock_data.json').read_text('utf-8'))

@@ -1,6 +1,7 @@
 -- =====================================================================
 -- TISCO Foundation Scholarship — ฐานข้อมูลกลาง (PostgreSQL 14+ / Supabase)
--- ใช้ร่วมกัน 3 ส่วน: นักเรียน (v28), ครู/สถานศึกษา (v28), เจ้าหน้าที่ (Admin v13)
+-- ใช้ร่วมกัน 3 ส่วน: นักเรียน (v28), ครู/สถานศึกษา (v28), เจ้าหน้าที่ (Admin v14)
+-- เงื่อนไขและตัวเลือกยึดตามต้นแบบ v28 / Admin v14
 -- ดูคำอธิบายใน docs/database-design.md
 -- =====================================================================
 
@@ -24,10 +25,11 @@ CREATE TYPE applicant_type  AS ENUM ('NEW', 'CONT');                 -- ทุ�
 CREATE TYPE staff_role      AS ENUM ('teacher', 'reviewer', 'manager', 'admin');
 CREATE TYPE account_status  AS ENUM ('active', 'disabled');
 CREATE TYPE cycle_status    AS ENUM ('preparing', 'open', 'closed'); -- เตรียมระบบ / เปิดรับ / ปิดรับ
-CREATE TYPE decision_result AS ENUM ('approved', 'rejected', 'reserve', 'ineligible');
-CREATE TYPE review_result   AS ENUM ('pass', 'fail', 'reserve', 'ineligible', 'need_more_info');
+CREATE TYPE decision_result AS ENUM ('approved', 'rejected', 'reserve', 'ineligible'); -- ineligible = จบที่เจ้าหน้าที่รีวิว
+CREATE TYPE review_result   AS ENUM ('forward', 'ineligible', 'need_more_info');     -- ส่งต่อผู้จัดการ / ไม่เข้าเกณฑ์ / รอข้อมูลเพิ่มเติม
 CREATE TYPE grade_type      AS ENUM ('gpa', 'percent');
-CREATE TYPE parent_status   AS ENUM ('alive', 'deceased', 'unknown');
+CREATE TYPE parent_status   AS ENUM ('alive', 'dead', 'contact', 'prison', 'monk'); -- มีชีวิต / เสียชีวิต / ขาดการติดต่อ / ถูกจำคุก / บวช
+CREATE TYPE income_type     AS ENUM ('none', 'daily', 'salary', 'other');           -- ไม่มีรายได้ / รายวัน / เงินเดือน / ไม่แน่นอน
 
 -- ---------------------------------------------------------------------
 -- 1) ข้อมูลพื้นที่ (Master)
@@ -77,8 +79,9 @@ CREATE TABLE schools (
   school_type    text NOT NULL CHECK (school_type IN ('school','college','university','other')),
   subdistrict_id integer REFERENCES subdistricts(id),
   district_id    integer NOT NULL REFERENCES districts(id),
-  address        text,
-  levels_offered text[] NOT NULL DEFAULT '{}',  -- ช่วงชั้นที่เปิดสอน เช่น {ม.1,...,ม.6}
+  address        text,                          -- บ้านเลขที่ หมู่ ถนน อาคาร
+  postcode       char(5),
+  levels_offered text[] NOT NULL DEFAULT '{}',  -- ช่วงชั้นที่เปิดสอน: primary, lowersec, uppersec, voc, highvoc, bachelor
   status         account_status NOT NULL DEFAULT 'active',
   created_at     timestamptz NOT NULL DEFAULT now(),
   updated_at     timestamptz NOT NULL DEFAULT now()
@@ -90,7 +93,8 @@ CREATE TABLE staff_users (
   username      text NOT NULL UNIQUE,
   password_hash text NOT NULL,                  -- bcrypt/argon2 (หรือใช้ Supabase Auth แทน)
   full_name     text NOT NULL,
-  position      text,                           -- ตำแหน่งครู / ฝ่ายที่รับผิดชอบ
+  position      text,                           -- ตำแหน่งครู
+  department    text,                           -- งาน / ฝ่ายที่รับผิดชอบ
   phone         text,
   email         text,
   role          staff_role NOT NULL,
@@ -100,6 +104,8 @@ CREATE TABLE staff_users (
   created_at    timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT teacher_has_school CHECK (role <> 'teacher' OR school_id IS NOT NULL)
 );
+-- 1 โรงเรียน = 1 Username สำหรับครูผู้ดูแลทุน (ตาม Admin v14)
+CREATE UNIQUE INDEX one_teacher_account_per_school ON staff_users (school_id) WHERE role = 'teacher';
 
 -- ---------------------------------------------------------------------
 -- 3) รอบรับสมัคร อัตราทุน และประเภทเอกสาร
@@ -115,6 +121,7 @@ CREATE TABLE scholarship_cycles (
   transfer_evidence_close date,
   privacy_notice_version text NOT NULL,
   privacy_notice_url     text NOT NULL,
+  privacy_notice_effective date,
   status               cycle_status NOT NULL DEFAULT 'preparing',
   CHECK (close_at > open_at)
 );
@@ -172,11 +179,16 @@ CREATE TABLE applications (
   current_class    text NOT NULL,      -- ระดับชั้นปัจจุบัน (ปี 2569)
   next_class       text,               -- ระดับชั้นปีถัดไป (ปี 2570) → ใช้คิดอัตราทุน
   rate_level_code  text,               -- อ้างอิง scholarship_rates
-  study_mode       text,
-  pvs_type         text,               -- ประเภทวิชา ปวช./ปวส.
-  faculty          text,               -- คณะ/สาขา (ป.ตรี)
-  program_years    smallint,
-  stays_same_school boolean,           -- สถานศึกษาในปีถัดไป
+  study_mode       text,               -- regular / special / dual / other
+  study_mode_other text,
+  pvs_type         text,               -- ประเภทวิชา ปวส.: industry / business / other
+  faculty          text,               -- คณะ / สาขาวิชา (ปวช. / ปวส. / ป.ตรี)
+  program_years    smallint,           -- หลักสูตรกี่ปี (ถามเมื่อ ป.ตรี ปี 4)
+  stays_same_school boolean,           -- ปีถัดไป: true = เรียนต่อสถานศึกษาเดิม, false = ย้ายสถานศึกษา
+  has_student_loan boolean,            -- กยศ. / กรอ. (true = ไม่เข้าเกณฑ์)
+  loan_amount      integer,
+  loan_period      text,               -- ต่อภาคเรียน / ต่อปี
+  review_round     smallint,           -- รอบพิจารณา 1 / 2 (เจ้าหน้าที่รีวิวกำหนด)
   next_school_id   integer REFERENCES schools(id),
 
   -- ที่อยู่
@@ -209,23 +221,36 @@ CREATE INDEX ON applications (cycle_id, status);
 -- ครอบครัว (1:1 กับใบสมัคร)
 CREATE TABLE application_family (
   application_id   uuid PRIMARY KEY REFERENCES applications(id) ON DELETE CASCADE,
-  father_name      text,
   father_status    parent_status,
+  father_name      text,
+  father_age       smallint,
   father_occupation text,
-  father_income_type text,             -- เงินเดือน / รายวัน / ไม่แน่นอน
-  father_monthly_income integer,
-  mother_name      text,
+  father_cannot_work boolean NOT NULL DEFAULT false,
+  father_income_type income_type,
+  father_daily_wage  integer,          -- บาท / วัน (รายวัน)
+  father_work_days   smallint,         -- วัน / เดือน (รายวัน; null = ไม่ทราบ)
+  father_monthly_income integer,       -- บาท / เดือน (เงินเดือน หรือรายได้ไม่แน่นอน)
   mother_status    parent_status,
+  mother_name      text,
+  mother_age       smallint,
   mother_occupation text,
-  mother_income_type text,
+  mother_cannot_work boolean NOT NULL DEFAULT false,
+  mother_income_type income_type,
+  mother_daily_wage  integer,
+  mother_work_days   smallint,
   mother_monthly_income integer,
-  family_status    text,               -- อยู่ด้วยกัน / แยกกันอยู่ / หย่าร้าง ...
-  guardian_relation text,
-  housing_type     text,               -- บ้านตนเอง / เช่า / อาศัยผู้อื่น
-  housing_cost     integer,            -- ค่าเช่า / ค่างวดผ่อน
-  owns_farmland    boolean,
-  rents_farmland   boolean,
-  assets           text[] NOT NULL DEFAULT '{}',  -- ทรัพย์สินที่ครอบครัวมี (ว่าง = ไม่มี)
+  family_status    text[] NOT NULL DEFAULT '{}',  -- เลือกได้หลายข้อ: together, apart, separated, divorced, father_new, mother_new
+  housing_type     text,               -- บ้านของครอบครัว / บ้านเช่า / ห้องเช่า-หอพัก / อาศัยญาติ / บ้านพักนายจ้าง / บ้านพักราชการ / อื่น ๆ
+  housing_cost     integer,            -- ค่าเช่า / ค่างวดผ่อน บาท/เดือน
+  own_land         boolean,
+  own_land_rai     numeric(6,1),
+  own_land_ngan    numeric(4,1),
+  rent_land        boolean,
+  rent_land_rai    numeric(6,1),
+  rent_land_ngan   numeric(4,1),
+  rent_land_cost   integer,            -- บาท / ปี
+  assets           jsonb NOT NULL DEFAULT '{}',  -- {"washer":1,"motorcycle":2,...}; {} + no_assets = ไม่มี
+  no_assets        boolean NOT NULL DEFAULT false,
   sibling_count    smallint
 );
 
@@ -235,9 +260,14 @@ CREATE TABLE application_siblings (
   seq            smallint NOT NULL,
   name           text,
   age            smallint,
-  status         text,                 -- กำลังเรียน / ทำงาน / อื่น ๆ
-  detail         text,                 -- ชั้น/สถานศึกษา หรืออาชีพ
-  monthly_income integer,
+  relation       text,                 -- ร่วมบิดามารดา / ต่างบิดา / ต่างมารดา
+  residence      text,                 -- อยู่บ้านเดียวกัน / แยกไปพักที่อื่น
+  status         text,                 -- study / work / none
+  edu_level      text,                 -- เมื่อกำลังศึกษา
+  school_name    text,
+  has_loan       boolean,
+  occupation     text,                 -- เมื่อทำงาน
+  detail         text,                 -- เมื่อไม่ได้ศึกษาและยังไม่ได้ทำงาน
   UNIQUE (application_id, seq)
 );
 
@@ -247,7 +277,8 @@ CREATE TABLE application_other_funding (
   application_id uuid NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
   kind           text NOT NULL CHECK (kind IN ('loan','scholarship')),
   provider       text NOT NULL,        -- กยศ. / กรอ. / ชื่อหน่วยงาน
-  amount_per_year integer
+  amount         integer,
+  period         text                  -- ต่อภาคเรียน / ต่อปี
 );
 
 -- ---------------------------------------------------------------------
@@ -301,20 +332,21 @@ CREATE TABLE staff_reviews (               -- ผลการรีวิวข�
   id             bigserial PRIMARY KEY,
   application_id uuid NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
   reviewer_id    uuid NOT NULL REFERENCES staff_users(id),
-  review_round   smallint NOT NULL DEFAULT 1,
+  review_round   smallint NOT NULL DEFAULT 1,  -- จัดเข้ารอบ 1 / 2
   result         review_result NOT NULL,
-  note           text,
+  comment        text,                          -- ความคิดเห็นของเจ้าหน้าที่รีวิว
   created_at     timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TABLE decisions (                   -- ผลพิจารณาสุดท้าย 1 ใบสมัคร = 1 ผล
   application_id  uuid PRIMARY KEY REFERENCES applications(id),
-  manager_id      uuid NOT NULL REFERENCES staff_users(id),
+  manager_id      uuid NOT NULL REFERENCES staff_users(id),  -- ผู้บันทึก (ไม่เข้าเกณฑ์ = เจ้าหน้าที่รีวิว)
   result          decision_result NOT NULL,
   standard_amount integer,                 -- ยอดตามอัตรามาตรฐาน
   approved_amount integer,                 -- ยอดที่อนุมัติจริง
   amount_reason   text,                    -- บังคับเมื่อยอดไม่เท่ามาตรฐาน
   reject_reason   text,
+  manager_note    text,
   decided_at      timestamptz NOT NULL DEFAULT now(),
   CHECK (result <> 'approved' OR approved_amount IS NOT NULL),
   CHECK (approved_amount IS NULL OR approved_amount = standard_amount OR amount_reason IS NOT NULL)
