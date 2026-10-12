@@ -122,6 +122,9 @@ textarea.input{min-height:110px;resize:vertical;line-height:1.55}
 .input::placeholder{color:var(--muted);opacity:.85}
 .input:focus{outline:none;border-color:var(--focus);background:var(--surface)}
 .field.invalid .input{border-color:var(--bad);background:var(--bad-soft)}
+.field.invalid .choice{background:var(--bad-soft);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.field.invalid .label{color:var(--bad)}
+.check.invalid{background:var(--bad-soft);border-radius:var(--r);padding:12px 14px;outline:1.5px solid color-mix(in srgb,var(--bad) 45%,transparent)}
 .input[disabled],.input[readonly]{color:var(--muted);cursor:default}
 .input[disabled]{opacity:.7}
 .choices{display:flex;flex-wrap:wrap;gap:8px}

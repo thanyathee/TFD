@@ -111,7 +111,8 @@ function stepStudent(s, e) {
       ${e.current_address ? `<div class="err">${esc(e.current_address)}</div>` : ''}</div>
   </section>
   <section class="card"><div class="card-head"><h3>สถานศึกษาปัจจุบัน</h3><span class="sub">เลือกภาค → จังหวัด → อำเภอ / เขต → ชื่อสถานศึกษา</span></div>
-    <div class="grid-2" data-area='${JSON.stringify({school: true, required: true, err: {school: e.school}})}' data-after="student-school-info">${this.areaPicker('st', area, {school: true, required: true, err: {school: e.school}})}</div>
+    <div class="grid-2" data-area='${JSON.stringify({school: true, required: true})}' data-after="student-school-info">${this.areaPicker('st', area, {school: true, required: true,
+      err: e.school ? {region: area.region ? '' : 'กรุณาเลือกภาค', province: area.province ? '' : 'กรุณาเลือกจังหวัด', district: area.district ? '' : 'กรุณาเลือกอำเภอ / เขต', school: e.school} : {}})}</div>
     <div id="school_info">${schoolInfo.call(this, sc)}</div>
     ${radioField('school_top', 'สถานศึกษานี้เปิดสอนถึงระดับชั้นสูงสุดคือ', TOP_LEVELS, s.school_top, {req: 1, err: e.school_top})}
   </section>
@@ -197,41 +198,42 @@ App.on('student-copy-address', function () {
 });
 
 /* ---------- ข้อมูลครอบครัว ---------- */
-function occCard(k, i, o = {}) {
+function occCard(k, i, o = {}, e = {}) {
+  const er = x => ({req: 1, err: e[`${k}_occ${i}_${x}`]});
   const n = x => `${k}_occ${i}_${x}`;
   const kinds = o.farm_kinds || [];
   return `<div class="subcard" data-occ="${k}:${i}">
     <div class="row between"><b>อาชีพที่ ${i + 1}</b><button class="btn ghost sm" type="button" data-action="occ-remove" data-person="${k}" data-i="${i}">ลบ</button></div>
-    ${field(n('cat'), 'หมวดอาชีพ', select(n('cat'), OCC_CATS, o.cat, 'กรุณาเลือก'), {req: 1})}
+    ${field(n('cat'), 'หมวดอาชีพ', select(n('cat'), OCC_CATS, o.cat, 'กรุณาเลือก'), er('cat'))}
     <div class="stack" data-when="${n('cat')}=hire">
       ${field(n('hire_kind'), 'ลักษณะงานรับจ้าง', select(n('hire_kind'), HIRE_KINDS, o.hire_kind, 'กรุณาเลือก'))}
-      <div class="grid-2">${field(n('detail_h'), 'งานที่ทำโดยละเอียด', input(n('detail_h'), o.cat === 'hire' ? o.detail : '', 'placeholder="เช่น ทาสีบ้าน ตัดหญ้า ประกอบชิ้นส่วนอิเล็กทรอนิกส์"'), {req: 1})}
+      <div class="grid-2">${field(n('detail_h'), 'งานที่ทำโดยละเอียด', input(n('detail_h'), o.cat === 'hire' ? o.detail : '', 'placeholder="เช่น ทาสีบ้าน ตัดหญ้า ประกอบชิ้นส่วนอิเล็กทรอนิกส์"'), er('detail_h'))}
         ${field(n('position_h'), 'ตำแหน่ง / แผนก', input(n('position_h'), o.cat === 'hire' ? o.position : '', 'placeholder="เช่น พนักงานฝ่ายผลิต หัวหน้าไลน์ ไม่มีตำแหน่ง"'))}</div>
     </div>
     <div class="grid-2" data-when="${n('cat')}=gov">
-      ${field(n('position_g'), 'ตำแหน่ง', input(n('position_g'), o.cat === 'gov' ? o.position : '', 'placeholder="เช่น ครู พยาบาล เจ้าหน้าที่ธุรการ"'), {req: 1})}
+      ${field(n('position_g'), 'ตำแหน่ง', input(n('position_g'), o.cat === 'gov' ? o.position : '', 'placeholder="เช่น ครู พยาบาล เจ้าหน้าที่ธุรการ"'), er('position_g'))}
       ${field(n('agency'), 'หน่วยงาน', input(n('agency'), o.agency))}
     </div>
     <div class="grid-2" data-when="${n('cat')}=trade">
-      ${field(n('goods'), 'สินค้าที่ขาย', input(n('goods'), o.goods, 'placeholder="เช่น ข้าวแกง ผักสด เสื้อผ้ามือสอง"'), {req: 1})}
+      ${field(n('goods'), 'สินค้าที่ขาย', input(n('goods'), o.goods, 'placeholder="เช่น ข้าวแกง ผักสด เสื้อผ้ามือสอง"'), er('goods'))}
       ${field(n('sell_where'), 'ขายที่ไหน', select(n('sell_where'), SELL_WHERE, o.sell_where, 'กรุณาเลือก'))}
     </div>
     <div class="stack" data-when="${n('cat')}=farm">
       <div class="choices">${FARM_KINDS.map(([fk, t]) => `<label class="choice"><input type="checkbox" name="${n('farm_kinds')}" value="${fk}" ${kinds.includes(fk) ? 'checked' : ''}> ${t}</label>`).join('')}</div>
-      <div class="grid-2">${field(n('crops'), 'ปลูกอะไร / เลี้ยงอะไร (ระบุ)', input(n('crops'), o.crops, 'placeholder="เช่น ข้าวเหนียว มันสำปะหลัง อ้อย สวนยาง ลำไย"'), {req: 1})}
+      <div class="grid-2">${field(n('crops'), 'ปลูกอะไร / เลี้ยงอะไร (ระบุ)', input(n('crops'), o.crops, 'placeholder="เช่น ข้าวเหนียว มันสำปะหลัง อ้อย สวนยาง ลำไย"'), er('crops'))}
         ${field(n('farm_land'), 'ที่ดินที่ทำ', select(n('farm_land'), FARM_LAND, o.farm_land, 'กรุณาเลือก'))}</div>
     </div>
-    <div data-when="${n('cat')}=other">${field(n('detail_o'), 'ระบุอาชีพ', input(n('detail_o'), o.cat === 'other' ? o.detail : '', 'placeholder="เช่น ขับวินมอเตอร์ไซค์ ทำขนมขาย ช่างตัดผม"'), {req: 1})}</div>
+    <div data-when="${n('cat')}=other">${field(n('detail_o'), 'ระบุอาชีพ', input(n('detail_o'), o.cat === 'other' ? o.detail : '', 'placeholder="เช่น ขับวินมอเตอร์ไซค์ ทำขนมขาย ช่างตัดผม"'), er('detail_o'))}</div>
     <div class="stack" data-when="${n('cat')}=hire|gov|trade|farm|other">
-      ${field(n('pay'), 'ลักษณะรายได้', select(n('pay'), PAY, o.pay, 'กรุณาเลือก'), {req: 1})}
+      ${field(n('pay'), 'ลักษณะรายได้', select(n('pay'), PAY, o.pay, 'กรุณาเลือก'), er('pay'))}
       <div class="grid-3" data-when="${n('pay')}=daily">
-        ${field(n('wage'), 'ค่าจ้างวันละ (บาท)', input(n('wage'), o.wage, 'type="number" min="0" inputmode="numeric" placeholder="เช่น 300"'))}
-        ${field(n('days'), 'ทำงานกี่วัน', input(n('days'), o.days, 'type="number" min="0" max="31" inputmode="numeric" placeholder="เช่น 2"'))}
+        ${field(n('wage'), 'ค่าจ้างวันละ (บาท)', input(n('wage'), o.wage, 'type="number" min="0" inputmode="numeric" placeholder="เช่น 300"'), er('wage'))}
+        ${field(n('days'), 'ทำงานกี่วัน', input(n('days'), o.days, 'type="number" min="0" max="31" inputmode="numeric" placeholder="เช่น 2"'), er('days'))}
         ${field(n('per'), 'ต่อ', select(n('per'), [['week', 'สัปดาห์'], ['month', 'เดือน']], o.per || 'week'))}
       </div>
-      <div data-when="${n('pay')}=monthly">${field(n('amount_m'), 'เงินเดือน (บาท / เดือน)', input(n('amount_m'), o.pay === 'monthly' ? o.amount : '', 'type="number" min="0" inputmode="numeric"'))}</div>
-      <div data-when="${n('pay')}=yearly">${field(n('amount_y'), 'รายได้ต่อปี / ต่อฤดูกาล (บาท)', input(n('amount_y'), o.pay === 'yearly' ? o.amount : '', 'type="number" min="0" inputmode="numeric" placeholder="เช่น ขายข้าวได้ปีละ 40000"'))}</div>
-      <div data-when="${n('pay')}=irregular">${field(n('amount_i'), 'รายได้เฉลี่ยประมาณ (บาท / เดือน)', input(n('amount_i'), o.pay === 'irregular' ? o.amount : '', 'type="number" min="0" inputmode="numeric"'))}</div>
+      <div data-when="${n('pay')}=monthly">${field(n('amount_m'), 'เงินเดือน (บาท / เดือน)', input(n('amount_m'), o.pay === 'monthly' ? o.amount : '', 'type="number" min="0" inputmode="numeric"'), er('amount_m'))}</div>
+      <div data-when="${n('pay')}=yearly">${field(n('amount_y'), 'รายได้ต่อปี / ต่อฤดูกาล (บาท)', input(n('amount_y'), o.pay === 'yearly' ? o.amount : '', 'type="number" min="0" inputmode="numeric" placeholder="เช่น ขายข้าวได้ปีละ 40000"'), er('amount_y'))}</div>
+      <div data-when="${n('pay')}=irregular">${field(n('amount_i'), 'รายได้เฉลี่ยประมาณ (บาท / เดือน)', input(n('amount_i'), o.pay === 'irregular' ? o.amount : '', 'type="number" min="0" inputmode="numeric"'), er('amount_i'))}</div>
       <div class="hint" data-occ-sum="${k}:${i}"></div>
     </div>
   </div>`;
@@ -254,7 +256,7 @@ function personBlock(k, p = {}, e = {}) {
       <div class="row between"><span class="label">อาชีพ <span class="muted">(ตอบได้มากกว่า 1 อาชีพ)</span></span>
         <label class="check small"><input type="checkbox" name="${k}_no_occ" ${p.no_occ ? 'checked' : ''}> <span>ไม่มีอาชีพ / ไม่มีรายได้ / ไม่ทราบ</span></label></div>
       <div class="stack" data-when="!${k}_no_occ=on">
-        <div class="stack" id="${k}_occs">${occs.map((o, i) => occCard(k, i, o)).join('')}</div>
+        <div class="stack" id="${k}_occs">${occs.map((o, i) => occCard(k, i, o, e)).join('')}</div>
         <button class="btn sm" type="button" data-action="occ-add" data-person="${k}" style="justify-self:start">+ เพิ่มอาชีพ</button>
         ${e[k + '_occ'] ? `<div class="err">${e[k + '_occ']}</div>` : ''}
         <div class="grid-2">
@@ -288,13 +290,24 @@ function readPerson(v, k) {
   else Object.assign(p, {name: v[`${k}_name`] || '', age: v[`${k}_age`] || '', status: v[`${k}_status`] || ''});
   return p;
 }
-function occErrors(p) {
-  if (p.no_occ || p.status === 'dead') return '';
-  if (!p.occs.length) return 'กรุณาเพิ่มอาชีพอย่างน้อย 1 อาชีพ หรือติ๊ก “ไม่มีอาชีพ / ไม่มีรายได้ / ไม่ทราบ”';
-  const bad = p.occs.findIndex(o => !o.cat || !o.pay || (o.cat === 'hire' && !o.detail) || (o.cat === 'gov' && !o.position)
-    || (o.cat === 'trade' && !o.goods) || (o.cat === 'farm' && !o.crops) || (o.cat === 'other' && !o.detail)
-    || (o.pay === 'daily' && (!o.wage || !o.days)) || (o.pay !== 'daily' && !o.amount));
-  return bad >= 0 ? `อาชีพที่ ${bad + 1} ยังกรอกไม่ครบ (หมวดอาชีพ รายละเอียดงาน และรายได้)` : '';
+/* ตรวจอาชีพทีละช่อง: คืน {ชื่อช่อง: ข้อความ} เพื่อทำช่องที่ยังไม่กรอกเป็นสีแดง */
+function occErrors(p, k) {
+  const out = {};
+  if (p.no_occ || p.status === 'dead') return out;
+  if (!p.occs.length) { out[k + '_occ'] = 'กรุณาเพิ่มอาชีพอย่างน้อย 1 อาชีพ หรือติ๊ก “ไม่มีอาชีพ / ไม่มีรายได้ / ไม่ทราบ”'; return out; }
+  p.occs.forEach((o, i) => {
+    const miss = (x, msg) => { out[`${k}_occ${i}_${x}`] = msg || 'กรุณากรอกข้อมูล'; };
+    if (!o.cat) { miss('cat', 'กรุณาเลือกหมวดอาชีพ'); return; }
+    if (o.cat === 'hire' && !o.detail) miss('detail_h');
+    if (o.cat === 'gov' && !o.position) miss('position_g');
+    if (o.cat === 'trade' && !o.goods) miss('goods');
+    if (o.cat === 'farm' && !o.crops) miss('crops');
+    if (o.cat === 'other' && !o.detail) miss('detail_o');
+    if (!o.pay) { miss('pay', 'กรุณาเลือกลักษณะรายได้'); return; }
+    if (o.pay === 'daily') { if (!o.wage) miss('wage'); if (!o.days) miss('days'); }
+    else if (!o.amount) miss({monthly: 'amount_m', yearly: 'amount_y', irregular: 'amount_i'}[o.pay]);
+  });
+  return out;
 }
 /* คำนวณรายได้เฉลี่ยต่อเดือนให้เห็นทันทีขณะกรอก */
 function recalcIncome() {
@@ -451,9 +464,9 @@ function stepMore(s, e) {
     ${needsGoal(s) ? field('goal', `${STORY_Q.length + 2}. เป้าหมายในการขอรับทุนเพื่อการศึกษาต่อในระดับอุดมศึกษา`, textarea('goal', s.goal, 'rows="3"'), {req: 1, err: e.goal, hint: 'สำหรับผู้ขอทุนระดับ ม.6 / ปวช. / ปวส.'}) : ''}
   </section>
   <section class="card"><h3>ยืนยันก่อนส่ง</h3>
-    <label class="check"><input type="checkbox" name="confirm" ${s.confirmed ? 'checked' : ''}> <span>ข้าพเจ้าขอรับรองว่าข้อมูลทั้งหมดที่ได้ให้ไว้ในแบบฟอร์มนี้ เป็นความจริงทุกประการ <span class="req">*</span></span></label>
+    <label class="check ${e.confirm ? 'invalid' : ''}"><input type="checkbox" name="confirm" ${s.confirmed ? 'checked' : ''}> <span>ข้าพเจ้าขอรับรองว่าข้อมูลทั้งหมดที่ได้ให้ไว้ในแบบฟอร์มนี้ เป็นความจริงทุกประการ <span class="req">*</span></span></label>
     ${e.confirm ? `<div class="err">${e.confirm}</div>` : ''}
-    <label class="check"><input type="checkbox" name="pdpa" ${s.pdpa_ack ? 'checked' : ''}> <span>ข้าพเจ้าได้อ่านและรับทราบเงื่อนไขในการขอรับทุนตามแบบฟอร์มฉบับนี้ ระเบียบการขอรับทุนเพื่อการศึกษา และประกาศความเป็นส่วนตัว (Privacy Notice) ของมูลนิธิทิสโก้ เพื่อการกุศลแล้ว <span class="req">*</span></span></label>
+    <label class="check ${e.pdpa ? 'invalid' : ''}"><input type="checkbox" name="pdpa" ${s.pdpa_ack ? 'checked' : ''}> <span>ข้าพเจ้าได้อ่านและรับทราบเงื่อนไขในการขอรับทุนตามแบบฟอร์มฉบับนี้ ระเบียบการขอรับทุนเพื่อการศึกษา และประกาศความเป็นส่วนตัว (Privacy Notice) ของมูลนิธิทิสโก้ เพื่อการกุศลแล้ว <span class="req">*</span></span></label>
     ${e.pdpa ? `<div class="err">${e.pdpa}</div>` : ''}
     <a href="${esc(pd.url)}" target="_blank" rel="noopener noreferrer">อ่านประกาศความเป็นส่วนตัว (Privacy Notice) ฉบับ ${esc(pd.version)}</a>
     <div class="note info small">เมื่อกดส่งแล้ว ข้อมูลจะถูกล็อกไม่ให้แก้ไขเอง หากจำเป็นต้องแก้ไข ให้ครูผู้ดูแลทุนหรือเจ้าหน้าที่เป็นผู้เปิดสิทธิ์ให้แก้ไข</div>
@@ -490,7 +503,7 @@ App.on('student-step', function (form, ev) {
     ['first_name', 'last_name', 'home_address'].forEach(k => need(k));
     if (!s.current_address) e.current_address = 'กรุณากรอกข้อมูล';
     if (v.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.email)) e.email = 'รูปแบบอีเมลไม่ถูกต้อง';
-    if (!area.school) e.school = 'กรุณาเลือกภาค จังหวัด อำเภอ และสถานศึกษา';
+    if (!area.school) e.school = 'กรุณาเลือกสถานศึกษา';
     need('school_top', 'กรุณาเลือกระดับชั้นสูงสุดที่สถานศึกษาเปิดสอน');
     need('group', 'กรุณาเลือกช่วงชั้น');
     need('class', 'กรุณาเลือกระดับชั้น');
@@ -515,14 +528,12 @@ App.on('student-step', function (form, ev) {
     ['father', 'mother'].forEach(k => {
       if (!fam[k].name) e[k + '_name'] = 'กรุณากรอกชื่อ–สกุล (กรอกทุกกรณี)';
       if (!fam[k].status) e[k + '_status'] = 'กรุณาเลือกสถานะ';
-      const oe = occErrors(fam[k]);
-      if (oe) e[k + '_occ'] = oe;
+      Object.assign(e, occErrors(fam[k], k));
     });
     if (!fam.live_with) e.live_with = 'กรุณาเลือกว่าผู้ขอทุนอาศัยอยู่กับใคร';
     if (fam.guardian) {
       if (!fam.guardian.relation) e.guardian_relation = 'กรุณาระบุความสัมพันธ์';
-      const oe = occErrors(fam.guardian);
-      if (oe) e.guardian_occ = oe;
+      Object.assign(e, occErrors(fam.guardian, 'guardian'));
     }
     if (!fam.housing) e.housing = 'กรุณาเลือกสภาพที่อยู่ปัจจุบัน';
     s.family = fam;

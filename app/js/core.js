@@ -353,9 +353,23 @@ function tbl(cols, rows, foot) {
 }
 function errNote(e) {
   const n = Object.keys(e || {}).length;
-  return n ? `<div class="note bad" role="alert">กรุณาตรวจสอบ ${n} รายการที่มีข้อความสีแดง</div>` : '';
+  return n ? '<div class="note bad" role="alert"><b>ยังกรอกข้อมูลไม่ครบ</b> — กรุณากรอกช่องที่เป็นสีแดงให้ครบ แล้วกดอีกครั้ง</div>' : '';
 }
 function focusFirstError() { const el = document.querySelector('.field.invalid .input, .field.invalid input'); if (el) el.focus(); }
+
+/* กรอกช่องที่เป็นสีแดงแล้ว เอาสีแดงออกทันที ไม่ต้องรอกดถัดไปอีกครั้ง */
+function clearInvalid(e) {
+  const el = e.target;
+  const box = el.closest('.field.invalid, .check.invalid');
+  if (!box) return;
+  const filled = el.type === 'checkbox' || el.type === 'radio' ? el.checked : String(el.value || '').trim() !== '';
+  if (!filled) return;
+  box.classList.remove('invalid');
+  const msg = box.classList.contains('check') ? box.nextElementSibling : box.querySelector(':scope > .err');
+  if (msg && msg.classList.contains('err')) msg.remove();
+}
+document.addEventListener('input', clearInvalid);
+document.addEventListener('change', clearInvalid);
 
 /* ---------- หน้าเลือกบทบาท ---------- */
 App.views.home = function () {
