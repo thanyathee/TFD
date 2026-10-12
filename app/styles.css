@@ -119,6 +119,9 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .stepper-num{display:flex;align-items:center;gap:8px}
 .stepper-num .btn{min-width:48px;min-height:48px;font-size:20px;padding:0}
 .stepper-num .input{max-width:90px;text-align:center}
+/* ซ่อนลูกศรขึ้น-ลงของช่องตัวเลขทุกช่อง (ช่องจำนวนมีปุ่ม − / + อยู่แล้ว ช่องเงินพิมพ์เองสะดวกกว่า) */
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 
 /* ---------- ฟอร์ม ---------- */
 .field{display:grid;gap:6px;min-width:0;align-content:start}
