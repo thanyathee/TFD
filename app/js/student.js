@@ -135,8 +135,8 @@ function stepStudent(s, e) {
     ${radioField('school_next', 'สถานศึกษาในปีการศึกษาหน้า', [['same', 'ศึกษาต่อสถานศึกษาเดิม'], ['transfer', 'ย้ายสถานศึกษาใหม่']], s.school_next, {req: 1, err: e.school_next})}
     <div class="stack" data-when="school_next=transfer">
       <div class="note bad"><b>⚠ ต้องส่งหลักฐานยืนยันการย้ายสถานศึกษาให้มูลนิธิฯ ทุกกรณี</b><br>
-        ระดับ ป.6 และ ม.3 ควรส่งภายใน <b>${thDate(this.db.cycle.first_cutoff)}</b> หากไม่ทัน ส่งได้ถึง <b>${thDate(this.db.cycle.transfer_close)}</b><br>
-        ระดับ ม.6 ปวช.3 และ ปวส.2 ส่งภายใน <b>${thDate(this.db.cycle.transfer_close)}</b><br>
+        ระดับ ป.6 และ ม.3 ที่ส่งภายใน <b>${thDate(this.db.cycle.first_cutoff)}</b> จะได้รับการพิจารณาใน<b>รอบแรก</b><br>
+        ทุกระดับชั้นส่งได้ถึง <b>${thDate(this.db.cycle.transfer_close)}</b> และจะได้รับการพิจารณาใน<b>รอบที่ 2</b> (รอบรอฟังผล)<br>
         <b>หากไม่ส่งภายใน ${thDate(this.db.cycle.transfer_close)} ถือว่าสละสิทธิ์การรับทุน</b> (ตามระเบียบการขอรับทุนเพื่อการศึกษา ข้อ 7 กรณีมีการเปลี่ยนสถานศึกษาของผู้ขอทุน)</div>
       ${field('next_school_text', 'ไปศึกษาต่อที่', input('next_school_text', s.next_school_text, 'placeholder="ชื่อสถานศึกษาใหม่ (ถ้ายังไม่ทราบ ให้เว้นว่างไว้)"'))}
       <label class="check ${e.transfer_ack ? 'invalid' : ''}"><input type="checkbox" name="transfer_ack" ${s.transfer_ack ? 'checked' : ''}> <span>ข้าพเจ้ารับทราบว่าต้องส่งหลักฐานยืนยันการย้ายสถานศึกษาให้มูลนิธิฯ ภายในกำหนด มิฉะนั้นถือว่าสละสิทธิ์ <span class="req">*</span></span></label>
@@ -808,12 +808,12 @@ App.on('student-login', function (form) {
 });
 
 
-/* กำหนดส่งหลักฐานการย้ายสถานศึกษา: ทุกระดับส่งได้ไม่เกินวันสุดท้าย (transfer_close)
-   ป.6 / ม.3 ควรส่งภายในรอบแรก (first_cutoff) ถ้าไม่ทันยังส่งได้จนถึงวันสุดท้าย */
+/* กำหนดส่งหลักฐานการย้ายสถานศึกษา: ทุกระดับส่งได้ถึงวันสุดท้าย (transfer_close) → พิจารณารอบที่ 2 (รอบรอฟังผล)
+   เฉพาะ ป.6 / ม.3 ที่ส่งภายในวันตัดรอบแรก (first_cutoff) → พิจารณารอบแรก */
 function transferDeadline(s) { return this.db.cycle.transfer_close; }
 function transferDeadlineText(s) {
-  const last = thDate(this.db.cycle.transfer_close);
-  return ['ป.6', 'ม.3'].includes(s.class) ? `ควรส่งภายใน ${thDate(this.db.cycle.first_cutoff)} หากไม่ทัน ส่งได้ถึง ${last}` : `ส่งภายใน ${last}`;
+  const last = `ส่งได้ถึง ${thDate(this.db.cycle.transfer_close)} (พิจารณารอบที่ 2)`;
+  return ['ป.6', 'ม.3'].includes(s.class) ? `ส่งภายใน ${thDate(this.db.cycle.first_cutoff)} พิจารณารอบแรก · ${last}` : last;
 }
 
 /* ---------- หน้า 5: ส่งเรียบร้อย / สถานะ ---------- */

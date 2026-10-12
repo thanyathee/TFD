@@ -203,10 +203,11 @@ App.views['staff-cycle'] = function () {
         ${field('c_open', 'วันเปิดรับสมัคร', input('c_open', c.open, 'type="date"'))}
         ${field('c_close', 'วันปิดรับสมัคร', input('c_close', c.close, 'type="date"'))}
       </div></section>
-      <section class="card"><h3>กำหนดการย้ายสถานศึกษา</h3><div class="grid-3">
+      <section class="card"><h3>กำหนดส่งหลักฐานการย้ายสถานศึกษา</h3>
+        <p class="small muted">วันที่ตั้งไว้ที่นี่จะแสดงในข้อความเตือนของนักเรียนและครูทุกจุด</p><div class="grid-3">
         ${field('c_topen', 'วันเปิดรับหลักฐานย้าย', input('c_topen', c.transfer_open, 'type="date"'))}
-        ${field('c_cut', 'วันตัดรอบแรก ป.6 / ม.3', input('c_cut', c.first_cutoff, 'type="date"'))}
-        ${field('c_tclose', 'วันสุดท้ายรับหลักฐาน', input('c_tclose', c.transfer_close, 'type="date"'))}
+        ${field('c_cut', 'วันตัดรอบแรก (เฉพาะ ป.6 / ม.3)', input('c_cut', c.first_cutoff, 'type="date"'), {hint: 'ป.6 / ม.3 ที่ส่งหลักฐานภายในวันนี้ → พิจารณารอบแรก'})}
+        ${field('c_tclose', 'วันสุดท้ายรับหลักฐาน (ทุกระดับชั้น)', input('c_tclose', c.transfer_close, 'type="date"'), {hint: 'ส่งหลังวันตัดรอบแรกแต่ไม่เกินวันนี้ → พิจารณารอบที่ 2 (รอบรอฟังผล) · เกินวันนี้ถือว่าสละสิทธิ์'})}
       </div></section>
       <div class="row end"><button class="btn primary" type="submit">บันทึก</button></div>
     </form>`};
@@ -283,7 +284,8 @@ App.views['staff-app'] = function (p) {
     panel = can ? `<form class="stack" data-submit="staff-review" data-code="${s.code}" novalidate>
       ${field('r_comment', 'ความคิดเห็นของเจ้าหน้าที่รีวิว', textarea('r_comment', v.r_comment ?? (sr && sr.comment) ?? '', 'rows="4" placeholder="สรุปข้อเท็จจริง ความจำเป็น ประเด็นสำคัญ หรือเหตุผลที่ไม่เข้าเกณฑ์"'), {err: e.r_comment})}
       ${field('r_result', 'ผลการรีวิว', select('r_result', [['forward', 'ส่งต่อให้ผู้จัดการพิจารณา'], ['ineligible', 'ไม่เข้าเกณฑ์'], ['need_more_info', 'รอข้อมูลเพิ่มเติม']], v.r_result || 'forward'))}
-      ${field('r_round', 'จัดเข้ารอบ', select('r_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], v.r_round || s.round || (['ป.6', 'ม.3'].includes(s.class) ? '1' : '1')), {hint: `วันตัดรอบแรก ป.6 / ม.3: ${thDate(this.db.cycle.first_cutoff)}`})}
+      ${field('r_round', 'จัดเข้ารอบ', select('r_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], v.r_round || s.round || (s.school_next === 'transfer' && !['ป.6', 'ม.3'].includes(s.class) ? '2' : '1')),
+        {hint: s.school_next === 'transfer' ? `ย้ายสถานศึกษา: ป.6 / ม.3 ส่งหลักฐานภายใน ${thDate(this.db.cycle.first_cutoff)} → รอบ 1 · ระดับอื่น หรือส่งหลังจากนั้นแต่ไม่เกิน ${thDate(this.db.cycle.transfer_close)} → รอบ 2` : 'ไม่ย้ายสถานศึกษา → รอบ 1'})}
       <button class="btn primary block" type="submit">บันทึกและส่งต่อผู้จัดการ</button></form>`
       : `<p class="small muted">ใบสมัครนี้อยู่สถานะ “${STATUS[s.status].label}” — จนท.รีวิวดำเนินการได้เมื่อสถานะเป็น “รอเจ้าหน้าที่ดำเนินการ”</p>${reviewSummary(s)}`;
   } else if (role === 'manager') {
