@@ -122,7 +122,7 @@ function applicantSections(s, o = {}) {
         <div><dt>บิดา</dt><dd>${person('father', f.father)}</dd></div><div><dt>มารดา</dt><dd>${person('mother', f.mother)}</dd></div>
         <div><dt>อาศัยอยู่กับ</dt><dd>${esc(lab(LIVE_WITH, f.live_with))}</dd></div>
         ${f.live_with === 'guardian' ? `<div><dt>ญาติ / ผู้อุปการะ</dt><dd>${person('guardian', f.guardian)}</dd></div>` : ''}
-        <div><dt>สภาพที่อยู่ปัจจุบัน</dt><dd>${esc(housing)}</dd></div><div><dt>อุปกรณ์ในบ้าน</dt><dd>${esc(equip)}</dd></div>
+        <div><dt>สภาพที่อยู่ปัจจุบัน</dt><dd>${esc(housing)}</dd></div><div><dt>อุปกรณ์ในบ้าน</dt><dd>${esc(equip)}${f.equipment_note ? `<div class="muted small">${esc(f.equipment_note)}</div>` : ''}</dd></div>
         <div><dt>ที่ดินทำกิน</dt><dd>${esc(land)}</dd></div>
         <div><dt>ความสัมพันธ์ในครอบครัว</dt><dd>${esc((f.relations || []).map(relLabel).join(', ') || '—')}</dd></div>
         <div><dt>พี่น้อง</dt><dd>${sibs.length} คน${sibs.length ? ` (อยู่บ้านเดียวกัน ${sibs.length - movedCount(sibs) - outCount(sibs)} · แยกไปอยู่ข้างนอก ${outCount(sibs)} · แยกไปมีครอบครัว ${movedCount(sibs)})` : ''}</dd></div></dl>

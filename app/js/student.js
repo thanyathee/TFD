@@ -374,7 +374,8 @@ function stepFamily(s, e) {
       <div class="choice-grid" id="equip">${EQUIP.map(([k, t]) => `<label class="choice"><input type="checkbox" name="equipment" value="${k}" ${eq.includes(k) ? 'checked' : ''} ${f.no_equipment ? 'disabled' : ''}> ${t}</label>`).join('')}
         <label class="choice"><input type="checkbox" name="no_equipment" ${f.no_equipment ? 'checked' : ''} data-onchange="student-noequip"> ไม่มีอุปกรณ์ตามรายการ</label></div>
       <input type="hidden" name="equipment_other_on" value="${eq.includes('other') ? 'on' : ''}">
-      <div data-when="equipment_other_on=on">${field('equipment_other', 'อุปกรณ์อื่น ๆ (ระบุ)', input('equipment_other', f.equipment_other), {req: 1, err: e.equipment_other})}</div></div>
+      <div data-when="equipment_other_on=on">${field('equipment_other', 'อุปกรณ์อื่น ๆ (ระบุ)', input('equipment_other', f.equipment_other), {req: 1, err: e.equipment_other})}</div>
+      ${field('equipment_note', 'อธิบายเพิ่มเติม <span class="muted">(ถ้ามี)</span>', textarea('equipment_note', f.equipment_note, 'rows="2" placeholder="เช่น รถกระบะเก่ามือสอง ซ่อมบ่อย / คอมพิวเตอร์ได้รับบริจาค"'))}</div>
   </section>
   <section class="card"><h3>ที่ดินทำกินของครอบครัว <span class="muted small">(ตอบได้มากกว่า 1 ข้อ)</span></h3>
     <div class="grid-2">
@@ -395,7 +396,7 @@ function siblingRows(list, e = {}) {
       ${field(`sib${i}_gender`, 'เพศ', select(`sib${i}_gender`, ['ชาย', 'หญิง'], x.gender, 'เลือก'))}
       ${field(`sib${i}_name`, 'ชื่อ-สกุล', input(`sib${i}_name`, x.name))}
       ${field(`sib${i}_age`, 'อายุ', `<div class="age-unit">${input(`sib${i}_age`, x.age, 'type="number" min="0" max="80" inputmode="numeric"')}
-        ${select(`sib${i}_age_unit`, AGE_UNITS, x.age_unit || 'y', null, 'aria-label="หน่วยอายุ"')}</div>`)}
+        <div class="unit-seg" role="radiogroup" aria-label="หน่วยอายุ">${AGE_UNITS.map(([k, t]) => `<label><input type="radio" name="sib${i}_age_unit" value="${k}" ${(x.age_unit || 'y') === k ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div></div>`, {hint: 'กดเลือก ปี หรือ เดือน'})}
       ${field(`sib${i}_edu`, 'การศึกษา / ระดับชั้น', input(`sib${i}_edu`, x.edu, 'placeholder="เช่น ม.2 / จบ ป.6 / ยังไม่เข้าเรียน"'))}
       ${field(`sib${i}_job`, 'อาชีพ / ตำแหน่ง', input(`sib${i}_job`, x.occupation, 'placeholder="เช่น นักเรียน / พนักงานโรงงาน"'))}
       ${field(`sib${i}_place`, 'สถานที่ทำงาน หรือสถานที่ศึกษา', input(`sib${i}_place`, x.place))}
@@ -555,7 +556,7 @@ App.on('student-step', function (form, ev) {
       housing: v.housing || '', housing_land_owner: v.housing === 'own_other_land' ? v.housing_land_owner || '' : '',
       housing_cost: v.housing === 'installment' ? v.housing_installment || '' : v.housing === 'rent' ? v.housing_rent || '' : '',
       housing_other: v.housing === 'other' ? v.housing_other || '' : '',
-      equipment: v.no_equipment ? [] : arr(v.equipment), equipment_other: arr(v.equipment).includes('other') ? v.equipment_other || '' : '', no_equipment: !!v.no_equipment,
+      equipment: v.no_equipment ? [] : arr(v.equipment), equipment_other: arr(v.equipment).includes('other') ? v.equipment_other || '' : '', no_equipment: !!v.no_equipment, equipment_note: (v.equipment_note || '').trim(),
       own_land: !!v.own_land, own_land_amt: v.own_land ? v.own_land_amt || '' : '', own_land_unit: v.own_land_unit || 'rai',
       rent_land: !!v.rent_land, rent_land_amt: v.rent_land ? v.rent_land_amt || '' : '', rent_land_unit: v.rent_land_unit || 'rai',
       rent_land_cost: v.rent_land ? v.rent_land_cost || '' : '', rent_land_per: v.rent_land_per || 'year',

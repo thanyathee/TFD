@@ -249,6 +249,7 @@ CREATE TABLE application_family (
   equipment        text[] NOT NULL DEFAULT '{}',  -- washer, aircon, computer, car, pickup, tractor, etan, other
   equipment_other  text,
   no_equipment     boolean NOT NULL DEFAULT false,
+  equipment_note   text,               -- คำอธิบายเพิ่มเติม เช่น รถกระบะเก่ามือสอง ซ่อมบ่อย
   own_land         boolean NOT NULL DEFAULT false,  -- ข้อ 6
   own_land_amt     numeric(8,1),
   own_land_unit    text,               -- wa (ตารางวา) / rai (ไร่)
