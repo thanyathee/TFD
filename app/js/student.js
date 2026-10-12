@@ -58,7 +58,7 @@ const RELATIONS = [['together', 'บิดามารดาอยู่ด้�
 const relLabel = k => (RELATIONS.find(r => r[0] === k) || [, k])[1];
 const PERSON_LABEL = {father: 'บิดา', mother: 'มารดา', guardian: 'ญาติ / ผู้อุปการะ'};
 const needsGoal = s => s.class === 'ม.6' || ['voc', 'highvoc'].includes(s.group);
-const storiesRequired = s => s.class !== 'ป.5';   // แบบฟอร์มเขียนเล่า: ยกเว้นระดับประถมศึกษาปีที่ 5
+const storiesRequired = s => s.class !== 'ป.5';   // ป.5 ไม่ต้องเขียนเล่า มูลนิธิฯ พิจารณาจากความคิดเห็นของครูแทน
 
 /* ---------- หน้า 2–4: กรอกใบสมัคร ---------- */
 App.views['student-form'] = function (p) {
@@ -536,7 +536,7 @@ function stepMore(s, e) {
   ${s.type === 'CONT' ? `<section class="card"><h3>เหตุผลในการขอรับทุนต่อเนื่อง</h3>
     ${field('reason', needsGoal(s) ? '§.1 เหตุผลในการขอรับทุนต่อเนื่อง' : '', textarea('reason', s.reason, 'rows="3" aria-label="เหตุผลในการขอรับทุนต่อเนื่อง"'), {req: req, err: e.reason})}
     ${needsGoal(s) ? field('goal', '§.2 เป้าหมายในการขอรับทุนเพื่อการศึกษาต่อในระดับอุดมศึกษา', textarea('goal', s.goal, 'rows="3"'), {req: 1, err: e.goal, hint: 'สำหรับผู้ขอทุนระดับ ม.6 / ปวช. / ปวส.'}) : ''}
-  </section>` : `<section class="card"><h3>เขียนเล่าประวัติและสภาพความเป็นอยู่</h3>
+  </section>` : !req ? '' : `<section class="card"><h3>เขียนเล่าประวัติและสภาพความเป็นอยู่</h3>
     <p class="small muted">${req ? 'กรุณาเล่าเรื่องราวตามจริง ข้อมูลนี้ใช้ประกอบการพิจารณาทุน' : 'ระดับประถมศึกษาปีที่ 5 ไม่บังคับกรอกส่วนนี้'}</p>
     ${STORY_Q.map(([t, h], i) => field('story_' + i, `§.${i + 1} ${t}`,
       textarea('story_' + i, (s.stories || [])[i], `rows="4" data-oninput="count" maxlength="2000" aria-describedby="cnt_${i}"`) +
@@ -633,7 +633,7 @@ App.on('student-step', function (form, ev) {
     Object.assign(s, {allowance: v.allowance || '', other: v.other, other_org: v.other === 'yes' ? v.other_org || '' : '', other_amount: v.other === 'yes' ? v.other_amount || '' : '',
       other_period: v.other === 'yes' ? v.other_period : '', loan: v.loan, loans: v.loan === 'yes' ? readLoans(form) : [], part_time: v.part_time, part_job: v.part_time === 'yes' ? v.part_job || '' : '',
       part_income: v.part_time === 'yes' ? v.part_income || '' : '', part_per: v.part_time === 'yes' ? v.part_per : '',
-      stories: s.type === 'CONT' ? [] : STORY_Q.map((_, i) => v['story_' + i] || ''), reason: v.reason || '', goal: v.goal || '', confirmed: !!v.confirm, pdpa_ack: !!v.pdpa});
+      stories: s.type === 'CONT' || !storiesRequired(s) ? [] : STORY_Q.map((_, i) => v['story_' + i] || ''), reason: v.reason || '', goal: v.goal || '', confirmed: !!v.confirm, pdpa_ack: !!v.pdpa});
     need('allowance');
     need('other', 'กรุณาเลือกคำตอบ');
     if (v.other === 'yes') need('other_org', 'กรุณาระบุชื่อทุน');
