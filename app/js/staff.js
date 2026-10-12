@@ -136,7 +136,8 @@ App.views['staff-dash'] = function (p) {
     ${p.drill ? drillBox.call(this, act.find(a => a[0] === p.drill), pl) : ''}
     ${trendCard.call(this, events, refDay, p)}`};
 };
-function shiftDay(day, n) { const d = new Date(day + 'T00:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+/* คำนวณแบบ UTC ล้วน ไม่ขึ้นกับเขตเวลาเครื่อง (เดิมเครื่องเวลาไทย +7 ทำให้วันไม่ขยับ และวนไม่จบ) */
+function shiftDay(day, n) { const d = new Date(day + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 function drillBox(a, pl) {
   if (!a) return '';
   const rows = a[2].map(e => [e, this.studentByCode[e.code]]).filter(x => x[1]);
@@ -149,7 +150,7 @@ function trendCard(events, refDay, p) {
     ['reviewer_done', 'จนท.ดำเนินการ', 'var(--violet)'], ['manager_done', 'ผจก.ดำเนินการ', 'var(--ok)']];
   const tests = Object.fromEntries(ACTIVITY.map(a => [a[0], a[2]]));
   const days = [];
-  for (let d = this.db.cycle.open; d <= refDay; d = shiftDay(d, 1)) days.push(d);
+  for (let d = this.db.cycle.open; d <= refDay && days.length < 800; d = shiftDay(d, 1)) days.push(d);
   const byDay = series.map(([k]) => days.map(d => events.filter(e => e.at.slice(0, 10) === d && tests[k](e.kind)).length));
   const data = mode === 'cum' ? byDay.map(a => a.reduce((acc, x, i) => (acc.push((acc[i - 1] || 0) + x), acc), [])) : byDay;
   const max = Math.max(1, ...data.flat());
