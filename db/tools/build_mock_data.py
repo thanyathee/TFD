@@ -284,11 +284,39 @@ def main():
                      'province': s['_province'], 'district': s['_district']} for s in schools],
         'teachers': [{'username': t['username'], 'name': t['full_name'], 'position': t['position'],
                       'school': by_id[t['school_id']]['institution_code'], 'phone': t['phone'], 'email': t['email']} for t in teachers],
-        'students': [{'code': a['app_code'], 'citizen_id': s['citizen_id'], 'name': f"{s['title']}{s['first_name']} {s['last_name']}",
-                      'birth_date': s['birth_date'], 'phone': s['phone'], 'school': by_id[a['school_id']]['institution_code'],
-                      'class': a['current_class'], 'next_class': a['next_class'], 'type': a['applicant_type'], 'status': a['status']}
-                     for s, a in zip(students, apps)],
+        'students': [],
+        'rates': [{'code': c, 'name': nm, 'amount': amt} for c, nm, amt in RATES],
     }
+    tr_by = {r['application_id']: r for r in treviews}
+    sr_by = {r['application_id']: r for r in sreviews}
+    de_by = {r['application_id']: r for r in decisions}
+    fam_by = {r['application_id']: r for r in fams}
+    sib_by = {}
+    for r in sibs:
+        sib_by.setdefault(r['application_id'], []).append(r)
+    user_by = {u['id']: u for u in users}
+    for s, a in zip(students, apps):
+        f = fam_by[a['id']]
+        t = tr_by.get(a['id'])
+        r = sr_by.get(a['id'])
+        d = de_by.get(a['id'])
+        mock['students'].append({
+            'code': a['app_code'], 'citizen_id': s['citizen_id'], 'title': s['title'], 'first_name': s['first_name'],
+            'last_name': s['last_name'], 'gender': s['gender'], 'birth_date': s['birth_date'], 'phone': s['phone'],
+            'school': by_id[a['school_id']]['institution_code'], 'class': a['current_class'], 'next_class': a['next_class'],
+            'rate': a['rate_level_code'], 'group': a['education_group'], 'type': a['applicant_type'], 'status': a['status'],
+            'submitted_at': a['submitted_at'], 'address': a['home_address'],
+            'stories': [a['story_family'], a['story_siblings'], a['story_travel'], a['story_housing'], a['story_expenses'], a['story_other']],
+            'family': {k: f[k] for k in ('father_name', 'father_status', 'father_occupation', 'father_monthly_income',
+                                         'mother_name', 'mother_status', 'mother_occupation', 'mother_monthly_income',
+                                         'family_status', 'guardian_relation', 'housing_type', 'housing_cost', 'assets')},
+            'siblings': [{k: x[k] for k in ('name', 'age', 'status', 'detail', 'monthly_income')} for x in sib_by.get(a['id'], [])],
+            'teacher_review': t and {'teacher': user_by[t['teacher_id']]['username'], 'grade_type': t['grade_type'],
+                                     'grade_value': t['grade_value'], 'comment': t['comment'], 'sent_at': t['sent_at']},
+            'staff_review': r and {'reviewer': user_by[r['reviewer_id']]['full_name'], 'result': r['result']},
+            'decision': d and {'result': d['result'], 'standard_amount': d['standard_amount'],
+                               'approved_amount': d['approved_amount'], 'reason': d['amount_reason'] or d['reject_reason']},
+        })
     (ROOT / 'mock').mkdir(exist_ok=True)
     (ROOT / 'mock/mock_data.json').write_text(json.dumps(mock, ensure_ascii=False, indent=1), 'utf-8')
     print(f'{len(schools)} สถานศึกษา / {len(teachers)} ครู / {len(staff)} เจ้าหน้าที่ / {len(students)} นักเรียน / '
