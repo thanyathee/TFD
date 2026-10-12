@@ -534,7 +534,7 @@ function stepMore(s, e) {
     </div>
   </section>
   ${s.type === 'CONT' ? `<section class="card"><h3>เหตุผลในการขอรับทุนต่อเนื่อง</h3>
-    ${field('reason', needsGoal(s) ? '§.1 เหตุผลในการขอรับทุนต่อเนื่อง' : '', textarea('reason', s.reason, 'rows="3" aria-label="เหตุผลในการขอรับทุนต่อเนื่อง"'), {req: req && needsGoal(s), err: e.reason})}
+    ${field('reason', needsGoal(s) ? '§.1 เหตุผลในการขอรับทุนต่อเนื่อง' : '', textarea('reason', s.reason, 'rows="3" aria-label="เหตุผลในการขอรับทุนต่อเนื่อง"'), {req: req, err: e.reason})}
     ${needsGoal(s) ? field('goal', '§.2 เป้าหมายในการขอรับทุนเพื่อการศึกษาต่อในระดับอุดมศึกษา', textarea('goal', s.goal, 'rows="3"'), {req: 1, err: e.goal, hint: 'สำหรับผู้ขอทุนระดับ ม.6 / ปวช. / ปวส.'}) : ''}
   </section>` : `<section class="card"><h3>เขียนเล่าประวัติและสภาพความเป็นอยู่</h3>
     <p class="small muted">${req ? 'กรุณาเล่าเรื่องราวตามจริง ข้อมูลนี้ใช้ประกอบการพิจารณาทุน' : 'ระดับประถมศึกษาปีที่ 5 ไม่บังคับกรอกส่วนนี้'}</p>
