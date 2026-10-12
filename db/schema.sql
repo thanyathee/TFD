@@ -310,14 +310,12 @@ CREATE TABLE application_siblings (    -- ข้อ 8 พี่น้อง (บ
   seq            smallint NOT NULL,
   gender         text,
   name           text,
-  age            smallint,             -- อายุ (ปี)
-  age_months     smallint CHECK (age_months BETWEEN 0 AND 11),  -- อายุ (เดือน) เช่น น้อง 0 ปี 3 เดือน
-  status         text CHECK (status IN ('study','preschool','work','disabled','none','other')),
-                                       -- กำลังเรียน / ยังไม่ถึงวัยเรียน / ทำงาน / พิการหรือเจ็บป่วย / ไม่ได้เรียนและไม่ได้ทำงาน / อื่น ๆ
-  note           text,                 -- รายละเอียด เมื่อ status = disabled / none / other
+  age            smallint,
+  age_unit       text NOT NULL DEFAULT 'y' CHECK (age_unit IN ('y','m')),  -- y = ปี, m = เดือน (เช่น น้องอายุ 3 เดือน)
   education      text,                 -- การศึกษา / ระดับชั้น
   occupation     text,                 -- อาชีพ / ตำแหน่ง
   place          text,                 -- สถานที่ทำงาน หรือสถานที่ศึกษา
+  note           text,                 -- หมายเหตุที่นักเรียนระบุเอง เช่น ยังไม่ถึงวัยเรียน / พิการ / เจ็บป่วย
   residence      text,                 -- home (อยู่บ้านเดียวกัน) / out (แยกออกไปอยู่ข้างนอก) / family (แยกออกไปมีครอบครัวแล้ว)
   UNIQUE (application_id, seq)
 );

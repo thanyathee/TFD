@@ -394,16 +394,13 @@ function siblingRows(list, e = {}) {
     <div class="grid-3">
       ${field(`sib${i}_gender`, 'เพศ', select(`sib${i}_gender`, ['ชาย', 'หญิง'], x.gender, 'เลือก'))}
       ${field(`sib${i}_name`, 'ชื่อ-สกุล', input(`sib${i}_name`, x.name))}
-      ${field(`sib${i}_age`, 'อายุ', `<div class="age-ym">${input(`sib${i}_age`, x.age, 'type="number" min="0" max="80" inputmode="numeric" aria-label="ปี"')}<span>ปี</span>
-        ${input(`sib${i}_age_m`, x.age_m, 'type="number" min="0" max="11" inputmode="numeric" aria-label="เดือน"')}<span>เดือน</span></div>`, {hint: 'ถ้ายังไม่ถึง 1 ปี ใส่ 0 ปี แล้วกรอกเดือน'})}
+      ${field(`sib${i}_age`, 'อายุ', `<div class="age-unit">${input(`sib${i}_age`, x.age, 'type="number" min="0" max="80" inputmode="numeric"')}
+        ${select(`sib${i}_age_unit`, AGE_UNITS, x.age_unit || 'y', null, 'aria-label="หน่วยอายุ"')}</div>`)}
+      ${field(`sib${i}_edu`, 'การศึกษา / ระดับชั้น', input(`sib${i}_edu`, x.edu, 'placeholder="เช่น ม.2 / จบ ป.6 / ยังไม่เข้าเรียน"'))}
+      ${field(`sib${i}_job`, 'อาชีพ / ตำแหน่ง', input(`sib${i}_job`, x.occupation, 'placeholder="เช่น นักเรียน / พนักงานโรงงาน"'))}
+      ${field(`sib${i}_place`, 'สถานที่ทำงาน หรือสถานที่ศึกษา', input(`sib${i}_place`, x.place))}
     </div>
-    ${field(`sib${i}_status`, 'ปัจจุบัน', select(`sib${i}_status`, SIB_STATUS, x.status, 'เลือก'), {req: 1, err: e[`sib${i}_status`]})}
-    <div class="grid-3">
-      <div data-when="sib${i}_status=study|work|none|disabled|other">${field(`sib${i}_edu`, 'การศึกษา / ระดับชั้น', input(`sib${i}_edu`, x.edu, 'placeholder="เช่น ม.2 / จบ ป.6 / ไม่ได้เรียน"'))}</div>
-      <div data-when="sib${i}_status=work">${field(`sib${i}_job`, 'อาชีพ / ตำแหน่ง', input(`sib${i}_job`, x.occupation, 'placeholder="เช่น พนักงานโรงงาน"'))}</div>
-      <div data-when="sib${i}_status=study|work">${field(`sib${i}_place`, 'สถานที่ทำงาน หรือสถานที่ศึกษา', input(`sib${i}_place`, x.place))}</div>
-    </div>
-    <div data-when="sib${i}_status=disabled|none|other">${field(`sib${i}_note`, 'ระบุรายละเอียด', input(`sib${i}_note`, x.note, 'placeholder="เช่น พิการทางร่างกาย ต้องมีคนดูแล / ป่วยติดเตียง"'), {req: 1, err: e[`sib${i}_note`]})}</div>
+    ${field(`sib${i}_note`, 'หมายเหตุ <span class="muted">(ถ้ามี)</span>', input(`sib${i}_note`, x.note, 'placeholder="เช่น ยังเล็กไม่ถึงวัยเรียน / พิการ ต้องมีคนดูแล / ป่วย ไม่ได้ทำงาน"'))}
   </div>`).join('');
 }
 function readSiblings(form) {
@@ -411,22 +408,18 @@ function readSiblings(form) {
   const out = [];
   for (let i = 0; i < 20; i++) {
     if (v[`sib${i}_name`] === undefined) continue;
-    const st = v[`sib${i}_status`] || '';
-    const keep = (k, ok) => ok ? (v[k] || '') : '';
-    out.push({gender: v[`sib${i}_gender`] || '', name: v[`sib${i}_name`] || '', age: v[`sib${i}_age`] || '', age_m: v[`sib${i}_age_m`] || '',
-      status: st, edu: keep(`sib${i}_edu`, st && st !== 'preschool'), occupation: keep(`sib${i}_job`, st === 'work'),
-      place: keep(`sib${i}_place`, st === 'study' || st === 'work'), note: keep(`sib${i}_note`, ['disabled', 'none', 'other'].includes(st)),
+    out.push({gender: v[`sib${i}_gender`] || '', name: v[`sib${i}_name`] || '', age: v[`sib${i}_age`] || '', age_unit: v[`sib${i}_age_unit`] || 'y',
+      edu: v[`sib${i}_edu`] || '', occupation: v[`sib${i}_job`] || '', place: v[`sib${i}_place`] || '', note: v[`sib${i}_note`] || '',
       residence: v[`sib${i}_res`] || ''});
   }
   return out;
 }
 const SIB_RES = [['home', 'อยู่บ้านเดียวกัน'], ['out', 'แยกออกไปอยู่ข้างนอก'], ['family', 'แยกออกไปมีครอบครัวแล้ว']];
-const SIB_STATUS = [['study', 'กำลังเรียน'], ['preschool', 'ยังเล็ก / ยังไม่ถึงวัยเรียน'], ['work', 'ทำงานแล้ว'],
-  ['disabled', 'ไม่ได้เรียน / ทำงาน เพราะพิการหรือเจ็บป่วย'], ['none', 'ไม่ได้เรียนและไม่ได้ทำงาน'], ['other', 'อื่น ๆ']];
+const AGE_UNITS = [['y', 'ปี'], ['m', 'เดือน']];
 const movedCount = list => list.filter(x => x.residence === 'family').length;
 const outCount = list => list.filter(x => x.residence === 'out').length;
 const sibCounts = list => SIB_RES.map(([k, t]) => `<div><b>${list.filter(x => x.residence === k).length}</b><span>${t.replace('แยกออกไป', 'แยกไป')}</span></div>`).join('');
-const sibAge = x => [x.age !== '' && x.age != null && (Number(x.age) || !Number(x.age_m)) ? `${x.age} ปี` : '', Number(x.age_m) ? `${x.age_m} เดือน` : ''].filter(Boolean).join(' ');
+const sibAge = x => x.age !== '' && x.age != null ? `${x.age} ${x.age_unit === 'm' ? 'เดือน' : 'ปี'}` : '';
 function renderSibs(form, list) {
   document.getElementById('sibs').innerHTML = siblingRows(list);
   document.getElementById('sib_count').value = list.length;
@@ -589,8 +582,6 @@ App.on('student-step', function (form, ev) {
     fam.sib_out = String(outCount(s.siblings));
     s.siblings.forEach((x, i) => {
       if (!x.residence) e[`sib${i}_res`] = 'กรุณาเลือกว่าพักอาศัยที่ไหน';
-      if (!x.status) e[`sib${i}_status`] = 'กรุณาเลือกสถานะปัจจุบัน';
-      else if (['disabled', 'none', 'other'].includes(x.status) && !x.note.trim()) e[`sib${i}_note`] = 'กรุณาระบุรายละเอียด';
     });
   } else {
     Object.assign(s, {allowance: v.allowance || '', other: v.other, other_org: v.other === 'yes' ? v.other_org || '' : '', other_amount: v.other === 'yes' ? v.other_amount || '' : '',
