@@ -131,9 +131,8 @@ CREATE TABLE document_types (
 -- ---------------------------------------------------------------------
 CREATE TABLE students (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  citizen_id_hash  text NOT NULL UNIQUE,  -- SHA-256(เลขบัตร + secret) ใช้ค้นหา/ล็อกอิน
-  citizen_id_enc   bytea NOT NULL,        -- เลขบัตรเข้ารหัส (pgp_sym_encrypt) แสดงเฉพาะผู้มีสิทธิ์
-  citizen_id_last4 char(4) NOT NULL,      -- แสดงแบบปิดบัง x-xxxx-xxxxx-12-3
+  citizen_id       char(13) NOT NULL UNIQUE  -- เลขประจำตัวประชาชน 13 หลักตามจริง (ตัวเลขล้วน ไม่มีขีด)
+                   CHECK (citizen_id ~ '^[0-9]{13}$'),
   title            text,
   first_name       text NOT NULL,
   last_name        text NOT NULL,
