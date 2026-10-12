@@ -350,5 +350,10 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .btn.sample{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;white-space:normal}
 .btn.sample span{color:var(--muted);font-weight:500;font-size:14px}
 /* ครู: ปุ่มใบสรุปเสนอ ผอ. เด่นเป็นสีแดง */
-.tabs button[data-go="teacher-report"]{background:var(--bad-soft);color:var(--bad)}
-.tabs button[data-go="teacher-report"][aria-current="page"]{background:var(--bad);color:#fff}
+.tabs button{transition:transform .15s ease,box-shadow .15s ease,background-color .15s ease,filter .15s ease}
+.tabs button:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.tabs button:active{transform:translateY(0)}
+.tabs button[data-go="teacher-report"]{background:#d93025;color:#fff;box-shadow:0 2px 8px rgba(217,48,37,.35)}
+.tabs button[data-go="teacher-report"]:hover{background:#b3261e;box-shadow:0 6px 16px rgba(217,48,37,.45)}
+.tabs button[data-go="teacher-report"][aria-current="page"]{background:#b3261e;color:#fff;box-shadow:0 0 0 3px rgba(217,48,37,.25)}
+@media (prefers-reduced-motion:reduce){.tabs button,.tabs button:hover{transition:none;transform:none}}
