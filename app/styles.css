@@ -388,3 +388,8 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
   html,body,main,#main{min-height:0!important;height:auto!important}
 }
 .paper.a4 .sign{grid-template-columns:1fr 1fr!important}
+.a4-sub{margin:14px 0 0;font-size:15px;color:#0055b8}
+.a4-sub span{color:#555;font-weight:500;font-size:13px}
+.paper.a4 td:nth-child(4),.paper.a4 th:nth-child(4){width:70px}
+.paper.a4 td:nth-child(2),.paper.a4 th:nth-child(2){width:150px;white-space:nowrap}
+@media print{.a4-sub{break-after:avoid}}

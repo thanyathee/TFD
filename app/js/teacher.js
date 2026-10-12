@@ -291,9 +291,11 @@ App.views['teacher-report'] = function () {
       <div class="a4-head"><span class="a4-logo">TF</span><div><b>มูลนิธิทิสโก้ เพื่อการกุศล</b><span>ปีการศึกษา ${this.db.cycle.year}</span></div></div>
       <h3>ใบสรุปรายชื่อนักเรียนที่ส่งขอรับทุนการศึกษา<br>มูลนิธิทิสโก้ เพื่อการกุศล</h3>
       <div class="c"><b>${esc(sc.name)}</b><br>${esc(sc.district)} จังหวัด${esc(sc.province)}</div>
-      <table><thead><tr><th class="n">ลำดับ</th><th>รหัสผู้สมัคร</th><th>ชื่อ–นามสกุล</th><th>ชั้น</th><th>ประเภททุน</th></tr></thead>
-        <tbody>${sent.length ? sent.map((s, i) => `<tr><td class="n">${i + 1}</td><td>${s.code}</td><td>${esc(fullName(s))}</td><td>${esc(s.class)}</td><td>${TYPE[s.type]}</td></tr>`).join('')
-          : '<tr><td colspan="5" style="text-align:center">ยังไม่มีนักเรียนที่ส่งมูลนิธิฯ</td></tr>'}</tbody></table>
+      ${[['NEW', 'ทุนใหม่'], ['CONT', 'ทุนต่อเนื่อง']].map(([k, label]) => { const list = sent.filter(s => s.type === k); return `
+      <h4 class="a4-sub">${label} <span>(${list.length} คน)</span></h4>
+      <table><thead><tr><th class="n">ลำดับ</th><th>รหัสผู้สมัคร</th><th>ชื่อ–นามสกุล</th><th>ชั้น</th></tr></thead>
+        <tbody>${list.length ? list.map((s, i) => `<tr><td class="n">${i + 1}</td><td>${s.code}</td><td>${esc(fullName(s))}</td><td>${esc(s.class)}</td></tr>`).join('')
+          : '<tr><td colspan="4" style="text-align:center">— ไม่มี —</td></tr>'}</tbody></table>`; }).join('')}
       <p class="a4-sum">รวมทั้งสิ้น <b>${sent.length}</b> คน (ทุนใหม่ ${sent.filter(s => s.type === 'NEW').length} คน · ทุนต่อเนื่อง ${sent.filter(s => s.type === 'CONT').length} คน)</p>
       <p class="a4-cert">ขอรับรองว่านักเรียนตามรายชื่อข้างต้นเป็นนักเรียนของสถานศึกษาจริง และข้อมูลที่ส่งมายังมูลนิธิฯ ได้ผ่านการตรวจสอบจากสถานศึกษาแล้ว</p>
       <div class="sign"><div><b>ผู้ประสานงานทุนการศึกษา</b><br>${esc(t ? t.name : '')}<br>โทร. ${esc(t ? t.phone : '')}<br>อีเมล ${esc(t ? t.email : '')}</div>
