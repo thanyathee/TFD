@@ -53,8 +53,9 @@ function rateOf(next, pvsType) {
   return null;
 }
 /* teacherNeedsScholarCert (v28) */
-/* แบบฟอร์มรับรองสถานะการกู้ยืม กยศ./กรอ.: สำหรับ ม.ปลาย อาชีวศึกษา และปริญญาตรี (ตามแบบฟอร์มกระดาษ) */
-const needsLoanCert = s => ['uppersec', 'voc', 'highvoc', 'bachelor'].includes(s.group || groupOfClass(s.class));
+/* แบบฟอร์มรับรองสถานะการกู้ยืม กยศ./กรอ.: สำหรับ ม.ปลาย อาชีวศึกษา และปริญญาตรี (ตามแบบฟอร์มกระดาษ)
+   และทุกระดับที่ตอบว่าผู้ขอทุนหรือพี่น้องกู้ กยศ./กรอ. */
+const needsLoanCert = s => s.loan === 'yes' || ['uppersec', 'voc', 'highvoc', 'bachelor'].includes(s.group || groupOfClass(s.class));
 /* เอกสารประกอบตามแบบฟอร์มกระดาษ — [รหัส, ชื่อ, แนบได้หลายไฟล์, ไม่บังคับ] */
 function docsFor(s) {
   const bachelor = (s.group || groupOfClass(s.class)) === 'bachelor';
@@ -74,6 +75,7 @@ function docsFor(s) {
     if (needsLoanCert(s)) d.push(loan);
     if (bachelor) d.push(['06_ADVISORCERT', 'จดหมายรับรองความเห็นจากอาจารย์ที่ปรึกษา']);
   }
+  if (s.school_next === 'transfer') d.push(['14_TRANSFER', 'หลักฐานยืนยันการย้ายสถานศึกษา (ส่งภายหลังได้ ภายในกำหนดของมูลนิธิฯ)', true, true]);
   return d.map(x => [x[0], x[1], !!x[2], !!x[3]]);
 }
 
