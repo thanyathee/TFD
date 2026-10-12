@@ -259,7 +259,7 @@ CREATE TABLE application_family (
   rent_land_per    text,               -- month / year
   relations        text[] NOT NULL DEFAULT '{}',  -- ข้อ 7 ความสัมพันธ์ในครอบครัว (13 ตัวเลือก)
   sibling_count    smallint,
-  siblings_moved   smallint            -- แยกไปมีครอบครัวแล้ว (คน)
+  siblings_moved   smallint            -- แยกไปมีครอบครัวแล้ว (คน) = จำนวนพี่น้องที่ residence = 'family'
 );
 
 -- บิดา / มารดา / ญาติหรือผู้อุปการะ (ข้อ 2–4)
@@ -313,6 +313,7 @@ CREATE TABLE application_siblings (    -- ข้อ 8 พี่น้อง (บ
   education      text,                 -- การศึกษา / ระดับชั้น
   occupation     text,                 -- อาชีพ / ตำแหน่ง
   place          text,                 -- สถานที่ทำงาน หรือสถานที่ศึกษา
+  residence      text,                 -- home (อยู่บ้านเดียวกัน) / out (แยกออกไปอยู่ข้างนอก) / family (แยกออกไปมีครอบครัวแล้ว)
   UNIQUE (application_id, seq)
 );
 

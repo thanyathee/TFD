@@ -356,10 +356,12 @@ function stepFamily(s, e) {
     <div data-when="live_with=guardian">${personBlock('guardian', f.guardian, e)}</div>
   </section>
   <section class="card"><h3>พี่น้อง (บิดามารดาเดียวกัน)</h3>
-    <p class="small muted">ไม่รวมผู้ขอทุน — กด “+ เพิ่มพี่น้อง” ทีละคน ถ้าไม่มีพี่น้อง ไม่ต้องเพิ่ม</p>
-    <div id="sibs" class="stack">${siblingRows(s.siblings || [])}</div>
-    <button class="btn add" type="button" data-action="sib-add">+ เพิ่มพี่น้อง</button>
-    <div class="grid-2">${field('sib_moved', 'พี่น้องที่แยกไปมีครอบครัวแล้ว (คน)', stepper('sib_moved', f.sib_moved || 0, 10))}</div>
+    <div class="grid-2">
+      ${field('sib_count', 'จำนวนพี่น้อง (ไม่รวมผู้ขอทุน)', stepper('sib_count', (s.siblings || []).length, 15, 'data-onchange="sib-count"'), {hint: 'กด − / + ระบบจะแสดงช่องให้กรอกตามจำนวน'})}
+      <div class="field"><span class="label">แยกไปมีครอบครัวแล้ว</span><div class="input" id="sib_moved_view" aria-live="polite">${movedCount(s.siblings || [])} คน</div>
+        <div class="hint">นับให้อัตโนมัติจากที่เลือกในแต่ละคนด้านล่าง</div></div>
+    </div>
+    <div id="sibs" class="stack">${siblingRows(s.siblings || [], e)}</div>
   </section>
   <div class="note info" id="family_total"></div>
   <section class="card"><h3>สภาพที่อยู่ปัจจุบัน</h3>
@@ -384,10 +386,11 @@ function stepFamily(s, e) {
     </div>
   </section>`;
 }
-function siblingRows(list) {
-  if (!list.length) return '<div class="empty small" style="padding:12px">ยังไม่ได้เพิ่มพี่น้อง</div>';
+function siblingRows(list, e = {}) {
+  if (!list.length) return '';
   return list.map((x, i) => `<div class="subcard" data-sib="${i}">
     <div class="row between"><b>พี่น้องคนที่ ${i + 1}</b><button class="btn ghost sm" type="button" data-action="sib-remove" data-i="${i}">ลบ</button></div>
+    ${radioField(`sib${i}_res`, 'ปัจจุบันพักอาศัย', SIB_RES, x.residence, {req: 1, err: e[`sib${i}_res`], attrs: 'data-onchange="sib-moved"'})}
     <div class="grid-3">
       ${field(`sib${i}_gender`, 'เพศ', select(`sib${i}_gender`, ['ชาย', 'หญิง'], x.gender, 'เลือก'))}
       ${field(`sib${i}_name`, 'ชื่อ-สกุล', input(`sib${i}_name`, x.name))}
@@ -403,26 +406,35 @@ function readSiblings(form) {
   for (let i = 0; i < 20; i++) {
     if (v[`sib${i}_name`] === undefined) continue;
     out.push({gender: v[`sib${i}_gender`] || '', name: v[`sib${i}_name`] || '', age: v[`sib${i}_age`] || '',
-      edu: v[`sib${i}_edu`] || '', occupation: v[`sib${i}_job`] || '', place: v[`sib${i}_place`] || ''});
+      edu: v[`sib${i}_edu`] || '', occupation: v[`sib${i}_job`] || '', place: v[`sib${i}_place`] || '', residence: v[`sib${i}_res`] || ''});
   }
   return out;
 }
-App.on('sib-add', function (el) {
-  const list = readSiblings(el.form);
-  if (list.length >= 15) return;
-  list.push({});
+const SIB_RES = [['home', 'อยู่บ้านเดียวกัน'], ['out', 'แยกออกไปอยู่ข้างนอก'], ['family', 'แยกออกไปมีครอบครัวแล้ว']];
+const movedCount = list => list.filter(x => x.residence === 'family').length;
+function renderSibs(form, list) {
   document.getElementById('sibs').innerHTML = siblingRows(list);
-  document.getElementById(`sib${list.length - 1}_gender`).focus();
+  document.getElementById('sib_count').value = list.length;
+  document.getElementById('sib_moved_view').textContent = `${movedCount(list)} คน`;
+}
+App.on('sib-count', function (el) {
+  const n = Math.max(0, Math.min(15, Number(el.value) || 0));
+  const list = readSiblings(el.form).slice(0, n);
+  while (list.length < n) list.push({});
+  renderSibs(el.form, list);
 });
 App.on('sib-remove', function (el) {
   const list = readSiblings(el.form);
   list.splice(Number(el.dataset.i), 1);
-  document.getElementById('sibs').innerHTML = siblingRows(list);
+  renderSibs(el.form, list);
+});
+App.on('sib-moved', function (el) {
+  document.getElementById('sib_moved_view').textContent = `${movedCount(readSiblings(el.form))} คน`;
 });
 /* ช่องจำนวนแบบกด − / + (พิมพ์ได้ แต่กด Enter ไม่ส่งฟอร์ม) */
-function stepper(id, value, max) {
+function stepper(id, value, max, attrs = '') {
   return `<div class="stepper-num"><button class="btn sm" type="button" data-action="num-step" data-for="${id}" data-d="-1" aria-label="ลด">−</button>
-    ${input(id, value, `type="number" min="0" max="${max}" inputmode="numeric"`)}
+    ${input(id, value, `type="number" min="0" max="${max}" inputmode="numeric" ${attrs}`)}
     <button class="btn sm" type="button" data-action="num-step" data-for="${id}" data-d="1" aria-label="เพิ่ม">+</button></div>`;
 }
 App.on('num-step', function (el) {
@@ -538,7 +550,7 @@ App.on('student-step', function (form, ev) {
       own_land: !!v.own_land, own_land_amt: v.own_land ? v.own_land_amt || '' : '', own_land_unit: v.own_land_unit || 'rai',
       rent_land: !!v.rent_land, rent_land_amt: v.rent_land ? v.rent_land_amt || '' : '', rent_land_unit: v.rent_land_unit || 'rai',
       rent_land_cost: v.rent_land ? v.rent_land_cost || '' : '', rent_land_per: v.rent_land_per || 'year',
-      relations: arr(v.relations), sib_moved: v.sib_moved || ''};
+      relations: arr(v.relations), sib_moved: ''};
     ['father', 'mother'].forEach(k => {
       if (!fam[k].name) e[k + '_name'] = 'กรุณากรอกชื่อ–สกุล (กรอกทุกกรณี)';
       if (!fam[k].status) e[k + '_status'] = 'กรุณาเลือกสถานะ';
@@ -557,6 +569,8 @@ App.on('student-step', function (form, ev) {
     if (fam.equipment.includes('other') && !fam.equipment_other) e.equipment_other = 'กรุณาระบุอุปกรณ์อื่น ๆ';
     s.family = fam;
     s.siblings = readSiblings(form);
+    fam.sib_moved = String(movedCount(s.siblings));
+    s.siblings.forEach((x, i) => { if (!x.residence) e[`sib${i}_res`] = 'กรุณาเลือกว่าพักอาศัยที่ไหน'; });
   } else {
     Object.assign(s, {allowance: v.allowance || '', other: v.other, other_org: v.other === 'yes' ? v.other_org || '' : '', other_amount: v.other === 'yes' ? v.other_amount || '' : '',
       other_period: v.other === 'yes' ? v.other_period : '', loan: v.loan, loan_count: v.loan === 'yes' ? v.loan_count || '' : '', loan_names: v.loan === 'yes' ? v.loan_names || '' : '',
@@ -836,4 +850,22 @@ document.addEventListener('keydown', e => {
   const items = [...form.querySelectorAll('input:not([type=hidden]), select, textarea')].filter(x => !x.disabled && !x.readOnly && !x.closest('[hidden]') && x.offsetParent !== null);
   const next = items[items.indexOf(el) + 1];
   if (next) next.focus();
+});
+
+/* ความสัมพันธ์ "บิดา/มารดาถึงแก่กรรม" กับสถานะในข้อมูลบิดา/มารดา ให้ตรงกันเสมอ (เลือกที่ไหนก็อัปเดตอีกที่) */
+document.addEventListener('change', e => {
+  const t = e.target;
+  const form = t.form;
+  if (!form || !form.matches('form[data-step="2"]')) return;
+  let who, dead;
+  if (t.name === 'relations' && /^(father|mother)_dead$/.test(t.value)) { who = t.value.split('_')[0]; dead = t.checked; }
+  else if (/^(father|mother)_status$/.test(t.name) && t.checked) { who = t.name.split('_')[0]; dead = t.value === 'dead'; }
+  else return;
+  const rel = form.querySelector(`[name=relations][value=${who}_dead]`);
+  if (rel) rel.checked = dead;
+  const radio = form.querySelector(`[name=${who}_status][value=${dead ? 'dead' : 'alive'}]`);
+  if (radio && (dead || form.querySelector(`[name=${who}_status][value=dead]`).checked)) radio.checked = true;
+  [rel, radio].forEach(x => x && x.dispatchEvent(new Event('input', {bubbles: true})));
+  applyWhen(form);
+  recalcIncome();
 });

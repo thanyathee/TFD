@@ -366,7 +366,7 @@ def main():
                      'own_land': own_land, 'own_land_amt': rng.randint(1, 10) if own_land else None, 'own_land_unit': 'rai',
                      'rent_land': rent_land, 'rent_land_amt': rng.randint(1, 5) if rent_land else None, 'rent_land_unit': 'rai',
                      'rent_land_cost': rng.choice([2000, 3000, 5000]) if rent_land else None, 'rent_land_per': 'year',
-                     'relations': rel, 'sibling_count': n_sib, 'siblings_moved': rng.randint(0, 1) if n_sib else 0})
+                     'relations': rel, 'sibling_count': n_sib, 'siblings_moved': 0})
         app_people[aid] = people
         for prs in people:
             pid = len(persons) + 1
@@ -383,10 +383,13 @@ def main():
                              'monthly_estimate': monthly(o)})
         for k in range(1, n_sib + 1):
             st = rng.choice(['study', 'study', 'work', 'none'])
+            sres = 'home' if st != 'work' else rng.choice(['home', 'out', 'family'])
             sibs.append({'application_id': aid, 'seq': k, 'gender': rng.choice(['ชาย', 'หญิง']), 'name': f'{rng.choice(BOY + GIRL)} {last}',
                          'age': rng.randint(3, 25), 'education': rng.choice(['ป.4', 'ม.2', 'ม.5', 'ปวช.2']) if st == 'study' else rng.choice(['จบ ม.3', 'จบ ป.6', 'ยังไม่เข้าเรียน']),
                          'occupation': 'นักเรียน' if st == 'study' else rng.choice(['พนักงานโรงงาน', 'รับจ้างทั่วไป']) if st == 'work' else '-',
-                         'place': 'โรงเรียนใกล้บ้าน' if st == 'study' else rng.choice(['นิคมอุตสาหกรรม', 'กรุงเทพฯ']) if st == 'work' else '-'})
+                         'place': 'โรงเรียนใกล้บ้าน' if st == 'study' else rng.choice(['นิคมอุตสาหกรรม', 'กรุงเทพฯ']) if st == 'work' else '-',
+                         'residence': sres})
+        fams[-1]['siblings_moved'] = sum(1 for x in sibs if x['application_id'] == aid and x['residence'] == 'family')
 
         ev = [(started, 'นักเรียนเริ่มกรอกใบสมัคร', 'started')]
         if submitted:
@@ -462,7 +465,7 @@ def main():
     sib_by, fund_by = {}, {}
     for r in sibs:
         sib_by.setdefault(r['application_id'], []).append({'gender': r['gender'], 'name': r['name'], 'age': r['age'],
-                                                          'edu': r['education'], 'occupation': r['occupation'], 'place': r['place']})
+                                                          'edu': r['education'], 'occupation': r['occupation'], 'place': r['place'], 'residence': r['residence']})
     for r in funding:
         fund_by.setdefault(r['application_id'], []).append(r)
     jperson = lambda p: p and {'name': p['name'], 'age': p['age'], 'status': p['status'] or '', 'relation': p['relation'] or '',
