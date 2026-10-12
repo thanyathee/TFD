@@ -678,73 +678,58 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 <section id="transfers" class="page">
   <div class="card">
     <h2 class="title">ย้ายสถานศึกษา</h2>
-    <p class="subtitle">เจ้าหน้าที่มูลนิธิฯ เป็นผู้บันทึกการได้รับและผลการตรวจหลักฐาน นักเรียนไม่ต้องยืนยันสถานะเอกสารด้วยตนเอง</p>
+    <p class="subtitle">เจ้าหน้าที่มูลนิธิฯ บันทึกว่านักเรียนย้ายไปเรียนที่สถานศึกษาใด (ตรวจสอบข้อมูลภายนอกเรียบร้อยแล้วก่อนบันทึก)</p>
 
     <div class="toolbar">
       <div class="field"><label>ปีทุนการศึกษา</label><select><option>2570</option></select></div>
-      <div class="field"><label>ภาค</label><select><option>ทั้งหมด</option><option>กรุงเทพฯและปริมณฑล</option><option>ภาคเหนือ</option><option>ภาคกลาง</option><option>ภาคตะวันออกเฉียงเหนือ</option><option>ภาคตะวันออก</option><option>ภาคตะวันตก</option><option>ภาคใต้</option></select></div>
-      <div class="field"><label>จังหวัด</label><select><option>ทั้งหมด</option><option>แพร่</option><option>เชียงใหม่</option></select></div>
-      <div class="field"><label>สถานะหลักฐาน</label><select id="transferStatusFilter" onchange="filterTransfers()"><option value="all">ทั้งหมด</option><option value="not_received">ยังไม่ได้รับ</option><option value="received">ได้รับแล้ว / รอตรวจสอบ</option><option value="passed">ผ่าน</option><option value="failed">ไม่ผ่าน</option></select></div>
       <div class="field"><label>ค้นหา</label><input id="transferKeyword" oninput="filterTransfers()" placeholder="ชื่อ / เลขใบสมัคร / โรงเรียน"></div>
     </div>
 
     <div class="transfer-summary">
-      <div class="transfer-stat" onclick="setTransferFilter('all')">ย้ายสถานศึกษาทั้งหมด<strong>186</strong></div>
-      <div class="transfer-stat" onclick="setTransferFilter('not_received')">ยังไม่ได้รับหลักฐาน<strong>42</strong></div>
-      <div class="transfer-stat" onclick="setTransferFilter('received')">ได้รับแล้ว / รอตรวจ<strong>18</strong></div>
-      <div class="transfer-stat" onclick="setTransferFilter('passed')">ผ่าน <span class="help">119</span><strong style="font-size:16px">ไม่ผ่าน 7</strong></div>
+      <div class="transfer-stat">ย้ายสถานศึกษาทั้งหมด<strong id="transferCount">0</strong></div>
     </div>
 
     <div class="transfer-layout">
       <div style="overflow:auto">
         <table id="transferTable">
-          <thead><tr><th>เลขใบสมัคร</th><th>ชื่อ–นามสกุล</th><th>สถานศึกษาเดิม</th><th>สถานศึกษาปัจจุบัน</th><th>ได้รับหลักฐาน</th><th>ผลตรวจ</th><th>วันที่ได้รับ</th><th></th></tr></thead>
-          <tbody>
-            <tr data-transfer-status="passed"><td>TF2570-001401</td><td>นักเรียน ก</td><td>โรงเรียน A</td><td>โรงเรียน B</td><td><span class="status s-ok">ได้รับแล้ว</span></td><td><span class="status s-ok">ผ่าน</span></td><td>12 พ.ย. 69</td><td><button class="btn-outline" onclick="openTransfer('TF2570-001401','นักเรียน ก','โรงเรียน A','โรงเรียน B','received','passed')">ตรวจสอบ</button></td></tr>
-            <tr data-transfer-status="failed"><td>TF2570-001402</td><td>นักเรียน ข</td><td>โรงเรียน C</td><td>โรงเรียน D</td><td><span class="status s-ok">ได้รับแล้ว</span></td><td><span class="status" style="background:#fff1f1;color:#b42318">ไม่ผ่าน</span></td><td>14 พ.ย. 69</td><td><button class="btn-outline" onclick="openTransfer('TF2570-001402','นักเรียน ข','โรงเรียน C','โรงเรียน D','received','failed')">ตรวจสอบ</button></td></tr>
-            <tr data-transfer-status="received"><td>TF2570-001403</td><td>นักเรียน ค</td><td>โรงเรียน E</td><td>โรงเรียน F</td><td><span class="status s-ok">ได้รับแล้ว</span></td><td><span class="status s-manager">รอตรวจสอบ</span></td><td>16 พ.ย. 69</td><td><button class="btn-outline" onclick="openTransfer('TF2570-001403','นักเรียน ค','โรงเรียน E','โรงเรียน F','received','pending')">ตรวจสอบ</button></td></tr>
-            <tr data-transfer-status="not_received"><td>TF2570-001404</td><td>นักเรียน ง</td><td>โรงเรียน G</td><td>โรงเรียน H</td><td><span class="status s-teacher">ยังไม่ได้รับ</span></td><td>—</td><td>—</td><td><button class="btn-outline" onclick="openTransfer('TF2570-001404','นักเรียน ง','โรงเรียน G','โรงเรียน H','not_received','')">ตรวจสอบ</button></td></tr>
-          </tbody>
+          <thead><tr><th>เลขใบสมัคร</th><th>ชื่อ–นามสกุล</th><th>สถานศึกษาเดิม</th><th>สถานศึกษาใหม่</th><th>วันที่แจ้งย้าย</th><th>ผู้บันทึก</th><th></th></tr></thead>
+          <tbody></tbody>
         </table>
       </div>
 
       <aside id="transferDetail" class="transfer-detail">
-        <h3>ตรวจหลักฐานการย้ายสถานศึกษา</h3>
-        <div class="help" style="margin-top:4px">เลือกนักเรียนจากตารางเพื่อบันทึกผล</div>
-        <div class="info" style="margin-top:12px">
-          <strong id="transferStudent">นักเรียน ก — TF2570-001401</strong><br>
-          สถานศึกษาเดิม: <span id="transferOldSchool">โรงเรียน A</span><br>
-          สถานศึกษาปัจจุบัน: <span id="transferNewSchool">โรงเรียน B</span>
+        <h3>บันทึกการย้ายสถานศึกษา</h3>
+
+        <div class="transfer-step">
+          <strong>1. ค้นหานักเรียน <span class="req">*</span></strong>
+          <div class="field" style="margin-top:8px"><input id="transferSearch" list="transferApplicantList" placeholder="เลขใบสมัคร หรือ ชื่อ–นามสกุล" onchange="selectTransferApplicant()"></div>
+          <datalist id="transferApplicantList"></datalist>
+          <div id="transferStudentInfo" class="info hidden" style="margin-top:10px">
+            <strong id="transferStudent"></strong><br>
+            สถานศึกษาปัจจุบัน (ก่อนย้าย): <span id="transferOldSchool"></span>
+          </div>
         </div>
 
         <div class="transfer-step">
-          <strong>1. มูลนิธิฯ ได้รับหลักฐานการย้ายสถานศึกษาแล้วหรือไม่ <span class="req">*</span></strong>
-          <div class="transfer-radio">
-            <label><input type="radio" name="transferReceived" value="not_received" onchange="updateTransferEvidenceUI()"> ยังไม่ได้รับ</label>
-            <label><input type="radio" name="transferReceived" value="received" checked onchange="updateTransferEvidenceUI()"> ได้รับแล้ว</label>
-          </div>
-          <div id="transferReceivedDateWrap" class="field" style="margin-top:10px"><label>วันที่ได้รับหลักฐาน <span class="req">*</span></label><input id="transferReceivedDate" type="date" value="2026-11-12"></div>
+          <strong>2. ข้อมูลสถานศึกษาใหม่ <span class="req">*</span></strong>
+          <div class="field" style="margin-top:8px"><label>ภาค</label><select id="transferRegion" onchange="loadTransferProvinces()"></select></div>
+          <div class="field"><label>จังหวัด</label><select id="transferProvince" onchange="loadTransferDistricts()" disabled></select></div>
+          <div class="field"><label>อำเภอ / เขต</label><select id="transferDistrict" onchange="loadTransferSchools()" disabled></select></div>
+          <div class="field"><label>สถานศึกษาใหม่ <span class="req">*</span></label><select id="transferSchool" disabled></select></div>
+          <div class="help">ไม่พบสถานศึกษา? <button type="button" class="btn-outline" onclick="addSchoolFromTransfer()">+ เพิ่มสถานศึกษาใหม่</button></div>
         </div>
 
-        <div id="transferReviewStep" class="transfer-step">
-          <strong>2. ผลการตรวจหลักฐาน <span class="req">*</span></strong>
-          <div class="transfer-radio">
-            <label><input type="radio" name="transferReviewResult" value="pending"> รอตรวจสอบ</label>
-            <label><input type="radio" name="transferReviewResult" value="passed" checked onchange="updateTransferResultUI()"> ผ่าน</label>
-            <label><input type="radio" name="transferReviewResult" value="failed" onchange="updateTransferResultUI()"> ไม่ผ่าน</label>
-          </div>
-          <div id="transferFailReason" class="field hidden" style="margin-top:10px"><label>เหตุผลที่ไม่ผ่าน <span class="req">*</span></label><textarea placeholder="กรุณาระบุเหตุผลที่หลักฐานไม่ผ่าน"></textarea></div>
-          <div class="field" style="margin-top:10px"><label>หมายเหตุของเจ้าหน้าที่</label><textarea placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"></textarea></div>
+        <div class="transfer-step">
+          <strong>3. รายละเอียดการย้าย</strong>
+          <div class="field" style="margin-top:8px"><label>วันที่แจ้งย้ายสถานศึกษา <span class="req">*</span></label><input id="transferNotifiedDate" type="date"></div>
+          <div class="field"><label>หมายเหตุของเจ้าหน้าที่</label><textarea id="transferNote" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"></textarea></div>
         </div>
 
-        <div class="actions"><span></span><button class="btn-primary" onclick="saveTransferReview()">บันทึกผลการตรวจสอบ</button></div>
+        <div class="actions"><button type="button" class="btn-outline" onclick="resetTransferForm()">ล้างข้อมูล</button><button type="button" class="btn-primary" onclick="saveTransfer()">บันทึกการย้ายสถานศึกษา</button></div>
 
         <div class="transfer-history">
-          <strong>ประวัติหลักฐาน</strong>
-          <div id="transferHistory">
-            <div class="transfer-history-item"><strong>ครั้งที่ 1</strong> · 12 พ.ย. 69 09:18<br>ได้รับหลักฐาน — จนท. 01</div>
-            <div class="transfer-history-item">12 พ.ย. 69 10:04<br>ผลตรวจ: <strong>ผ่าน</strong> — จนท. 01</div>
-          </div>
+          <strong>ประวัติการย้ายของนักเรียนรายนี้</strong>
+          <div id="transferHistory"><div class="help">เลือกนักเรียนเพื่อดูประวัติ</div></div>
         </div>
       </aside>
     </div>
@@ -880,6 +865,7 @@ const subdistrictMaster={
 
 const institutionMaster=[
   {id:'SCH-PRE-0001',name:'โรงเรียนพิริยาลัยจังหวัดแพร่',type:'โรงเรียน',region:'north',province:'แพร่',district:'เมืองแพร่',subdistrict:'ในเวียง',levels:['lower','upper'],username:'PRE0001',teacher:'นางสาวสมฤดี ใจดี',position:'ครู',department:'งานแนะแนว',phone:'08X-XXX-XXXX',email:'scholarship@school.ac.th'},
+  {id:'SCH-PRE-0002',name:'โรงเรียนนารีรัตน์จังหวัดแพร่',type:'โรงเรียน',region:'north',province:'แพร่',district:'เมืองแพร่',subdistrict:'ในเวียง',levels:['lower','upper'],username:'PRE0002',teacher:'นางตัวอย่าง ครูแนะแนว',position:'ครู',department:'งานแนะแนว',phone:'08X-XXX-XXXX',email:'guide2@school.ac.th'},
   {id:'SCH-CMI-0001',name:'โรงเรียนกาวิละวิทยาลัย',type:'โรงเรียน',region:'north',province:'เชียงใหม่',district:'เมืองเชียงใหม่',subdistrict:'หายยา',levels:['lower','upper'],username:'CMI0001',teacher:'นายตัวอย่าง ครูแนะแนว',position:'ครู',department:'งานแนะแนว',phone:'08X-XXX-XXXX',email:'guide@school.ac.th'},
   {id:'UNI-BKK-0001',name:'มหาวิทยาลัยตัวอย่าง',type:'มหาวิทยาลัย',region:'central',province:'กรุงเทพมหานคร',district:'ปทุมวัน',subdistrict:'ปทุมวัน',levels:['bachelor'],username:'BKKU0001',teacher:'เจ้าหน้าที่ทุนการศึกษา',position:'เจ้าหน้าที่',department:'งานทุนการศึกษา',phone:'02-XXX-XXXX',email:'scholarship@university.ac.th'}
 ];
@@ -1280,48 +1266,158 @@ function saveManagerDecision(){
 }
 
 
-function setTransferFilter(v){
-  const el=document.getElementById('transferStatusFilter');
-  if(el){el.value=v;filterTransfers();}
+// Prototype: ผู้สมัครที่ค้นหาได้ และรายการย้ายสถานศึกษาที่บันทึกแล้ว
+// ระบบจริงค้นจากตาราง applications และบันทึกลง school_transfers
+const transferApplicants=[
+  {code:'TF2570-001284',name:'สมชาย ใจดี',school:'SCH-PRE-0001'},
+  {code:'TF2570-001285',name:'สุภาวดี ดีใจ',school:'SCH-PRE-0001'},
+  {code:'TF2570-001286',name:'ธนกร สมพงษ์',school:'SCH-PRE-0001'},
+  {code:'TF2570-001301',name:'สุภาวดี แสงดี',school:'SCH-CMI-0001'},
+  {code:'TF2570-001401',name:'นักเรียน ก',school:'SCH-PRE-0001'}
+];
+const transferRecords=[
+  {code:'TF2570-001401',from:'SCH-PRE-0001',to:'SCH-CMI-0001',date:'2026-11-12',by:'จนท. 01',note:''}
+];
+let transferSelected=null;
+
+function schoolName(id){return institutionMaster.find(x=>x.id===id)?.name||id}
+function fmtThaiDate(iso){
+  if(!iso) return '—';
+  return new Date(iso+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});
+}
+function initTransfers(){
+  const regions=Object.keys(regionLabels).map(k=>({value:k,text:regionLabels[k]}));
+  fillSelect(document.getElementById('transferRegion'),regions,'กรุณาเลือกภาค');
+  fillSelect(document.getElementById('transferProvince'),[],'กรุณาเลือกจังหวัด');
+  fillSelect(document.getElementById('transferDistrict'),[],'กรุณาเลือกอำเภอ / เขต');
+  fillSelect(document.getElementById('transferSchool'),[],'กรุณาเลือกสถานศึกษา');
+  const dl=document.getElementById('transferApplicantList');
+  if(dl){
+    dl.innerHTML='';
+    transferApplicants.forEach(a=>{const o=document.createElement('option');o.value=a.code+' — '+a.name;dl.appendChild(o);});
+  }
+  renderTransferTable();
+}
+function renderTransferTable(){
+  const tb=document.querySelector('#transferTable tbody');
+  if(!tb) return;
+  tb.innerHTML='';
+  transferRecords.slice().reverse().forEach(r=>{
+    const a=transferApplicants.find(x=>x.code===r.code);
+    const tr=document.createElement('tr');
+    [r.code,a?.name||'',schoolName(r.from),schoolName(r.to),fmtThaiDate(r.date),r.by].forEach(v=>{
+      const td=document.createElement('td');td.textContent=v;tr.appendChild(td);
+    });
+    const td=document.createElement('td');
+    const btn=document.createElement('button');
+    btn.className='btn-outline';btn.textContent='ดู';btn.style.whiteSpace='nowrap';
+    btn.onclick=()=>{document.getElementById('transferSearch').value=r.code;selectTransferApplicant();};
+    td.appendChild(btn);tr.appendChild(td);tb.appendChild(tr);
+  });
+  document.getElementById('transferCount').textContent=transferRecords.length.toLocaleString('th-TH');
+  filterTransfers();
 }
 function filterTransfers(){
-  const status=document.getElementById('transferStatusFilter')?.value||'all';
   const kw=(document.getElementById('transferKeyword')?.value||'').trim().toLowerCase();
   document.querySelectorAll('#transferTable tbody tr').forEach(row=>{
-    const okStatus=status==='all'||row.dataset.transferStatus===status;
-    const okKw=!kw||row.textContent.toLowerCase().includes(kw);
-    row.style.display=okStatus&&okKw?'':'none';
+    row.style.display=!kw||row.textContent.toLowerCase().includes(kw)?'':'none';
   });
 }
-function openTransfer(id,name,oldSchool,newSchool,received,result){
-  document.getElementById('transferStudent').textContent=name+' — '+id;
-  document.getElementById('transferOldSchool').textContent=oldSchool;
-  document.getElementById('transferNewSchool').textContent=newSchool;
-  const rec=document.querySelector('input[name="transferReceived"][value="'+received+'"]');
-  if(rec) rec.checked=true;
-  if(result){
-    const rr=document.querySelector('input[name="transferReviewResult"][value="'+result+'"]');
-    if(rr) rr.checked=true;
+function currentSchoolOf(code){
+  const moves=transferRecords.filter(r=>r.code===code);
+  return moves.length?moves[moves.length-1].to:transferApplicants.find(x=>x.code===code)?.school;
+}
+function selectTransferApplicant(){
+  const q=(document.getElementById('transferSearch').value||'').trim().toLowerCase();
+  const info=document.getElementById('transferStudentInfo');
+  transferSelected=q?transferApplicants.find(a=>
+    q.startsWith(a.code.toLowerCase())||a.name.toLowerCase()===q||(a.code+' — '+a.name).toLowerCase()===q
+  ):null;
+  if(!transferSelected){
+    info.classList.add('hidden');
+    if(q) alert('ไม่พบนักเรียน กรุณาตรวจสอบเลขใบสมัครหรือชื่ออีกครั้ง');
+    renderTransferHistory();
+    return;
   }
-  updateTransferEvidenceUI();
-  updateTransferResultUI();
-  document.getElementById('transferDetail')?.scrollIntoView({behavior:'smooth',block:'start'});
+  document.getElementById('transferSearch').value=transferSelected.code+' — '+transferSelected.name;
+  document.getElementById('transferStudent').textContent=transferSelected.name+' — '+transferSelected.code;
+  document.getElementById('transferOldSchool').textContent=schoolName(currentSchoolOf(transferSelected.code));
+  info.classList.remove('hidden');
+  renderTransferHistory();
 }
-function updateTransferEvidenceUI(){
-  const received=document.querySelector('input[name="transferReceived"]:checked')?.value==='received';
-  document.getElementById('transferReceivedDateWrap')?.classList.toggle('hidden',!received);
-  document.getElementById('transferReviewStep')?.classList.toggle('disabled',!received);
+function renderTransferHistory(){
+  const box=document.getElementById('transferHistory');
+  box.innerHTML='';
+  const list=transferSelected?transferRecords.filter(r=>r.code===transferSelected.code):[];
+  if(!list.length){
+    box.innerHTML='<div class="help">'+(transferSelected?'ยังไม่มีประวัติการย้าย':'เลือกนักเรียนเพื่อดูประวัติ')+'</div>';
+    return;
+  }
+  list.forEach((r,i)=>{
+    const d=document.createElement('div');
+    d.className='transfer-history-item';
+    d.textContent='ครั้งที่ '+(i+1)+' · แจ้งย้าย '+fmtThaiDate(r.date)+' — '+schoolName(r.from)+' → '+schoolName(r.to)+' (บันทึกโดย '+r.by+')'+(r.note?' · '+r.note:'');
+    box.appendChild(d);
+  });
 }
-function updateTransferResultUI(){
-  const result=document.querySelector('input[name="transferReviewResult"]:checked')?.value;
-  document.getElementById('transferFailReason')?.classList.toggle('hidden',result!=='failed');
+function loadTransferProvinces(){
+  const region=document.getElementById('transferRegion').value;
+  const p=document.getElementById('transferProvince');
+  fillSelect(p,region?(thaiRegions[region]||[]):[],'กรุณาเลือกจังหวัด'); p.disabled=!region;
+  loadTransferDistricts();
 }
-function saveTransferReview(){
-  const received=document.querySelector('input[name="transferReceived"]:checked')?.value;
-  if(!received){alert('กรุณาระบุว่าได้รับหลักฐานแล้วหรือยัง');return;}
-  if(received==='received'&&!document.getElementById('transferReceivedDate')?.value){alert('กรุณาระบุวันที่ได้รับหลักฐาน');return;}
-  if(received==='received'&&!document.querySelector('input[name="transferReviewResult"]:checked')){alert('กรุณาระบุผลการตรวจหลักฐาน');return;}
-  alert('HTML Demo: บันทึกผลการตรวจหลักฐานแล้ว\nระบบจริงจะเพิ่มเหตุการณ์นี้ใน Timeline ของนักเรียนโดยไม่เขียนทับประวัติเดิม');
+function loadTransferDistricts(){
+  const province=document.getElementById('transferProvince').value;
+  const d=document.getElementById('transferDistrict');
+  fillSelect(d,province?(districtMaster[province]||[]):[],'กรุณาเลือกอำเภอ / เขต'); d.disabled=!province;
+  loadTransferSchools();
+}
+function loadTransferSchools(){
+  const region=document.getElementById('transferRegion').value;
+  const province=document.getElementById('transferProvince').value;
+  const district=document.getElementById('transferDistrict').value;
+  const sc=document.getElementById('transferSchool');
+  const list=district?institutionMaster.filter(x=>x.region===region&&x.province===province&&x.district===district):[];
+  fillSelect(sc,list.map(x=>({value:x.id,text:x.name})),
+    !district?'กรุณาเลือกสถานศึกษา':list.length?'กรุณาเลือกสถานศึกษา':'ไม่พบสถานศึกษาในอำเภอนี้');
+  sc.disabled=list.length===0;
+}
+function addSchoolFromTransfer(){
+  goPage('schools');
+  openNewSchool();
+  // ใส่พื้นที่ที่เลือกไว้ให้ล่วงหน้า
+  const region=document.getElementById('transferRegion').value;
+  const province=document.getElementById('transferProvince').value;
+  const district=document.getElementById('transferDistrict').value;
+  const r=document.getElementById('schoolRegion');
+  if(region&&r){r.value=region;loadSchoolProvinces();
+    const p=document.getElementById('schoolProvince');
+    if(province&&p){p.value=province;loadSchoolDistricts();
+      const d=document.getElementById('schoolDistrict');
+      if(district&&d){d.value=district;loadSchoolSubdistricts();}
+    }
+  }
+  alert('เพิ่มสถานศึกษาใหม่ใน Master Data แล้วกลับมาที่เมนู “ย้ายสถานศึกษา” เพื่อเลือกสถานศึกษาและบันทึกต่อ');
+}
+function resetTransferForm(){
+  transferSelected=null;
+  ['transferSearch','transferNotifiedDate','transferNote'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('transferStudentInfo').classList.add('hidden');
+  initTransfers();
+  renderTransferHistory();
+}
+function saveTransfer(){
+  if(!transferSelected){alert('กรุณาค้นหาและเลือกนักเรียน');return;}
+  const to=document.getElementById('transferSchool').value;
+  const date=document.getElementById('transferNotifiedDate').value;
+  if(!to){alert('กรุณาเลือกสถานศึกษาใหม่');return;}
+  const from=currentSchoolOf(transferSelected.code);
+  if(to===from){alert('สถานศึกษาใหม่ต้องไม่ใช่สถานศึกษาเดิม');return;}
+  if(!date){alert('กรุณาระบุวันที่แจ้งย้ายสถานศึกษา');return;}
+  transferRecords.push({code:transferSelected.code,from,to,date,by:'จนท. 01',note:document.getElementById('transferNote').value.trim()});
+  const name=transferSelected.name;
+  resetTransferForm();
+  alert('HTML Demo: บันทึกการย้ายสถานศึกษาของ '+name+' แล้ว\nสถานศึกษาใหม่: '+schoolName(to)+'\nระบบจริงจะเปลี่ยนสถานศึกษาในใบสมัคร และเก็บประวัติเดิมไว้');
 }
 
 function setReportType(type){
@@ -1354,6 +1450,7 @@ function closeDrilldown(){document.getElementById('drillModal').classList.remove
 renderTrend();
 
 initRegions();
+initTransfers();
 setRole('reviewer');
 </script>
 </body>

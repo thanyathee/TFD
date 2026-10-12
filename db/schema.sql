@@ -28,8 +28,6 @@ CREATE TYPE decision_result AS ENUM ('approved', 'rejected', 'reserve', 'ineligi
 CREATE TYPE review_result   AS ENUM ('pass', 'fail', 'reserve', 'ineligible', 'need_more_info');
 CREATE TYPE grade_type      AS ENUM ('gpa', 'percent');
 CREATE TYPE parent_status   AS ENUM ('alive', 'deceased', 'unknown');
-CREATE TYPE transfer_evidence AS ENUM ('not_received', 'received');
-CREATE TYPE transfer_result   AS ENUM ('pending', 'passed', 'failed');
 
 -- ---------------------------------------------------------------------
 -- 1) ข้อมูลพื้นที่ (Master)
@@ -322,19 +320,30 @@ CREATE TABLE decisions (                   -- ผลพิจารณาสุ�
   CHECK (approved_amount IS NULL OR approved_amount = standard_amount OR amount_reason IS NOT NULL)
 );
 
-CREATE TABLE school_transfers (            -- ย้ายสถานศึกษา
+CREATE TABLE school_transfers (            -- ย้ายสถานศึกษา (จนท. ตรวจสอบภายนอกแล้วก่อนบันทึก)
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id  uuid NOT NULL REFERENCES applications(id),
   from_school_id  integer NOT NULL REFERENCES schools(id),
-  to_school_id    integer REFERENCES schools(id),
-  evidence_status transfer_evidence NOT NULL DEFAULT 'not_received',
-  evidence_received_date date,
-  result          transfer_result NOT NULL DEFAULT 'pending',
-  reviewed_by     uuid REFERENCES staff_users(id),
+  to_school_id    integer NOT NULL REFERENCES schools(id),
+  notified_date   date NOT NULL,             -- วันที่แจ้งย้ายสถานศึกษา
+  recorded_by     uuid NOT NULL REFERENCES staff_users(id),
   note            text,
   created_at      timestamptz NOT NULL DEFAULT now(),
-  CHECK (evidence_status = 'not_received' OR evidence_received_date IS NOT NULL)
+  CHECK (to_school_id <> from_school_id)
 );
+CREATE INDEX ON school_transfers (application_id, created_at);
+
+-- บันทึกการย้ายแล้ว เปลี่ยนสถานศึกษาในใบสมัครเป็นที่ใหม่ (ประวัติเดิมยังอยู่ใน school_transfers)
+CREATE FUNCTION apply_school_transfer() RETURNS trigger AS $$
+BEGIN
+  UPDATE applications SET school_id = NEW.to_school_id, updated_at = now()
+   WHERE id = NEW.application_id;
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_school_transfer
+  AFTER INSERT ON school_transfers
+  FOR EACH ROW EXECUTE FUNCTION apply_school_transfer();
 
 -- ---------------------------------------------------------------------
 -- 9) ประวัติสถานะ และ Audit Log (เพิ่มอย่างเดียว ห้ามแก้/ลบ)
