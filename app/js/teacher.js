@@ -59,7 +59,7 @@ App.views['teacher-home'] = function (p) {
     waiting: ['รอครูดำเนินการ', s => s.status === 'waiting_teacher'],
     sent: ['ส่งมูลนิธิฯ สำเร็จ', s => SENT.includes(s.status)],
   };
-  const f = groups[p.filter] ? p.filter : (all.some(groups.waiting[1]) ? 'waiting' : 'all');
+  const f = groups[p.filter] ? p.filter : 'all';
   const q = (p.q || '').toLowerCase();
   const docsState = s => SENT.includes(s.status) || s.status === 'waiting_teacher' ? (docsComplete(s) ? 'ok' : 'miss') : '';
   const classes = Object.values(CLASS_GROUPS).flat().filter(c => all.some(s => s.class === c));
