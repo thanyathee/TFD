@@ -109,6 +109,16 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .btn.sm{min-height:38px;padding:6px 14px;font-size:14px;border-radius:var(--r-sm)}
 .btn.block{width:100%}
 .btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+/* ปุ่มเพิ่มรายการ (เพิ่มอาชีพ / เพิ่มพี่น้อง): แดงอ่อน เส้นประ เต็มความกว้าง ให้เห็นชัดว่ากดเพิ่มได้ */
+.btn.add{width:100%;background:var(--bad-soft);color:var(--bad);border:1.5px dashed color-mix(in srgb,var(--bad) 55%,transparent);font-weight:700}
+.btn.add:hover{background:color-mix(in srgb,var(--bad-soft) 70%,var(--bad) 12%)}
+/* ตัวเลือกหลายข้อแบบตาราง ขนาดเท่ากัน */
+.choice-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.choice-grid .choice{height:100%}
+/* ช่องจำนวนแบบ − / + */
+.stepper-num{display:flex;align-items:center;gap:8px}
+.stepper-num .btn{min-width:48px;min-height:48px;font-size:20px;padding:0}
+.stepper-num .input{max-width:90px;text-align:center}
 
 /* ---------- ฟอร์ม ---------- */
 .field{display:grid;gap:6px;min-width:0;align-content:start}

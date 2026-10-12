@@ -248,7 +248,7 @@ function personBlock(k, p = {}, e = {}) {
         <label class="check small"><input type="checkbox" name="${k}_no_occ" ${p.no_occ ? 'checked' : ''}> <span>ไม่มีอาชีพ / ไม่มีรายได้ / ไม่ทราบ</span></label></div>
       <div class="stack" data-when="!${k}_no_occ=on">
         <div class="stack" id="${k}_occs">${occs.map((o, i) => occCard(k, i, o, e)).join('')}</div>
-        <button class="btn sm" type="button" data-action="occ-add" data-person="${k}" style="justify-self:start">+ เพิ่มอาชีพ</button>
+        <button class="btn add" type="button" data-action="occ-add" data-person="${k}">+ เพิ่มอาชีพ</button>
         ${e[k + '_occ'] ? `<div class="err">${e[k + '_occ']}</div>` : ''}
         <div class="grid-2">
           ${field(`${k}_workplace`, 'สถานที่ทำงาน', input(`${k}_workplace`, p.workplace, 'placeholder="เช่น โรงงานในนิคมฯ บ้านตนเอง ตลาดสด"'))}
@@ -346,26 +346,35 @@ function stepFamily(s, e) {
   const f = s.family || {};
   const eq = f.equipment || [];
   return `
-  <section class="card"><h3>2. ข้อมูลบิดา</h3>${personBlock('father', f.father, e)}</section>
-  <section class="card"><h3>3. ข้อมูลมารดา</h3>${personBlock('mother', f.mother, e)}</section>
-  <section class="card"><h3>4. ผู้ขอทุนอาศัยอยู่กับ</h3>
+  <section class="card"><h3>ความสัมพันธ์ในครอบครัว <span class="muted small">(ตอบได้มากกว่า 1 ข้อ)</span></h3>
+    <div class="choice-grid">${RELATIONS.map(([k, t]) => `<label class="choice"><input type="checkbox" name="relations" value="${k}" ${(f.relations || []).includes(k) ? 'checked' : ''}> ${t}</label>`).join('')}</div>
+  </section>
+  <section class="card"><h3>ข้อมูลบิดา</h3>${personBlock('father', f.father, e)}</section>
+  <section class="card"><h3>ข้อมูลมารดา</h3>${personBlock('mother', f.mother, e)}</section>
+  <section class="card"><h3>ผู้ขอทุนอาศัยอยู่กับ</h3>
     ${radioField('live_with', 'ปัจจุบันอาศัยอยู่กับ', LIVE_WITH, f.live_with, {req: 1, err: e.live_with})}
     <div data-when="live_with=guardian">${personBlock('guardian', f.guardian, e)}</div>
   </section>
+  <section class="card"><h3>พี่น้อง (บิดามารดาเดียวกัน)</h3>
+    <p class="small muted">ไม่รวมผู้ขอทุน — กด “+ เพิ่มพี่น้อง” ทีละคน ถ้าไม่มีพี่น้อง ไม่ต้องเพิ่ม</p>
+    <div id="sibs" class="stack">${siblingRows(s.siblings || [])}</div>
+    <button class="btn add" type="button" data-action="sib-add">+ เพิ่มพี่น้อง</button>
+    <div class="grid-2">${field('sib_moved', 'พี่น้องที่แยกไปมีครอบครัวแล้ว (คน)', stepper('sib_moved', f.sib_moved || 0, 10))}</div>
+  </section>
   <div class="note info" id="family_total"></div>
-  <section class="card"><h3>5. สภาพที่อยู่ปัจจุบัน</h3>
-    ${radioField('housing', '', HOUSING_P, f.housing, {err: e.housing, col: 1})}
-    <div data-when="housing=own_other_land">${field('housing_land_owner', 'ที่ดินเป็นของ (ระบุ)', input('housing_land_owner', f.housing_land_owner, 'placeholder="เช่น ที่ดินของวัด ที่ดินของญาติ"'))}</div>
-    <div data-when="housing=installment">${field('housing_installment', 'ผ่อนชำระเดือนละ (บาท)', input('housing_installment', f.housing === 'installment' ? f.housing_cost : '', 'type="number" min="0" inputmode="numeric"'))}</div>
-    <div data-when="housing=rent">${field('housing_rent', 'ค่าเช่าเดือนละ (บาท)', input('housing_rent', f.housing === 'rent' ? f.housing_cost : '', 'type="number" min="0" inputmode="numeric"'))}</div>
-    <div data-when="housing=other">${field('housing_other', 'ระบุ', input('housing_other', f.housing_other))}</div>
+  <section class="card"><h3>สภาพที่อยู่ปัจจุบัน</h3>
+    ${radioField('housing', 'บ้านที่อยู่ปัจจุบันเป็นแบบใด', HOUSING_P, f.housing, {req: 1, err: e.housing, col: 1})}
+    <div data-when="housing=own_other_land">${field('housing_land_owner', 'ที่ดินเป็นของ (ระบุ)', input('housing_land_owner', f.housing_land_owner, 'placeholder="เช่น ที่ดินของวัด ที่ดินของญาติ"'), {req: 1, err: e.housing_land_owner})}</div>
+    <div data-when="housing=installment">${field('housing_installment', 'ผ่อนชำระเดือนละ (บาท)', input('housing_installment', f.housing === 'installment' ? f.housing_cost : '', 'type="number" min="0" inputmode="numeric"'), {req: 1, err: e.housing_installment})}</div>
+    <div data-when="housing=rent">${field('housing_rent', 'ค่าเช่าเดือนละ (บาท)', input('housing_rent', f.housing === 'rent' ? f.housing_cost : '', 'type="number" min="0" inputmode="numeric"'), {req: 1, err: e.housing_rent})}</div>
+    <div data-when="housing=other">${field('housing_other', 'ระบุ', input('housing_other', f.housing_other), {req: 1, err: e.housing_other})}</div>
     <div class="field"><span class="label">บ้านที่อยู่อาศัยมีอุปกรณ์ดังนี้ <span class="muted">(ตอบได้มากกว่า 1 ข้อ)</span></span>
-      <div class="choices" id="equip">${EQUIP.map(([k, t]) => `<label class="choice"><input type="checkbox" name="equipment" value="${k}" ${eq.includes(k) ? 'checked' : ''} ${f.no_equipment ? 'disabled' : ''}> ${t}</label>`).join('')}
+      <div class="choice-grid" id="equip">${EQUIP.map(([k, t]) => `<label class="choice"><input type="checkbox" name="equipment" value="${k}" ${eq.includes(k) ? 'checked' : ''} ${f.no_equipment ? 'disabled' : ''}> ${t}</label>`).join('')}
         <label class="choice"><input type="checkbox" name="no_equipment" ${f.no_equipment ? 'checked' : ''} data-onchange="student-noequip"> ไม่มีอุปกรณ์ตามรายการ</label></div>
       <input type="hidden" name="equipment_other_on" value="${eq.includes('other') ? 'on' : ''}">
-      <div data-when="equipment_other_on=on">${field('equipment_other', 'อื่น ๆ (ระบุ)', input('equipment_other', f.equipment_other))}</div></div>
+      <div data-when="equipment_other_on=on">${field('equipment_other', 'อุปกรณ์อื่น ๆ (ระบุ)', input('equipment_other', f.equipment_other), {req: 1, err: e.equipment_other})}</div></div>
   </section>
-  <section class="card"><h3>6. ที่ดินทำกินของครอบครัว <span class="muted small">(ตอบได้มากกว่า 1 ข้อ)</span></h3>
+  <section class="card"><h3>ที่ดินทำกินของครอบครัว <span class="muted small">(ตอบได้มากกว่า 1 ข้อ)</span></h3>
     <div class="grid-2">
       <div class="subcard"><label class="check"><input type="checkbox" name="own_land" ${f.own_land ? 'checked' : ''}> <span>เป็นของตนเอง</span></label>
         <div class="grid-2" data-when="own_land=on">${field('own_land_amt', 'ขนาด', input('own_land_amt', f.own_land_amt, 'type="number" min="0" inputmode="decimal"'))}${field('own_land_unit', 'หน่วย', select('own_land_unit', LAND_UNITS, f.own_land_unit || 'rai'))}</div></div>
@@ -373,20 +382,12 @@ function stepFamily(s, e) {
         <div class="stack" data-when="rent_land=on"><div class="grid-2">${field('rent_land_amt', 'ขนาด', input('rent_land_amt', f.rent_land_amt, 'type="number" min="0" inputmode="decimal"'))}${field('rent_land_unit', 'หน่วย', select('rent_land_unit', LAND_UNITS, f.rent_land_unit || 'rai'))}</div>
           <div class="grid-2">${field('rent_land_cost', 'ค่าเช่า (บาท)', input('rent_land_cost', f.rent_land_cost, 'type="number" min="0" inputmode="numeric"'))}${field('rent_land_per', 'ต่อ', select('rent_land_per', [['month', 'เดือน'], ['year', 'ปี']], f.rent_land_per || 'year'))}</div></div></div>
     </div>
-  </section>
-  <section class="card"><h3>7. ความสัมพันธ์ในครอบครัว <span class="muted small">(ตอบได้มากกว่า 1 ข้อ)</span></h3>
-    <div class="choices col">${RELATIONS.map(([k, t]) => `<label class="choice"><input type="checkbox" name="relations" value="${k}" ${(f.relations || []).includes(k) ? 'checked' : ''}> ${t}</label>`).join('')}</div>
-  </section>
-  <section class="card"><h3>8. พี่น้อง (บิดามารดาเดียวกัน)</h3>
-    <div class="grid-2">
-      ${field('sib_count', 'จำนวนพี่น้อง (ไม่รวมผู้ขอทุน)', input('sib_count', (s.siblings || []).length, 'type="number" min="0" max="10" inputmode="numeric" data-onchange="student-sibs"'), {hint: 'ระบบจะแสดงตารางให้กรอกตามจำนวน'})}
-      ${field('sib_moved', 'แยกไปมีครอบครัวแล้ว (คน)', input('sib_moved', f.sib_moved, 'type="number" min="0" inputmode="numeric"'))}
-    </div>
-    <div id="sibs" class="stack">${siblingRows(s.siblings || [])}</div>
   </section>`;
 }
 function siblingRows(list) {
-  return list.map((x, i) => `<div class="subcard"><b>พี่น้องคนที่ ${i + 1}</b>
+  if (!list.length) return '<div class="empty small" style="padding:12px">ยังไม่ได้เพิ่มพี่น้อง</div>';
+  return list.map((x, i) => `<div class="subcard" data-sib="${i}">
+    <div class="row between"><b>พี่น้องคนที่ ${i + 1}</b><button class="btn ghost sm" type="button" data-action="sib-remove" data-i="${i}">ลบ</button></div>
     <div class="grid-3">
       ${field(`sib${i}_gender`, 'เพศ', select(`sib${i}_gender`, ['ชาย', 'หญิง'], x.gender, 'เลือก'))}
       ${field(`sib${i}_name`, 'ชื่อ-สกุล', input(`sib${i}_name`, x.name))}
@@ -398,14 +399,36 @@ function siblingRows(list) {
 }
 function readSiblings(form) {
   const v = formData(form);
-  const n = Math.max(0, Math.min(10, Number(v.sib_count) || 0));
-  return Array.from({length: n}, (_, i) => ({gender: v[`sib${i}_gender`] || '', name: v[`sib${i}_name`] || '', age: v[`sib${i}_age`] || '',
-    edu: v[`sib${i}_edu`] || '', occupation: v[`sib${i}_job`] || '', place: v[`sib${i}_place`] || ''}));
+  const out = [];
+  for (let i = 0; i < 20; i++) {
+    if (v[`sib${i}_name`] === undefined) continue;
+    out.push({gender: v[`sib${i}_gender`] || '', name: v[`sib${i}_name`] || '', age: v[`sib${i}_age`] || '',
+      edu: v[`sib${i}_edu`] || '', occupation: v[`sib${i}_job`] || '', place: v[`sib${i}_place`] || ''});
+  }
+  return out;
 }
-App.on('student-sibs', function (el) {
-  el.value = Math.max(0, Math.min(10, Number(el.value) || 0));
-  const cur = readSiblings(el.form);
-  document.getElementById('sibs').innerHTML = siblingRows(Array.from({length: Number(el.value)}, (_, i) => cur[i] || {}));
+App.on('sib-add', function (el) {
+  const list = readSiblings(el.form);
+  if (list.length >= 15) return;
+  list.push({});
+  document.getElementById('sibs').innerHTML = siblingRows(list);
+  document.getElementById(`sib${list.length - 1}_gender`).focus();
+});
+App.on('sib-remove', function (el) {
+  const list = readSiblings(el.form);
+  list.splice(Number(el.dataset.i), 1);
+  document.getElementById('sibs').innerHTML = siblingRows(list);
+});
+/* ช่องจำนวนแบบกด − / + (พิมพ์ได้ แต่กด Enter ไม่ส่งฟอร์ม) */
+function stepper(id, value, max) {
+  return `<div class="stepper-num"><button class="btn sm" type="button" data-action="num-step" data-for="${id}" data-d="-1" aria-label="ลด">−</button>
+    ${input(id, value, `type="number" min="0" max="${max}" inputmode="numeric"`)}
+    <button class="btn sm" type="button" data-action="num-step" data-for="${id}" data-d="1" aria-label="เพิ่ม">+</button></div>`;
+}
+App.on('num-step', function (el) {
+  const x = document.getElementById(el.dataset.for);
+  x.value = Math.max(0, Math.min(Number(x.max) || 99, (Number(x.value) || 0) + Number(el.dataset.d)));
+  x.dispatchEvent(new Event('change', {bubbles: true}));
 });
 App.on('student-noequip', function (el) {
   document.querySelectorAll('#equip input[name=equipment]').forEach(x => { if (el.checked) x.checked = false; x.disabled = el.checked; });
@@ -527,6 +550,11 @@ App.on('student-step', function (form, ev) {
       Object.assign(e, occErrors(fam.guardian, 'guardian'));
     }
     if (!fam.housing) e.housing = 'กรุณาเลือกสภาพที่อยู่ปัจจุบัน';
+    if (fam.housing === 'own_other_land' && !fam.housing_land_owner) e.housing_land_owner = 'กรุณาระบุว่าที่ดินเป็นของใคร';
+    if (fam.housing === 'installment' && !fam.housing_cost) e.housing_installment = 'กรุณาระบุจำนวนเงินผ่อนต่อเดือน';
+    if (fam.housing === 'rent' && !fam.housing_cost) e.housing_rent = 'กรุณาระบุค่าเช่าต่อเดือน';
+    if (fam.housing === 'other' && !fam.housing_other) e.housing_other = 'กรุณาระบุสภาพที่อยู่';
+    if (fam.equipment.includes('other') && !fam.equipment_other) e.equipment_other = 'กรุณาระบุอุปกรณ์อื่น ๆ';
     s.family = fam;
     s.siblings = readSiblings(form);
   } else {
@@ -797,3 +825,15 @@ function applicationPaper(s) {
     ${s.school_next === 'transfer' ? `<div class="sr"><b>หมายเหตุ</b><div><b>ต้องส่งหลักฐานยืนยันการย้ายสถานศึกษาภายใน ${thDate(transferDeadline.call(this, s))} มิฉะนั้นถือว่าสละสิทธิ์</b></div></div>` : ''}
     <div class="foot">เอกสารฉบับนี้จัดทำจากข้อมูลที่ผู้สมัครกรอกในระบบ เพื่อเก็บไว้เป็นหลักฐาน</div></div>`;
 }
+
+/* กด Enter ในช่องกรอกของใบสมัคร = ไปช่องถัดไป (ไม่ส่งฟอร์ม/ไม่ข้ามหน้า) — คนส่วนใหญ่กด Enter เพื่อยืนยันค่าที่พิมพ์ ไม่ได้ตั้งใจไปหน้าถัดไป */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.isComposing) return;
+  const el = e.target;
+  const form = el.closest && el.closest('form[data-when-form]');
+  if (!form || el.tagName === 'TEXTAREA' || el.tagName === 'BUTTON') return;
+  e.preventDefault();
+  const items = [...form.querySelectorAll('input:not([type=hidden]), select, textarea')].filter(x => !x.disabled && !x.readOnly && !x.closest('[hidden]') && x.offsetParent !== null);
+  const next = items[items.indexOf(el) + 1];
+  if (next) next.focus();
+});
