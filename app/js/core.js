@@ -167,6 +167,16 @@ const App = {
         <p class="small muted">${esc(err.message)}</p><div class="row"><button class="btn primary" data-action="reset">ล้างข้อมูลทดลอง</button><button class="btn" data-action="home">กลับหน้าแรก</button></div></section>`};
     }
     document.getElementById('topbar').innerHTML = this.topbar(out.nav);
+    const duo = document.querySelector('.tabs.duo');
+    if (duo) {
+      /* แถบสีเริ่มที่ปุ่มเดิม แล้วเลื่อนไปปุ่มใหม่ */
+      const i = [...duo.querySelectorAll('button')].findIndex(b => b.hasAttribute('aria-current'));
+      const from = this._duoIdx != null ? this._duoIdx : i;
+      duo.style.setProperty('--i', from);
+      duo.dataset.at = from;
+      requestAnimationFrame(() => requestAnimationFrame(() => { duo.style.setProperty('--i', i); duo.dataset.at = i; }));
+      this._duoIdx = i;
+    } else this._duoIdx = null;
     document.getElementById('main').innerHTML = out.html;
     if (out.after) out.after.call(this);
   },
@@ -175,7 +185,8 @@ const App = {
     const roleName = {student: 'นักเรียน', teacher: 'ครู / สถานศึกษา', staff: 'เจ้าหน้าที่มูลนิธิฯ'}[r];
     const right = r ? `<div class="whoami">${esc(roleName)}<b>${esc(this.session.who || '')}</b></div>
       <button class="btn sm" data-action="home">ออกจากระบบ</button>` : '';
-    const tabs = nav ? `<nav class="tabs" aria-label="เมนู">${nav.map(n =>
+    const duo = nav && nav.length === 2;   // เมนู 2 ปุ่ม (ครู): ปุ่มกว้างเท่ากัน มีแถบสีเลื่อนไปมา
+    const tabs = nav ? `<nav class="tabs ${duo ? 'duo' : ''}" aria-label="เมนู">${duo ? '<span class="ind" aria-hidden="true"></span>' : ''}${nav.map(n =>
       `<button data-go="${n[0]}" ${n[0] === this.view.name || (n[2] || []).includes(this.view.name) ? 'aria-current="page"' : ''}>${esc(n[1])}</button>`).join('')}</nav>` : '';
     return `<div class="topbar-in">
       <button class="brand" data-action="home" aria-label="กลับหน้าแรก"><span class="logo">TF</span>
