@@ -111,7 +111,7 @@ function applicantSections(s, o = {}) {
       ${s.pvs_type ? `<div><dt>ประเภทวิชา</dt><dd>${esc(lab(PVS_TYPES, s.pvs_type))}</dd></div>` : ''}
       ${s.study_mode ? `<div><dt>รูปแบบการเรียน</dt><dd>${esc(lab(STUDY_MODES_PAPER, s.study_mode))}${s.study_mode_other ? ' — ' + esc(s.study_mode_other) : ''}</dd></div>` : ''}
       <div><dt>ปีหน้าศึกษาต่อระดับชั้น</dt><dd>${esc(s.next_class || '-')}${s.next_faculty ? ' · ' + esc(s.next_faculty) : ''}</dd></div>
-      <div><dt>สถานศึกษาปีหน้า</dt><dd>${s.school_next === 'same' ? 'ศึกษาต่อสถานศึกษาเดิม' : s.school_next === 'transfer' ? `<span class="badge t-warn">ย้ายสถานศึกษาใหม่</span>${s.next_school_text ? ' ไป ' + esc(s.next_school_text) : ''}<div class="small muted">ต้องส่งหลักฐานการย้ายภายใน ${thDate(transferDeadline.call(this, s))}</div>` : '-'}</dd></div>
+      <div><dt>สถานศึกษาปีหน้า</dt><dd>${s.school_next === 'same' ? 'ศึกษาต่อสถานศึกษาเดิม' : s.school_next === 'transfer' ? `<span class="badge t-warn">ย้ายสถานศึกษาใหม่</span>${s.next_school_text ? ' ไป ' + esc(s.next_school_text) : ''}<div class="small muted">ส่งหลักฐานการย้าย: ${transferDeadlineText.call(this, s)}</div>` : '-'}</dd></div>
       <div><dt>ประเภททุน</dt><dd>${TYPE[s.type]}${s.type === 'CONT' && s.cont_since ? ` · ได้รับตั้งแต่ปี ${esc(s.cont_since)} รวม ${esc(s.cont_years || '-')} ปี` : ''}</dd></div>
       <div><dt>อัตราทุน</dt><dd>${baht(this.rateAmount(s.rate))}</dd></div>
       ${s.teacher_review ? `<div><dt>ผลการเรียนจากครู</dt><dd>${gradeText(s.teacher_review)}</dd></div>` : ''}
