@@ -2,6 +2,12 @@
 'use strict';
 
 const SENT = ['waiting_staff', 'need_more_info', 'waiting_manager', 'decided'];
+/* ครูเห็นสถานะแค่ 4 แบบ ผลการพิจารณาของมูลนิธิฯ ไม่แสดงฝั่งครู */
+function teacherBadge(s) {
+  if (SENT.includes(s.status)) return '<span class="badge t-ok">ส่งมูลนิธิฯ สำเร็จ</span>';
+  if (s.status === 'draft') return '<span class="badge t-idle">กำลังกรอกใบสมัคร</span>';
+  return badge(s);
+}
 
 App.teacherNav = function () { return [['teacher-home', 'รายชื่อนักเรียน', ['teacher-student']], ['teacher-report', 'ใบสรุปเสนอ ผอ.']]; };
 App.myStudents = function () { return this.db.students.filter(s => s.school === this.session.school); };
@@ -48,9 +54,10 @@ App.views['teacher-home'] = function (p) {
   const all = this.myStudents();
   const groups = {
     all: ['ทั้งหมด', () => true],
-    draft: ['กำลังกรอกใบสมัคร', s => ['draft', 'returned_to_student'].includes(s.status)],
+    draft: ['กำลังกรอกใบสมัคร', s => s.status === 'draft'],
+    returned: ['เปิดสิทธิ์ให้แก้ไข', s => s.status === 'returned_to_student'],
     waiting: ['รอครูดำเนินการ', s => s.status === 'waiting_teacher'],
-    sent: ['ส่งมูลนิธิฯ แล้ว', s => SENT.includes(s.status)],
+    sent: ['ส่งมูลนิธิฯ สำเร็จ', s => SENT.includes(s.status)],
   };
   const f = groups[p.filter] ? p.filter : (all.some(groups.waiting[1]) ? 'waiting' : 'all');
   const q = (p.q || '').toLowerCase();
@@ -65,7 +72,7 @@ App.views['teacher-home'] = function (p) {
     <section class="card"><div class="card-head"><div><b>ครูผู้ดูแลทุน: ${esc(t ? t.name : '-')}</b>
       <div class="small muted">โทร. <span class="num">${esc(t ? t.phone : '-')}</span> · อีเมล ${esc(t ? t.email : '-')}</div></div></div>
       <p class="small muted">บัญชีผู้ดูแลทุนของโรงเรียน — โรงเรียนนี้ใช้ Username เดียวสำหรับตรวจสอบนักเรียนและส่งเอกสารมายังมูลนิธิฯ</p></section>
-    <div class="stats">${['draft', 'waiting', 'sent'].map(k =>
+    <div class="stats">${['draft', 'returned', 'waiting', 'sent'].map(k =>
       `<button class="stat" data-go="teacher-home" data-filter="${k}" aria-pressed="${k === f}"><span>${groups[k][0]}</span><b>${all.filter(groups[k][1]).length}</b></button>`).join('')}</div>
     <div class="filters" id="tfilters">
       ${field('tq', 'ค้นหา', input('tq', p.q || '', 'placeholder="รหัส หรือ ชื่อ–นามสกุล" data-oninput="teacher-search"'))}
@@ -78,7 +85,7 @@ App.views['teacher-home'] = function (p) {
     <div class="tlist" role="table" aria-label="รายชื่อนักเรียน">
       <div class="tlist-head" role="row"><span>ชื่อ–นามสกุล</span><span>สถานะ</span><span>รหัสผู้สมัคร</span><span>ชั้น</span><span>ประเภท</span><span>เอกสาร</span></div>
       ${rows.length ? rows.map(s => `<button class="trow" role="row" data-go="teacher-student" data-code="${s.code}">
-        <span class="c-name">${esc(fullName(s))}</span><span class="c-status">${badge(s)}</span><span class="br"></span><span class="c-code num">${s.code}</span><span class="c-class">${esc(s.class || '-')}</span>
+        <span class="c-name">${esc(fullName(s))}</span><span class="c-status">${teacherBadge(s)}</span><span class="br"></span><span class="c-code num">${s.code}</span><span class="c-class">${esc(s.class || '-')}</span>
         <span class="c-type">${TYPE[s.type]}</span><span class="c-docs">${docCell(s)}</span></button>`).join('')
         : '<div class="empty">ไม่มีนักเรียนตามเงื่อนไขนี้</div>'}
     </div>`,
@@ -176,7 +183,7 @@ App.views['teacher-student'] = function (p) {
   const gradeLabel = v.grade_type === 'gpa' ? 'เกรดเฉลี่ย (GPA)' : v.grade_type === 'percent' ? 'คะแนนเฉลี่ย (%)' : 'คะแนน / เกรดเฉลี่ย';
   return {nav: this.teacherNav(), html: `
     <button class="back" data-go="teacher-home">${icon('back')} กลับรายชื่อ</button>
-    <div class="page-head"><div><h1>แฟ้มนักเรียน</h1><p class="sub"><span class="num">${s.code}</span> — ${esc(fullName(s))}</p></div>${badge(s)}</div>
+    <div class="page-head"><div><h1>แฟ้มนักเรียน</h1><p class="sub"><span class="num">${s.code}</span> — ${esc(fullName(s))}</p></div>${teacherBadge(s)}</div>
     <div class="grid-2"><div class="stat"><span>ระดับชั้น</span><b style="font-size:20px">${esc(s.class || '-')}</b></div><div class="stat"><span>ประเภททุน</span><b style="font-size:20px">${TYPE[s.type]}</b></div></div>
     <div class="note info">ครูสามารถ <b>ดูข้อมูลที่นักเรียนกรอก</b> แต่ไม่แก้ไขแทนนักเรียนโดยตรง หากข้อมูลผิด ให้เปิดสิทธิ์ให้นักเรียนกลับไปแก้ไขก่อนส่งมายังมูลนิธิฯ</div>
     ${s.status === 'returned_to_student' ? `<div class="note warn"><b>เปิดสิทธิ์ให้นักเรียนแก้ไขแล้ว:</b> ${esc(s.return_reason || '')}</div>` : ''}
