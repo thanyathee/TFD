@@ -228,6 +228,7 @@ App.appFilter = function (f) {
     const sc = this.schoolById[s.school] || {};
     return WORK_TEST[f.work || 'all'](s) && (!f.result || (s.decision && s.decision.result === f.result))
       && (!f.round || String(s.round || '') === f.round) && (!f.loan || s.loan === f.loan) && (!f.type || s.type === f.type)
+      && (!f.move || s.school_next === f.move)
       && (!f.region || sc.region === f.region) && (!f.province || sc.province === f.province) && (!f.district || sc.district === f.district)
       && (!f.school || s.school === f.school) && (!f.levels || !f.levels.length || f.levels.includes(s.group || groupOfClass(s.class)))
       && (!f.q || (s.code + fullName(s)).toLowerCase().includes(f.q.toLowerCase()));
@@ -247,6 +248,7 @@ App.views['staff-apps'] = function (p) {
         ${field('f_round', 'รอบพิจารณา', select('f_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], f.round, 'ทั้งหมด'))}
         ${field('f_loan', 'กยศ./กรอ.', select('f_loan', [['no', 'ไม่กู้'], ['yes', 'กู้ / ไม่เข้าเกณฑ์']], f.loan, 'ทั้งหมด'))}
         ${field('f_type', 'ประเภททุน', select('f_type', [['NEW', 'ทุนใหม่'], ['CONT', 'ทุนต่อเนื่อง']], f.type, 'ทั้งหมด'))}
+        ${field('f_move', 'สถานศึกษาปีหน้า', select('f_move', [['transfer', 'ย้ายสถานศึกษา'], ['same', 'เรียนต่อที่เดิม']], f.move, 'ทั้งหมด'))}
         ${field('f_q', 'ค้นหาเพิ่มเติม', input('f_q', f.q, 'placeholder="รหัสผู้สมัคร / ชื่อ–นามสกุล"'))}
       </div>
       <div class="field"><span class="label">เลือกโรงเรียนที่ต้องการรีวิว</span>
@@ -263,7 +265,7 @@ App.views['staff-apps'] = function (p) {
       ${rows.length ? rows.map((s, i) => { const sc = this.schoolById[s.school] || {};
         return `<button class="trow" role="row" data-go="staff-app" data-code="${s.code}">
           <span class="n">${i + 1}</span>
-          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}${s.loan === 'yes' ? ' · กู้ กยศ.' : ''}<span class="m-only"> · ${esc(s.class || '-')} · ${TYPE[s.type]}${s.round ? ' · รอบ ' + s.round : ''}</span></small></span>
+          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}${s.loan === 'yes' ? ' · กู้ กยศ.' : ''}${s.school_next === 'transfer' ? ' · ย้ายสถานศึกษา' : ''}<span class="m-only"> · ${esc(s.class || '-')} · ${TYPE[s.type]}${s.round ? ' · รอบ ' + s.round : ''}</span></small></span>
           <span class="c-status">${badge(s)}</span>
           <span class="c-school">${esc(sc.name || '-')}<small>จ.${esc(sc.province || '')} · ${esc(this.regionName(sc.region))}</small></span>
           <span class="c-class">${esc(s.class || '-')}</span><span class="c-type">${TYPE[s.type]}</span><span class="c-round">${s.round ? s.round : '—'}</span></button>`; }).join('')
@@ -273,7 +275,7 @@ App.views['staff-apps'] = function (p) {
 App.on('apps-filter', function (form) {
   const v = formData(form);
   const a = this.readArea('fa');
-  this._appF = {work: v.f_work, result: v.f_result, round: v.f_round, loan: v.f_loan, type: v.f_type, q: v.f_q,
+  this._appF = {work: v.f_work, result: v.f_result, round: v.f_round, loan: v.f_loan, type: v.f_type, move: v.f_move, q: v.f_q,
     region: a.region, province: a.province, district: a.district, school: a.school, levels: arr(v.f_levels)};
   this.go('staff-apps');
 });
