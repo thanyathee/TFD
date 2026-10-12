@@ -125,9 +125,9 @@ function applicantSections(s, o = {}) {
         <div><dt>สภาพที่อยู่ปัจจุบัน</dt><dd>${esc(housing)}</dd></div><div><dt>อุปกรณ์ในบ้าน</dt><dd>${esc(equip)}</dd></div>
         <div><dt>ที่ดินทำกิน</dt><dd>${esc(land)}</dd></div>
         <div><dt>ความสัมพันธ์ในครอบครัว</dt><dd>${esc((f.relations || []).map(relLabel).join(', ') || '—')}</dd></div>
-        <div><dt>พี่น้อง</dt><dd>${sibs.length} คน${f.sib_moved ? ` (แยกไปมีครอบครัว ${esc(f.sib_moved)} คน)` : ''}</dd></div></dl>
-      ${sibs.length ? `<details class="more"><summary>รายละเอียดพี่น้อง (${sibs.length})</summary><div>${sibs.map((x, i) => `<div class="small"><b>${i + 1}. ${esc(x.name || '-')}</b> ${esc(x.gender || '')} ${x.age ? x.age + ' ปี' : ''}
-        <div class="muted">${esc([(SIB_RES.find(r => r[0] === x.residence) || [, ''])[1], x.edu, x.occupation, x.place].filter(Boolean).join(' · ') || '—')}</div></div>`).join('')}</div></details>` : ''}
+        <div><dt>พี่น้อง</dt><dd>${sibs.length} คน${sibs.length ? ` (อยู่บ้านเดียวกัน ${sibs.length - movedCount(sibs) - outCount(sibs)} · แยกไปอยู่ข้างนอก ${outCount(sibs)} · แยกไปมีครอบครัว ${movedCount(sibs)})` : ''}</dd></div></dl>
+      ${sibs.length ? `<details class="more"><summary>รายละเอียดพี่น้อง (${sibs.length})</summary><div>${sibs.map((x, i) => `<div class="small"><b>${i + 1}. ${esc(x.name || '-')}</b> ${esc(x.gender || '')} ${esc(sibAge(x))}
+        <div class="muted">${esc([(SIB_RES.find(r => r[0] === x.residence) || [, ''])[1], (SIB_STATUS.find(r => r[0] === x.status) || [, ''])[1], x.edu, x.occupation, x.place, x.note].filter(Boolean).join(' · ') || '—')}</div></div>`).join('')}</div></details>` : ''}
     </section>
     <section class="card"><h3>${n(4)}ข้อมูลเพิ่มเติม</h3><dl class="kv">
       <div><dt>ได้เงินมาใช้จ่ายวันละ</dt><dd>${baht(s.allowance)}</dd></div>

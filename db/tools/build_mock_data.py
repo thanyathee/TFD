@@ -366,7 +366,7 @@ def main():
                      'own_land': own_land, 'own_land_amt': rng.randint(1, 10) if own_land else None, 'own_land_unit': 'rai',
                      'rent_land': rent_land, 'rent_land_amt': rng.randint(1, 5) if rent_land else None, 'rent_land_unit': 'rai',
                      'rent_land_cost': rng.choice([2000, 3000, 5000]) if rent_land else None, 'rent_land_per': 'year',
-                     'relations': rel, 'sibling_count': n_sib, 'siblings_moved': 0})
+                     'relations': rel, 'sibling_count': n_sib, 'siblings_out': 0, 'siblings_moved': 0})
         app_people[aid] = people
         for prs in people:
             pid = len(persons) + 1
@@ -382,14 +382,18 @@ def main():
                              'work_days': o['days'] or None, 'days_per': o['per'] or None, 'amount': o['amount'] or None,
                              'monthly_estimate': monthly(o)})
         for k in range(1, n_sib + 1):
-            st = rng.choice(['study', 'study', 'work', 'none'])
+            st = rng.choice(['study', 'study', 'study', 'work', 'work', 'preschool', 'none', 'disabled'])
             sres = 'home' if st != 'work' else rng.choice(['home', 'out', 'family'])
+            age = {'preschool': rng.randint(0, 4), 'study': rng.randint(6, 22)}.get(st, rng.randint(15, 30))
             sibs.append({'application_id': aid, 'seq': k, 'gender': rng.choice(['ชาย', 'หญิง']), 'name': f'{rng.choice(BOY + GIRL)} {last}',
-                         'age': rng.randint(3, 25), 'education': rng.choice(['ป.4', 'ม.2', 'ม.5', 'ปวช.2']) if st == 'study' else rng.choice(['จบ ม.3', 'จบ ป.6', 'ยังไม่เข้าเรียน']),
-                         'occupation': 'นักเรียน' if st == 'study' else rng.choice(['พนักงานโรงงาน', 'รับจ้างทั่วไป']) if st == 'work' else '-',
-                         'place': 'โรงเรียนใกล้บ้าน' if st == 'study' else rng.choice(['นิคมอุตสาหกรรม', 'กรุงเทพฯ']) if st == 'work' else '-',
+                         'age': age, 'age_months': rng.randint(1, 11) if st == 'preschool' else None, 'status': st,
+                         'note': {'disabled': 'พิการทางร่างกาย ต้องมีคนดูแล', 'none': 'ช่วยงานบ้าน'}.get(st),
+                         'education': {'study': rng.choice(['ป.4', 'ม.2', 'ม.5', 'ปวช.2']), 'preschool': None}.get(st, rng.choice(['จบ ม.3', 'จบ ป.6'])),
+                         'occupation': rng.choice(['พนักงานโรงงาน', 'รับจ้างทั่วไป']) if st == 'work' else None,
+                         'place': 'โรงเรียนใกล้บ้าน' if st == 'study' else rng.choice(['นิคมอุตสาหกรรม', 'กรุงเทพฯ']) if st == 'work' else None,
                          'residence': sres})
         fams[-1]['siblings_moved'] = sum(1 for x in sibs if x['application_id'] == aid and x['residence'] == 'family')
+        fams[-1]['siblings_out'] = sum(1 for x in sibs if x['application_id'] == aid and x['residence'] == 'out')
 
         ev = [(started, 'นักเรียนเริ่มกรอกใบสมัคร', 'started')]
         if submitted:
@@ -464,8 +468,9 @@ def main():
     hist_by = dict(history)
     sib_by, fund_by = {}, {}
     for r in sibs:
-        sib_by.setdefault(r['application_id'], []).append({'gender': r['gender'], 'name': r['name'], 'age': r['age'],
-                                                          'edu': r['education'], 'occupation': r['occupation'], 'place': r['place'], 'residence': r['residence']})
+        sib_by.setdefault(r['application_id'], []).append({'gender': r['gender'], 'name': r['name'], 'age': r['age'], 'age_m': r['age_months'] or '',
+                                                          'status': r['status'], 'edu': r['education'] or '', 'occupation': r['occupation'] or '',
+                                                          'place': r['place'] or '', 'note': r['note'] or '', 'residence': r['residence']})
     for r in funding:
         fund_by.setdefault(r['application_id'], []).append(r)
     jperson = lambda p: p and {'name': p['name'], 'age': p['age'], 'status': p['status'] or '', 'relation': p['relation'] or '',
@@ -510,7 +515,7 @@ def main():
                        'own_land': f['own_land'], 'own_land_amt': str(f['own_land_amt'] or ''), 'own_land_unit': f['own_land_unit'],
                        'rent_land': f['rent_land'], 'rent_land_amt': str(f['rent_land_amt'] or ''), 'rent_land_unit': f['rent_land_unit'],
                        'rent_land_cost': str(f['rent_land_cost'] or ''), 'rent_land_per': f['rent_land_per'],
-                       'relations': f['relations'], 'sib_moved': str(f['siblings_moved'] or '')},
+                       'relations': f['relations'], 'sib_moved': str(f['siblings_moved'] or ''), 'sib_out': str(f['siblings_out'] or '')},
             'siblings': sib_by.get(a['id'], []),
             'teacher_review': t and {'teacher': user_by[t['teacher_id']]['username'], 'grade_type': t['grade_type'], 'grade_value': t['grade_value'],
                                      'grade_before': t['grade_before'], 'comment': t['comment'], 'sent_at': t['sent_at']},

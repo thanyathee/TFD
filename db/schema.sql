@@ -259,6 +259,7 @@ CREATE TABLE application_family (
   rent_land_per    text,               -- month / year
   relations        text[] NOT NULL DEFAULT '{}',  -- ข้อ 7 ความสัมพันธ์ในครอบครัว (13 ตัวเลือก)
   sibling_count    smallint,
+  siblings_out     smallint,           -- แยกไปอยู่ข้างนอก (คน) = residence = 'out'
   siblings_moved   smallint            -- แยกไปมีครอบครัวแล้ว (คน) = จำนวนพี่น้องที่ residence = 'family'
 );
 
@@ -309,7 +310,11 @@ CREATE TABLE application_siblings (    -- ข้อ 8 พี่น้อง (บ
   seq            smallint NOT NULL,
   gender         text,
   name           text,
-  age            smallint,
+  age            smallint,             -- อายุ (ปี)
+  age_months     smallint CHECK (age_months BETWEEN 0 AND 11),  -- อายุ (เดือน) เช่น น้อง 0 ปี 3 เดือน
+  status         text CHECK (status IN ('study','preschool','work','disabled','none','other')),
+                                       -- กำลังเรียน / ยังไม่ถึงวัยเรียน / ทำงาน / พิการหรือเจ็บป่วย / ไม่ได้เรียนและไม่ได้ทำงาน / อื่น ๆ
+  note           text,                 -- รายละเอียด เมื่อ status = disabled / none / other
   education      text,                 -- การศึกษา / ระดับชั้น
   occupation     text,                 -- อาชีพ / ตำแหน่ง
   place          text,                 -- สถานที่ทำงาน หรือสถานที่ศึกษา

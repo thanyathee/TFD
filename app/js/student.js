@@ -358,7 +358,7 @@ function stepFamily(s, e) {
   <section class="card"><h3>พี่น้อง (บิดามารดาเดียวกัน)</h3>
     <div class="grid-2">
       ${field('sib_count', 'จำนวนพี่น้อง (ไม่รวมผู้ขอทุน)', stepper('sib_count', (s.siblings || []).length, 15, 'data-onchange="sib-count"'), {hint: 'กด − / + ระบบจะแสดงช่องให้กรอกตามจำนวน'})}
-      <div class="field"><span class="label">แยกไปมีครอบครัวแล้ว</span><div class="input" id="sib_moved_view" aria-live="polite">${movedCount(s.siblings || [])} คน</div>
+      <div class="field"><span class="label">แยกตามที่พักอาศัย</span><div class="sib-counts" id="sib_counts" aria-live="polite">${sibCounts(s.siblings || [])}</div>
         <div class="hint">นับให้อัตโนมัติจากที่เลือกในแต่ละคนด้านล่าง</div></div>
     </div>
     <div id="sibs" class="stack">${siblingRows(s.siblings || [], e)}</div>
@@ -394,28 +394,44 @@ function siblingRows(list, e = {}) {
     <div class="grid-3">
       ${field(`sib${i}_gender`, 'เพศ', select(`sib${i}_gender`, ['ชาย', 'หญิง'], x.gender, 'เลือก'))}
       ${field(`sib${i}_name`, 'ชื่อ-สกุล', input(`sib${i}_name`, x.name))}
-      ${field(`sib${i}_age`, 'อายุ', input(`sib${i}_age`, x.age, 'type="number" min="0" inputmode="numeric"'))}
-      ${field(`sib${i}_edu`, 'การศึกษา / ระดับชั้น', input(`sib${i}_edu`, x.edu, 'placeholder="เช่น ม.2 / จบ ป.6 / ยังไม่เข้าเรียน"'))}
-      ${field(`sib${i}_job`, 'อาชีพ / ตำแหน่ง', input(`sib${i}_job`, x.occupation, 'placeholder="เช่น นักเรียน / พนักงานโรงงาน"'))}
-      ${field(`sib${i}_place`, 'สถานที่ทำงาน หรือสถานที่ศึกษา', input(`sib${i}_place`, x.place))}
-    </div></div>`).join('');
+      ${field(`sib${i}_age`, 'อายุ', `<div class="age-ym">${input(`sib${i}_age`, x.age, 'type="number" min="0" max="80" inputmode="numeric" aria-label="ปี"')}<span>ปี</span>
+        ${input(`sib${i}_age_m`, x.age_m, 'type="number" min="0" max="11" inputmode="numeric" aria-label="เดือน"')}<span>เดือน</span></div>`, {hint: 'ถ้ายังไม่ถึง 1 ปี ใส่ 0 ปี แล้วกรอกเดือน'})}
+    </div>
+    ${field(`sib${i}_status`, 'ปัจจุบัน', select(`sib${i}_status`, SIB_STATUS, x.status, 'เลือก'), {req: 1, err: e[`sib${i}_status`]})}
+    <div class="grid-3">
+      <div data-when="sib${i}_status=study|work|none|disabled|other">${field(`sib${i}_edu`, 'การศึกษา / ระดับชั้น', input(`sib${i}_edu`, x.edu, 'placeholder="เช่น ม.2 / จบ ป.6 / ไม่ได้เรียน"'))}</div>
+      <div data-when="sib${i}_status=work">${field(`sib${i}_job`, 'อาชีพ / ตำแหน่ง', input(`sib${i}_job`, x.occupation, 'placeholder="เช่น พนักงานโรงงาน"'))}</div>
+      <div data-when="sib${i}_status=study|work">${field(`sib${i}_place`, 'สถานที่ทำงาน หรือสถานที่ศึกษา', input(`sib${i}_place`, x.place))}</div>
+    </div>
+    <div data-when="sib${i}_status=disabled|none|other">${field(`sib${i}_note`, 'ระบุรายละเอียด', input(`sib${i}_note`, x.note, 'placeholder="เช่น พิการทางร่างกาย ต้องมีคนดูแล / ป่วยติดเตียง"'), {req: 1, err: e[`sib${i}_note`]})}</div>
+  </div>`).join('');
 }
 function readSiblings(form) {
   const v = formData(form);
   const out = [];
   for (let i = 0; i < 20; i++) {
     if (v[`sib${i}_name`] === undefined) continue;
-    out.push({gender: v[`sib${i}_gender`] || '', name: v[`sib${i}_name`] || '', age: v[`sib${i}_age`] || '',
-      edu: v[`sib${i}_edu`] || '', occupation: v[`sib${i}_job`] || '', place: v[`sib${i}_place`] || '', residence: v[`sib${i}_res`] || ''});
+    const st = v[`sib${i}_status`] || '';
+    const keep = (k, ok) => ok ? (v[k] || '') : '';
+    out.push({gender: v[`sib${i}_gender`] || '', name: v[`sib${i}_name`] || '', age: v[`sib${i}_age`] || '', age_m: v[`sib${i}_age_m`] || '',
+      status: st, edu: keep(`sib${i}_edu`, st && st !== 'preschool'), occupation: keep(`sib${i}_job`, st === 'work'),
+      place: keep(`sib${i}_place`, st === 'study' || st === 'work'), note: keep(`sib${i}_note`, ['disabled', 'none', 'other'].includes(st)),
+      residence: v[`sib${i}_res`] || ''});
   }
   return out;
 }
 const SIB_RES = [['home', 'อยู่บ้านเดียวกัน'], ['out', 'แยกออกไปอยู่ข้างนอก'], ['family', 'แยกออกไปมีครอบครัวแล้ว']];
+const SIB_STATUS = [['study', 'กำลังเรียน'], ['preschool', 'ยังเล็ก / ยังไม่ถึงวัยเรียน'], ['work', 'ทำงานแล้ว'],
+  ['disabled', 'ไม่ได้เรียน / ทำงาน เพราะพิการหรือเจ็บป่วย'], ['none', 'ไม่ได้เรียนและไม่ได้ทำงาน'], ['other', 'อื่น ๆ']];
 const movedCount = list => list.filter(x => x.residence === 'family').length;
+const outCount = list => list.filter(x => x.residence === 'out').length;
+const sibCounts = list => SIB_RES.map(([k, t]) => `<div><b>${list.filter(x => x.residence === k).length}</b><span>${t.replace('แยกออกไป', 'แยกไป')}</span></div>`).join('');
+const sibAge = x => [x.age !== '' && x.age != null && (Number(x.age) || !Number(x.age_m)) ? `${x.age} ปี` : '', Number(x.age_m) ? `${x.age_m} เดือน` : ''].filter(Boolean).join(' ');
 function renderSibs(form, list) {
   document.getElementById('sibs').innerHTML = siblingRows(list);
   document.getElementById('sib_count').value = list.length;
-  document.getElementById('sib_moved_view').textContent = `${movedCount(list)} คน`;
+  document.getElementById('sib_counts').innerHTML = sibCounts(list);
+  applyWhen(form);
 }
 App.on('sib-count', function (el) {
   const n = Math.max(0, Math.min(15, Number(el.value) || 0));
@@ -429,7 +445,7 @@ App.on('sib-remove', function (el) {
   renderSibs(el.form, list);
 });
 App.on('sib-moved', function (el) {
-  document.getElementById('sib_moved_view').textContent = `${movedCount(readSiblings(el.form))} คน`;
+  document.getElementById('sib_counts').innerHTML = sibCounts(readSiblings(el.form));
 });
 /* ช่องจำนวนแบบกด − / + (พิมพ์ได้ แต่กด Enter ไม่ส่งฟอร์ม) */
 function stepper(id, value, max, attrs = '') {
@@ -550,7 +566,7 @@ App.on('student-step', function (form, ev) {
       own_land: !!v.own_land, own_land_amt: v.own_land ? v.own_land_amt || '' : '', own_land_unit: v.own_land_unit || 'rai',
       rent_land: !!v.rent_land, rent_land_amt: v.rent_land ? v.rent_land_amt || '' : '', rent_land_unit: v.rent_land_unit || 'rai',
       rent_land_cost: v.rent_land ? v.rent_land_cost || '' : '', rent_land_per: v.rent_land_per || 'year',
-      relations: arr(v.relations), sib_moved: ''};
+      relations: arr(v.relations), sib_moved: '', sib_out: ''};
     ['father', 'mother'].forEach(k => {
       if (!fam[k].name) e[k + '_name'] = 'กรุณากรอกชื่อ–สกุล (กรอกทุกกรณี)';
       if (!fam[k].status) e[k + '_status'] = 'กรุณาเลือกสถานะ';
@@ -570,7 +586,12 @@ App.on('student-step', function (form, ev) {
     s.family = fam;
     s.siblings = readSiblings(form);
     fam.sib_moved = String(movedCount(s.siblings));
-    s.siblings.forEach((x, i) => { if (!x.residence) e[`sib${i}_res`] = 'กรุณาเลือกว่าพักอาศัยที่ไหน'; });
+    fam.sib_out = String(outCount(s.siblings));
+    s.siblings.forEach((x, i) => {
+      if (!x.residence) e[`sib${i}_res`] = 'กรุณาเลือกว่าพักอาศัยที่ไหน';
+      if (!x.status) e[`sib${i}_status`] = 'กรุณาเลือกสถานะปัจจุบัน';
+      else if (['disabled', 'none', 'other'].includes(x.status) && !x.note.trim()) e[`sib${i}_note`] = 'กรุณาระบุรายละเอียด';
+    });
   } else {
     Object.assign(s, {allowance: v.allowance || '', other: v.other, other_org: v.other === 'yes' ? v.other_org || '' : '', other_amount: v.other === 'yes' ? v.other_amount || '' : '',
       other_period: v.other === 'yes' ? v.other_period : '', loan: v.loan, loan_count: v.loan === 'yes' ? v.loan_count || '' : '', loan_names: v.loan === 'yes' ? v.loan_names || '' : '',
