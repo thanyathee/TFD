@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v7';
+const STORE_KEY = 'tfd-scholarship-demo-v8';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -156,7 +156,12 @@ const App = {
     window.scrollTo({top: 0});
   },
   render() {
-    const out = this.views[this.view.name].call(this, this.view.params);
+    let out;
+    try { out = this.views[this.view.name].call(this, this.view.params); } catch (err) {
+      console.error(err);
+      out = {html: `<section class="card"><h2>เปิดหน้านี้ไม่สำเร็จ</h2><p class="muted">ข้อมูลทดลองในเบราว์เซอร์อาจเป็นรุ่นเก่า กด “ล้างข้อมูลทดลอง” แล้วลองใหม่</p>
+        <p class="small muted">${esc(err.message)}</p><div class="row"><button class="btn primary" data-action="reset">ล้างข้อมูลทดลอง</button><button class="btn" data-action="home">กลับหน้าแรก</button></div></section>`};
+    }
     document.getElementById('topbar').innerHTML = this.topbar(out.nav);
     document.getElementById('main').innerHTML = out.html;
     if (out.after) out.after.call(this);

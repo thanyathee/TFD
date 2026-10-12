@@ -54,7 +54,12 @@ App.views['teacher-home'] = function (p) {
   };
   const f = groups[p.filter] ? p.filter : (all.some(groups.waiting[1]) ? 'waiting' : 'all');
   const q = (p.q || '').toLowerCase();
-  const rows = all.filter(groups[f][1]).filter(s => !q || (s.code + fullName(s)).toLowerCase().includes(q));
+  const docsState = s => SENT.includes(s.status) || s.status === 'waiting_teacher' ? (docsComplete(s) ? 'ok' : 'miss') : '';
+  const classes = Object.values(CLASS_GROUPS).flat().filter(c => all.some(s => s.class === c));
+  const rows = all.filter(groups[f][1])
+    .filter(s => !p.cls || s.class === p.cls).filter(s => !p.type || s.type === p.type).filter(s => !p.docs || docsState(s) === p.docs)
+    .filter(s => !q || (s.code + fullName(s)).toLowerCase().includes(q));
+  const docCell = s => ({ok: '<span class="badge t-ok">ครบ</span>', miss: '<span class="badge t-bad">ยังไม่ครบ</span>'})[docsState(s)] || '<span class="muted">—</span>';
   return {nav: this.teacherNav(), html: `
     <div class="page-head"><div><h1>${esc(sc.name)}</h1><p class="sub">ระบบครู / สถานศึกษา</p></div></div>
     <section class="card"><div class="card-head"><div><b>ครูผู้ดูแลทุน: ${esc(t ? t.name : '-')}</b>
@@ -62,19 +67,29 @@ App.views['teacher-home'] = function (p) {
       <p class="small muted">บัญชีผู้ดูแลทุนของโรงเรียน — โรงเรียนนี้ใช้ Username เดียวสำหรับตรวจสอบนักเรียนและส่งเอกสารมายังมูลนิธิฯ</p></section>
     <div class="stats">${['draft', 'waiting', 'sent'].map(k =>
       `<button class="stat" data-go="teacher-home" data-filter="${k}" aria-pressed="${k === f}"><span>${groups[k][0]}</span><b>${all.filter(groups[k][1]).length}</b></button>`).join('')}</div>
-    <div class="grid-2">
-      ${field('tf', 'กรองตามสถานะ', select('tf', Object.entries(groups).map(([k, g]) => [k, g[0]]), f, null, 'data-onchange="teacher-filter"'))}
-      ${field('tq', 'ค้นหานักเรียน', input('tq', p.q || '', 'placeholder="รหัสผู้สมัคร หรือ ชื่อ–นามสกุล" data-oninput="teacher-search"'))}
+    <div class="filters" id="tfilters">
+      ${field('tq', 'ค้นหา', input('tq', p.q || '', 'placeholder="รหัส หรือ ชื่อ–นามสกุล" data-oninput="teacher-search"'))}
+      ${field('tf', 'สถานะ', select('tf', Object.entries(groups).map(([k, g]) => [k, g[0]]), f, null, 'data-onchange="teacher-filter"'))}
+      ${field('tc', 'ระดับชั้น', select('tc', classes, p.cls, 'ทุกชั้น', 'data-onchange="teacher-filter"'))}
+      ${field('tt', 'ประเภททุน', select('tt', Object.entries(TYPE), p.type, 'ทุกประเภท', 'data-onchange="teacher-filter"'))}
+      ${field('td', 'เอกสาร', select('td', [['ok', 'ครบ'], ['miss', 'ยังไม่ครบ']], p.docs, 'ทั้งหมด', 'data-onchange="teacher-filter"'))}
     </div>
-    ${listRows(rows.map(s => studentRow(s, `data-go="teacher-student" data-code="${s.code}"`,
-      `<span class="num">${s.code}</span> · ${esc(s.class || '-')} · ${TYPE[s.type]}${SENT.includes(s.status) || s.status === 'waiting_teacher' ? ` · เอกสาร${docsComplete(s) ? 'ครบ' : 'ยังไม่ครบ'}` : ''}`)),
-      'ไม่มีนักเรียนในกลุ่มนี้')}`,
-    after() { const el = document.getElementById('tq'); if (p.q != null && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }};
+    <div class="small muted">แสดง ${rows.length} จาก ${all.length} คน</div>
+    <div class="tlist" role="table" aria-label="รายชื่อนักเรียน">
+      <div class="tlist-head" role="row"><span>ชื่อ–นามสกุล</span><span>สถานะ</span><span>รหัสผู้สมัคร</span><span>ชั้น</span><span>ประเภท</span><span>เอกสาร</span></div>
+      ${rows.length ? rows.map(s => `<button class="trow" role="row" data-go="teacher-student" data-code="${s.code}">
+        <span class="c-name">${esc(fullName(s))}</span><span class="c-status">${badge(s)}</span><span class="br"></span><span class="c-code num">${s.code}</span><span class="c-class">${esc(s.class || '-')}</span>
+        <span class="c-type">${TYPE[s.type]}</span><span class="c-docs">${docCell(s)}</span></button>`).join('')
+        : '<div class="empty">ไม่มีนักเรียนตามเงื่อนไขนี้</div>'}
+    </div>`,
+    after() { const el = document.getElementById('tq'); if (p.q != null && p.focusQ && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }};
 };
-App.on('teacher-filter', function (el) { this.go('teacher-home', {filter: el.value, q: (document.getElementById('tq') || {}).value || ''}); });
+const teacherFilters = q => ({filter: document.getElementById('tf').value, cls: document.getElementById('tc').value, type: document.getElementById('tt').value,
+  docs: document.getElementById('td').value, q: q != null ? q : document.getElementById('tq').value});
+App.on('teacher-filter', function () { this.go('teacher-home', teacherFilters()); });
 App.on('teacher-search', function (el) {
   clearTimeout(this._ts);
-  this._ts = setTimeout(() => this.go('teacher-home', {filter: document.getElementById('tf').value, q: el.value}), 250);
+  this._ts = setTimeout(() => this.go('teacher-home', {...teacherFilters(el.value), focusQ: 1}), 250);
 });
 
 /* ข้อมูลผู้สมัครทุกส่วน ใช้ร่วมกันระหว่างครูและเจ้าหน้าที่ */

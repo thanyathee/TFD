@@ -327,3 +327,23 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .key-q .choice{min-height:64px;padding:12px 18px}
 .key-q .choice .opt b{font-size:17px}
 .key-q .choice .opt small{font-size:14px}
+/* ครู: รายชื่อนักเรียนแบบตาราง ชื่อและสถานะอยู่บรรทัดเดียวกัน */
+.filters{display:grid;grid-template-columns:2fr repeat(4,1fr);gap:10px}
+.tlist{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden}
+.tlist-head,.trow{display:grid;grid-template-columns:minmax(180px,2fr) minmax(170px,1.2fr) 130px 90px 110px 100px;gap:10px;align-items:center;padding:10px 16px}
+.tlist-head{font-size:13px;font-weight:600;color:var(--muted);background:var(--fill)}
+.trow{width:100%;border:0;border-top:1px solid var(--line);background:none;text-align:left;font:inherit;color:inherit;cursor:pointer;min-height:52px}
+.trow:hover{background:var(--brand-soft)}
+.trow .c-name{font-weight:600}
+.trow .c-code,.trow .c-class,.trow .c-type{font-size:14px;color:var(--ink-2)}
+.trow .br{display:none}
+@media (max-width:900px){
+  .filters{grid-template-columns:1fr 1fr}
+  .filters>.field:first-child{grid-column:1/-1}
+  .tlist-head{display:none}
+  .trow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:12px 14px}
+  .trow .c-name{flex:1 1 0;min-width:0}
+  .trow .br{display:block;flex-basis:100%;height:0}
+  .trow .c-code,.trow .c-class,.trow .c-type{font-size:13px}
+  .trow .c-docs{margin-left:auto}
+}
