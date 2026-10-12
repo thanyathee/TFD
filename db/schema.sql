@@ -34,29 +34,40 @@ CREATE TYPE transfer_result   AS ENUM ('pending', 'passed', 'failed');
 -- ---------------------------------------------------------------------
 -- 1) ข้อมูลพื้นที่ (Master)
 -- ---------------------------------------------------------------------
+-- ข้อมูลจริงอยู่ใน db/seed_geography.sql (77 จังหวัด / 928 อำเภอ-เขต / 7,436 ตำบล-แขวง)
 CREATE TABLE regions (
   id    smallint PRIMARY KEY,
-  name  text NOT NULL UNIQUE           -- ภาคเหนือ, ภาคกลาง, ...
+  code  text NOT NULL UNIQUE,          -- bkkmetro, north, central, ... (ตรงกับค่าในฟอร์ม v28)
+  name  text NOT NULL UNIQUE           -- กรุงเทพฯและปริมณฑล, ภาคเหนือ, ...
 );
 
 CREATE TABLE provinces (
   id        integer PRIMARY KEY,       -- รหัสจังหวัดตามกรมการปกครอง
   region_id smallint NOT NULL REFERENCES regions(id),
-  name_th   text NOT NULL
+  name_th   text NOT NULL UNIQUE,
+  name_en   text NOT NULL
 );
 
 CREATE TABLE districts (
   id          integer PRIMARY KEY,
   province_id integer NOT NULL REFERENCES provinces(id),
-  name_th     text NOT NULL
+  prefix_th   text NOT NULL,           -- อำเภอ / เขต
+  name_th     text NOT NULL,
+  name_en     text NOT NULL,
+  UNIQUE (province_id, name_th)
 );
 
 CREATE TABLE subdistricts (
   id          integer PRIMARY KEY,
   district_id integer NOT NULL REFERENCES districts(id),
+  prefix_th   text NOT NULL,           -- ตำบล / แขวง
   name_th     text NOT NULL,
-  postcode    char(5)
+  name_en     text NOT NULL,
+  postcode    char(5) NOT NULL
 );
+CREATE INDEX ON districts (province_id);
+CREATE INDEX ON subdistricts (district_id);
+CREATE INDEX ON subdistricts (postcode);
 
 -- ---------------------------------------------------------------------
 -- 2) สถานศึกษา และบัญชีผู้ใช้ฝั่งครู/เจ้าหน้าที่
@@ -375,9 +386,7 @@ CREATE TRIGGER trg_application_status
 -- ---------------------------------------------------------------------
 -- 10) ข้อมูลตั้งต้น
 -- ---------------------------------------------------------------------
-INSERT INTO regions VALUES
-  (1,'ภาคเหนือ'),(2,'ภาคกลาง'),(3,'ภาคตะวันออกเฉียงเหนือ'),
-  (4,'ภาคตะวันออก'),(5,'ภาคตะวันตก'),(6,'ภาคใต้'),(7,'กรุงเทพฯและปริมณฑล');
+-- ภาค / จังหวัด / อำเภอ / ตำบล → รัน db/seed_geography.sql ต่อจากไฟล์นี้
 
 INSERT INTO document_types (code, name_th, allow_multiple) VALUES
   ('01_IDCARD','บัตรประจำตัวประชาชน',false),

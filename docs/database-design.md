@@ -28,7 +28,7 @@ draft ──นักเรียนกดส่ง──▶ waiting_teacher ─
 
 | กลุ่ม | ตาราง | ใช้ในส่วน |
 |---|---|---|
-| พื้นที่ | `regions` `provinces` `districts` `subdistricts` | ทุกส่วน (แทนการโหลดจาก GitHub) |
+| พื้นที่ | `regions` `provinces` `districts` `subdistricts` | ทุกส่วน — ข้อมูลของระบบเองใน `db/seed_geography.sql` และ `db/geography/thailand_geography.json` (7 ภาค / 77 จังหวัด / 928 อำเภอ-เขต / 7,436 ตำบล-แขวง พร้อมรหัสไปรษณีย์) สร้างด้วย `db/tools/build_geography.py` |
 | สถานศึกษา/ผู้ใช้ | `schools` `staff_users` | จนท. จัดการ, ครูล็อกอิน |
 | ตั้งค่ารอบ | `scholarship_cycles` `scholarship_rates` `document_types` | จนท. ตั้งค่า |
 | นักเรียน | `students` | นักเรียน |
@@ -72,7 +72,7 @@ applications 1─* siblings / other_funding / documents / staff_reviews / status
 ## 5. ขั้นถัดไป
 
 1. ตกลงชื่อสถานะในตาราง §1 ให้ตรงกันทั้งฝั่งนักเรียน/ครู (v28) และฝั่ง Admin (v13)
-2. นำเข้าข้อมูลพื้นที่ (77 จังหวัด / 928 อำเภอ / ตำบล) และรายชื่อสถานศึกษา
+2. นำเข้ารายชื่อสถานศึกษา (ข้อมูลพื้นที่พร้อมแล้ว: รัน `schema.sql` แล้วตามด้วย `seed_geography.sql`)
 3. เขียน RLS policy ตาม §4
 4. เชื่อมหน้า HTML เข้ากับฐานข้อมูล (เช่น Supabase client หรือ API)
 5. กำหนดระยะเวลาเก็บข้อมูลตาม PDPA เช่น ลบเอกสารของผู้ไม่ได้รับทุนเมื่อครบ X ปี
