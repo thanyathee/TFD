@@ -118,7 +118,6 @@ App.views['student-form'] = function (p) {
 function stepPersonal(s, e) {
   const sc = this.schoolById[s.school];
   const area = sc ? {region: sc.region, province: sc.province, district: sc.district, school: sc.id} : {};
-  const classes = sc ? (sc.type === 'college' ? COLLEGE_CLASSES : SCHOOL_CLASSES) : SCHOOL_CLASSES.concat(COLLEGE_CLASSES);
   return `
   <section class="card"><h3>ข้อมูลส่วนตัว</h3>
     <div class="grid-3">
@@ -139,12 +138,11 @@ function stepPersonal(s, e) {
       {req: 1, err: e.current_address, attrs: `id="current_wrap" ${s.same_address ? 'hidden' : ''}`})}
   </section>
   <section class="card"><h3>สถานศึกษาปัจจุบัน</h3>
-    <div class="grid-2" data-area='{"school":true,"required":true}' data-after="student-school">${this.areaPicker('st', area, {school: true, required: true})}</div>
+    <div class="grid-2" data-area='{"school":true,"required":true}'>${this.areaPicker('st', area, {school: true, required: true})}</div>
     ${e.school ? `<div class="err">${e.school}</div>` : ''}
-    <div class="grid-2">
-      ${field('class', 'ระดับชั้นปัจจุบัน (ปี ' + (this.db.cycle.year - 1) + ')', select('class', classes, s.class, 'เลือกระดับชั้น', 'data-onchange="student-class"'), {req: 1, err: e.class})}
-      ${field('next_ro', 'ระดับชั้นปีที่ได้รับทุน (ปี ' + this.db.cycle.year + ')', input('next_ro', NEXT_CLASS[s.class] || '', 'readonly'), {hint: 'ใช้คำนวณอัตราทุน'})}
-    </div>
+  </section>
+  <section class="card"><h3>ระดับชั้น</h3>
+    <div id="class_box" class="stack">${classFields.call(this, {group: CLASS_GROUPS[s.group] ? s.group : groupOfClass(s.class), cls: s.class, next: s.next_class, pvs: s.pvs_type}, e)}</div>
   </section>
   <section class="card"><h3>ทุนและเงินกู้อื่น</h3>
     <div class="field"><span class="label">กู้ยืม กยศ. / กรอ. หรือไม่ <span class="req">*</span></span>${radios('loan', [['no', 'ไม่กู้'], ['yes', 'กู้']], s.loan)}${e.loan ? `<div class="err">${e.loan}</div>` : ''}</div>
@@ -155,17 +153,31 @@ function stepPersonal(s, e) {
 App.on('student-same-address', function (el) {
   document.getElementById('current_wrap').hidden = el.checked;
 });
+/* เลือกช่วงชั้นก่อน แล้วจึงเลือกระดับชั้นปัจจุบัน ระดับชั้นปีถัดไปเลือกให้อัตโนมัติเมื่อมีทางเดียว */
+function classFields(v, e = {}) {
+  const y = this.db.cycle.year;
+  const classes = CLASS_GROUPS[v.group] || [];
+  const nexts = NEXT_OPTIONS[v.cls] || [];
+  const next = nexts.length === 1 ? nexts[0] : (nexts.includes(v.next) ? v.next : '');
+  const rate = RATE_OF_NEXT(next, v.pvs);
+  return `<div class="grid-3">
+      ${field('group', 'ช่วงชั้นที่กำลังศึกษา', select('group', EDU_GROUPS, v.group, 'เลือกช่วงชั้น', 'data-onchange="student-class"'), {req: 1, err: e.group})}
+      ${field('class', `ระดับชั้นปัจจุบัน (ปี ${y - 1})`, select('class', classes, v.cls, v.group ? 'เลือกระดับชั้น' : 'เลือกช่วงชั้นก่อน', `data-onchange="student-class" ${v.group ? '' : 'disabled'}`), {req: 1, err: e.class})}
+      ${field('next_class', `ระดับชั้นปีที่ได้รับทุน (ปี ${y})`, select('next_class', nexts, next, v.cls ? (nexts.length > 1 ? 'เลือกระดับชั้นปีถัดไป' : 'เลือก') : 'เลือกระดับชั้นปัจจุบันก่อน',
+        `data-onchange="student-class" ${nexts.length > 1 ? '' : 'disabled'}`) + (nexts.length === 1 ? `<input type="hidden" name="next_class" value="${esc(next)}">` : ''),
+        {req: 1, err: e.next_class, hint: nexts.length > 1 ? 'เลือกตามที่จะศึกษาต่อในปีที่ได้รับทุน' : ''})}
+    </div>
+    ${/^ปวส/.test(next) ? field('pvs_type', 'ประเภทวิชา (ปวส.)', select('pvs_type', PVS_TYPES, v.pvs, 'เลือกประเภทวิชา', 'data-onchange="student-class"'), {req: 1, err: e.pvs_type}) : ''}
+    ${rate ? `<div class="note info small">อัตราทุนปี ${y}: <b>${baht(this.rateAmount(rate))}</b>${rate === 'BACHELOR' ? ' · ระดับปริญญาตรีส่งใบสมัครถึงมูลนิธิฯ โดยตรง ไม่ผ่านครู' : ''}</div>` : ''}`;
+}
 App.on('student-class', function (el) {
-  const box = document.getElementById('next_ro');
-  if (box) box.value = NEXT_CLASS[el.value] || '';
-});
-App.on('student-school', function () {
-  const id = this.readArea('st').school;
-  const sc = this.schoolById[id];
-  const cls = document.getElementById('class');
-  if (!sc || !cls) return;
-  const list = sc.type === 'college' ? COLLEGE_CLASSES : SCHOOL_CLASSES;
-  cls.outerHTML = select('class', list, list.includes(cls.value) ? cls.value : '', 'เลือกระดับชั้น', 'data-onchange="student-class"');
+  const val = id => (document.getElementById(id) || {}).value || '';
+  const v = {group: val('group'), cls: val('class'), next: val('next_class'), pvs: val('pvs_type')};
+  if (el.name === 'group') { v.cls = ''; v.next = ''; }
+  if (el.name === 'class') v.next = '';
+  document.getElementById('class_box').innerHTML = classFields.call(this, v);
+  const nextFocus = el.name === 'group' ? 'class' : el.name === 'class' && !document.getElementById('next_class').disabled ? 'next_class' : null;
+  if (nextFocus) document.getElementById(nextFocus).focus();
 });
 
 function stepFamily(s, e) {
@@ -230,8 +242,8 @@ function stepReview(s, e) {
   return `
   <section class="card"><div class="card-head"><h3>ข้อมูลนักเรียน</h3>${edit(1)}</div>
     <dl class="kv"><div><dt>ชื่อ–นามสกุล</dt><dd>${esc(fullName(s))}</dd></div><div><dt>เลขประจำตัวประชาชน</dt><dd class="num">${esc(s.citizen_id)}</dd></div>
-      <div><dt>สถานศึกษา</dt><dd>${esc(this.schoolName(s.school))}</dd></div><div><dt>ระดับชั้น</dt><dd>${esc(s.class)} → ${esc(NEXT_CLASS[s.class] || '')}</dd></div>
-      <div><dt>ประเภททุน</dt><dd>${TYPE[s.type]}</dd></div><div><dt>อัตราทุน</dt><dd>${baht(this.rateAmount(RATE_OF_NEXT(NEXT_CLASS[s.class])))}</dd></div></dl>
+      <div><dt>สถานศึกษา</dt><dd>${esc(this.schoolName(s.school))}</dd></div><div><dt>ระดับชั้น</dt><dd>${esc(s.class)} → ${esc(s.next_class)}${s.pvs_type ? ` (${esc(s.pvs_type)})` : ''}</dd></div>
+      <div><dt>ประเภททุน</dt><dd>${TYPE[s.type]}</dd></div><div><dt>อัตราทุน</dt><dd>${baht(this.rateAmount(s.rate))}</dd></div></dl>
     ${addressBlock(s)}</section>
   <section class="card"><div class="card-head"><h3>ครอบครัว</h3>${edit(2)}</div>
     <dl class="kv"><div><dt>บิดา</dt><dd>${esc(f.father_name)} · ${baht(f.father_monthly_income || 0)}/เดือน</dd></div>
@@ -262,7 +274,10 @@ App.on('student-step', function (form) {
     ['title', 'gender'].forEach(k => need(k, 'กรุณาเลือก'));
     ['first_name', 'last_name', 'home_address'].forEach(k => need(k));
     if (!v.same_address) need('current_address');
-    need('class', 'กรุณาเลือกระดับชั้น');
+    need('group', 'กรุณาเลือกช่วงชั้น');
+    need('class', 'กรุณาเลือกระดับชั้นปัจจุบัน');
+    need('next_class', 'กรุณาเลือกระดับชั้นปีที่ได้รับทุน');
+    if (/^ปวส/.test(v.next_class)) need('pvs_type', 'กรุณาเลือกประเภทวิชา');
     need('loan', 'กรุณาเลือกคำตอบ');
     need('other', 'กรุณาเลือกคำตอบ');
     if (v.other === 'yes' && !v.other_detail) e.other_detail = 'กรุณาระบุชื่อหน่วยงานและจำนวนเงิน';
@@ -270,7 +285,8 @@ App.on('student-step', function (form) {
     if (!area.school) e.school = 'กรุณาเลือกภาค จังหวัด อำเภอ และสถานศึกษา';
     Object.assign(s, {title: v.title, first_name: v.first_name, last_name: v.last_name, gender: v.gender, home_address: v.home_address,
       same_address: !!v.same_address, current_address: v.same_address ? v.home_address : v.current_address,
-      school: area.school || s.school, class: v.class, next_class: NEXT_CLASS[v.class] || '', rate: RATE_OF_NEXT(NEXT_CLASS[v.class]),
+      school: area.school || s.school, group: v.group, class: v.class, next_class: v.next_class, pvs_type: /^ปวส/.test(v.next_class) ? v.pvs_type : '',
+      rate: RATE_OF_NEXT(v.next_class, v.pvs_type),
       loan: v.loan, other: v.other, other_detail: v.other_detail});
   } else if (step === 2) {
     ['father', 'mother'].forEach(p => {
@@ -300,16 +316,17 @@ App.on('student-step', function (form) {
   this.save();
   if (Object.keys(e).length) { this.go('student-form', {step, errors: e}); return; }
   if (step < 4) { this.toast('บันทึกแล้ว'); this.go('student-form', {step: step + 1}); return; }
-  s.status = 'waiting_teacher';
+  const direct = s.group === 'bachelor';
+  s.status = direct ? 'waiting_staff' : 'waiting_teacher';
   s.submitted_at = nowIso();
   s.return_reason = '';
-  s.history.push({at: s.submitted_at, text: 'นักเรียนส่งใบสมัคร'});
+  s.history.push({at: s.submitted_at, text: direct ? 'นักศึกษาส่งใบสมัครถึงมูลนิธิฯ โดยตรง' : 'นักเรียนส่งใบสมัคร'});
   this.save();
   this.toast('ส่งใบสมัครแล้ว');
   this.go('student-status');
 });
 function stepComplete(s, n) {
-  if (n === 1) return s.title && s.first_name && s.home_address && s.last_name && s.school && s.class && s.loan && s.other;
+  if (n === 1) return s.title && s.first_name && s.home_address && s.last_name && s.school && s.class && s.next_class && s.loan && s.other;
   if (n === 2) return s.family && s.family.father_name && s.family.mother_name && s.family.housing_type;
   return STORY_Q.every(([, , req], i) => !req || (s.stories[i] || '').length >= 20);
 }
