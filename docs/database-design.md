@@ -75,6 +75,11 @@ applications 1─* siblings / other_funding / documents / staff_reviews / status
 | ตั้งค่ารอบ/โรงเรียน/บัญชี | — | — | — | — | ✓ |
 | Export | — | ใบสรุปของโรงเรียน | ✓ + log | ✓ + log | ✓ + log |
 
+## ข้อมูลจำลองสำหรับทดสอบ
+
+`db/seed_mock.sql` (สร้างด้วย `db/tools/build_mock_data.py`): นักเรียน 100 คนพร้อมใบสมัคร, ครู 100 คน (สถานศึกษาจำลอง 50 แห่ง แห่งละ 2 คน), เจ้าหน้าที่ 4 บัญชี (`reviewer01` `reviewer02` `manager01` `admin01`) รหัสผ่านทุกบัญชี `Demo@1234`
+ลำดับการรัน: `schema.sql` → `seed_geography.sql` → `seed_mock.sql` · ข้อมูลชุดเดียวกันสำหรับหน้า HTML อยู่ที่ `db/mock/mock_data.json`
+
 ## 5. ขั้นถัดไป
 
 1. ตกลงชื่อสถานะในตาราง §1 ให้ตรงกันทั้งฝั่งนักเรียน/ครู (v28) และฝั่ง Admin (v13)
