@@ -113,7 +113,7 @@ function studentSummary(s) {
         <div><dt>วันเกิด</dt><dd>${thDate(s.birth_date)}</dd></div><div><dt>โทรศัพท์</dt><dd class="num">${esc(s.phone)}</dd></div>
         <div><dt>สถานศึกษา</dt><dd>${esc(this.schoolName(s.school))}</dd></div>
         <div><dt>อัตราทุน</dt><dd>${baht(this.rateAmount(s.rate))}</dd></div><div><dt>ส่งใบสมัคร</dt><dd>${thDate(s.submitted_at, true)}</dd></div></dl>
-      ${s.address ? `<p class="small"><span class="muted">ที่อยู่:</span> ${esc(s.address)}</p>` : ''}</section>
+      ${addressBlock(s)}</section>
     <section class="card"><h3>ครอบครัว</h3>
       <dl class="kv"><div><dt>บิดา</dt><dd>${esc(f.father_name || '—')}<br><span class="small muted">${esc(f.father_occupation || '')} ${baht(f.father_monthly_income || 0)}/เดือน</span></dd></div>
         <div><dt>มารดา</dt><dd>${esc(f.mother_name || '—')}<br><span class="small muted">${esc(f.mother_occupation || '')} ${baht(f.mother_monthly_income || 0)}/เดือน</span></dd></div>

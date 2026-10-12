@@ -186,6 +186,8 @@ def main():
         cont = rng.random() < 0.3
         submitted = None if status in ('draft',) else base + timedelta(days=rng.randint(0, 40), minutes=rng.randint(0, 600))
         aid = uid('app', n)
+        home_addr = f'{rng.randint(1, 299)} หมู่ {rng.randint(1, 15)} ' + sc['address'].split(' ', 3)[3]
+        same_addr = rng.random() < 0.75
         fam_size = rng.randint(0, 4)
         apps.append({
             'id': aid, 'app_code': f'TF2570-{n:06d}', 'cycle_id': 1, 'student_id': sid, 'school_id': sc['id'],
@@ -195,7 +197,8 @@ def main():
             'current_class': cur, 'next_class': nxt, 'rate_level_code': rate,
             'study_mode': 'ปกติ', 'pvs_type': ('อุตสาหกรรม' if rate == 'PVS_IND' else 'พาณิชยกรรม') if college else None,
             'stays_same_school': cur not in ('ป.6', 'ม.3'),
-            'home_address': sc['address'].replace(' (จำลอง)', ''), 'current_address': sc['address'].replace(' (จำลอง)', ''),
+            'home_address': home_addr, 'current_address': home_addr if same_addr else
+                f'{rng.randint(1, 199)}/{rng.randint(1, 30)} หมู่ {rng.randint(1, 15)} ' + home_addr.split(' ', 3)[3],
             'story_family': f'อาศัยอยู่กับ{rng.choice(["พ่อแม่", "แม่", "ยายและตา", "ป้า"])} ผู้ปกครองมีรายได้ไม่แน่นอน',
             'story_siblings': f'มีพี่น้อง {fam_size} คน' if fam_size else 'เป็นลูกคนเดียว',
             'story_travel': f'{rng.choice(TRAVEL)}มาโรงเรียน ใช้เวลาประมาณ {rng.choice([10, 15, 20, 30, 45])} นาที ได้เงินไปโรงเรียนวันละ {rng.choice([20, 30, 40, 50])} บาท',
@@ -305,7 +308,8 @@ def main():
             'last_name': s['last_name'], 'gender': s['gender'], 'birth_date': s['birth_date'], 'phone': s['phone'],
             'school': by_id[a['school_id']]['institution_code'], 'class': a['current_class'], 'next_class': a['next_class'],
             'rate': a['rate_level_code'], 'group': a['education_group'], 'type': a['applicant_type'], 'status': a['status'],
-            'submitted_at': a['submitted_at'], 'address': a['home_address'],
+            'submitted_at': a['submitted_at'], 'home_address': a['home_address'], 'current_address': a['current_address'],
+            'same_address': a['home_address'] == a['current_address'],
             'stories': [a['story_family'], a['story_siblings'], a['story_travel'], a['story_housing'], a['story_expenses'], a['story_other']],
             'family': {k: f[k] for k in ('father_name', 'father_status', 'father_occupation', 'father_monthly_income',
                                          'mother_name', 'mother_status', 'mother_occupation', 'mother_monthly_income',

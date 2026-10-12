@@ -1,7 +1,7 @@
 /* ส่วนกลาง: ข้อมูล, การเก็บสถานะ, ตัวช่วยแสดงผล, การเปลี่ยนหน้า, หน้าเลือกบทบาท */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v2';
+const STORE_KEY = 'tfd-scholarship-demo-v3';
 
 const STATUS = {
   draft:               {label: 'กำลังกรอก',          tone: 'idle'},

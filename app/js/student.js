@@ -83,7 +83,7 @@ App.on('student-login', function (form) {
     const n = this.db.students.reduce((m, x) => Math.max(m, Number(x.code.slice(-6))), 0) + 1;
     s = {code: `TF${this.db.cycle.year}-${String(n).padStart(6, '0')}`, citizen_id: v.cid, birth_date: v.birth, phone: v.phone,
       title: '', first_name: '', last_name: '', gender: '', type: v.received === 'yes' ? 'CONT' : 'NEW', status: 'draft',
-      school: '', class: '', next_class: '', address: '', stories: ['', '', '', '', '', ''], family: {assets: []}, siblings: [],
+      school: '', class: '', next_class: '', home_address: '', current_address: '', same_address: false, stories: ['', '', '', '', '', ''], family: {assets: []}, siblings: [],
       loan: '', other: '', other_detail: '', history: [], docs: []};
     this.db.students.push(s);
     this.save();
@@ -131,7 +131,12 @@ function stepPersonal(s, e) {
       ${field('birth_ro', 'วันเกิด', input('birth_ro', thDate(s.birth_date), 'readonly'))}
       ${field('gender', 'เพศ', select('gender', ['ชาย', 'หญิง'], s.gender, 'เลือก'), {req: 1, err: e.gender})}
     </div>
-    ${field('address', 'ที่อยู่ปัจจุบัน', textarea('address', s.address, 'rows="2" placeholder="บ้านเลขที่ หมู่ ตำบล อำเภอ จังหวัด รหัสไปรษณีย์"'), {req: 1, err: e.address})}
+  </section>
+  <section class="card"><h3>ที่อยู่</h3>
+    ${field('home_address', 'ที่อยู่ตามทะเบียนบ้าน', textarea('home_address', s.home_address, 'rows="2" placeholder="บ้านเลขที่ หมู่ ซอย ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์"'), {req: 1, err: e.home_address})}
+    <label class="check"><input type="checkbox" name="same_address" data-onchange="student-same-address" ${s.same_address ? 'checked' : ''}> <span>ที่อยู่ปัจจุบันเหมือนที่อยู่ตามทะเบียนบ้าน</span></label>
+    ${field('current_address', 'ที่อยู่ปัจจุบัน (ที่พักอาศัยจริง)', textarea('current_address', s.same_address ? '' : s.current_address, 'rows="2" placeholder="บ้านเลขที่ หมู่ ซอย ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์"'),
+      {req: 1, err: e.current_address, attrs: `id="current_wrap" ${s.same_address ? 'hidden' : ''}`})}
   </section>
   <section class="card"><h3>สถานศึกษาปัจจุบัน</h3>
     <div class="grid-2" data-area='{"school":true,"required":true}' data-after="student-school">${this.areaPicker('st', area, {school: true, required: true})}</div>
@@ -147,6 +152,9 @@ function stepPersonal(s, e) {
     ${field('other_detail', 'ชื่อหน่วยงานและจำนวนเงิน (ถ้าได้รับ)', input('other_detail', s.other_detail), {err: e.other_detail})}
   </section>`;
 }
+App.on('student-same-address', function (el) {
+  document.getElementById('current_wrap').hidden = el.checked;
+});
 App.on('student-class', function (el) {
   const box = document.getElementById('next_ro');
   if (box) box.value = NEXT_CLASS[el.value] || '';
@@ -223,7 +231,8 @@ function stepReview(s, e) {
   <section class="card"><div class="card-head"><h3>ข้อมูลนักเรียน</h3>${edit(1)}</div>
     <dl class="kv"><div><dt>ชื่อ–นามสกุล</dt><dd>${esc(fullName(s))}</dd></div><div><dt>เลขประจำตัวประชาชน</dt><dd class="num">${esc(s.citizen_id)}</dd></div>
       <div><dt>สถานศึกษา</dt><dd>${esc(this.schoolName(s.school))}</dd></div><div><dt>ระดับชั้น</dt><dd>${esc(s.class)} → ${esc(NEXT_CLASS[s.class] || '')}</dd></div>
-      <div><dt>ประเภททุน</dt><dd>${TYPE[s.type]}</dd></div><div><dt>อัตราทุน</dt><dd>${baht(this.rateAmount(RATE_OF_NEXT(NEXT_CLASS[s.class])))}</dd></div></dl></section>
+      <div><dt>ประเภททุน</dt><dd>${TYPE[s.type]}</dd></div><div><dt>อัตราทุน</dt><dd>${baht(this.rateAmount(RATE_OF_NEXT(NEXT_CLASS[s.class])))}</dd></div></dl>
+    ${addressBlock(s)}</section>
   <section class="card"><div class="card-head"><h3>ครอบครัว</h3>${edit(2)}</div>
     <dl class="kv"><div><dt>บิดา</dt><dd>${esc(f.father_name)} · ${baht(f.father_monthly_income || 0)}/เดือน</dd></div>
       <div><dt>มารดา</dt><dd>${esc(f.mother_name)} · ${baht(f.mother_monthly_income || 0)}/เดือน</dd></div>
@@ -251,14 +260,16 @@ App.on('student-step', function (form) {
   const need = (k, msg) => { if (!v[k]) e[k] = msg || 'กรุณากรอกข้อมูล'; };
   if (step === 1) {
     ['title', 'gender'].forEach(k => need(k, 'กรุณาเลือก'));
-    ['first_name', 'last_name', 'address'].forEach(k => need(k));
+    ['first_name', 'last_name', 'home_address'].forEach(k => need(k));
+    if (!v.same_address) need('current_address');
     need('class', 'กรุณาเลือกระดับชั้น');
     need('loan', 'กรุณาเลือกคำตอบ');
     need('other', 'กรุณาเลือกคำตอบ');
     if (v.other === 'yes' && !v.other_detail) e.other_detail = 'กรุณาระบุชื่อหน่วยงานและจำนวนเงิน';
     const area = this.readArea('st');
     if (!area.school) e.school = 'กรุณาเลือกภาค จังหวัด อำเภอ และสถานศึกษา';
-    Object.assign(s, {title: v.title, first_name: v.first_name, last_name: v.last_name, gender: v.gender, address: v.address,
+    Object.assign(s, {title: v.title, first_name: v.first_name, last_name: v.last_name, gender: v.gender, home_address: v.home_address,
+      same_address: !!v.same_address, current_address: v.same_address ? v.home_address : v.current_address,
       school: area.school || s.school, class: v.class, next_class: NEXT_CLASS[v.class] || '', rate: RATE_OF_NEXT(NEXT_CLASS[v.class]),
       loan: v.loan, other: v.other, other_detail: v.other_detail});
   } else if (step === 2) {
@@ -298,7 +309,7 @@ App.on('student-step', function (form) {
   this.go('student-status');
 });
 function stepComplete(s, n) {
-  if (n === 1) return s.title && s.first_name && s.last_name && s.school && s.class && s.loan && s.other;
+  if (n === 1) return s.title && s.first_name && s.home_address && s.last_name && s.school && s.class && s.loan && s.other;
   if (n === 2) return s.family && s.family.father_name && s.family.mother_name && s.family.housing_type;
   return STORY_Q.every(([, , req], i) => !req || (s.stories[i] || '').length >= 20);
 }
@@ -336,3 +347,8 @@ App.views['student-status'] = function () {
       </aside>
     </div>`};
 };
+
+function addressBlock(s) {
+  return `<dl class="kv"><div><dt>ที่อยู่ตามทะเบียนบ้าน</dt><dd>${esc(s.home_address || '—')}</dd></div>
+    <div><dt>ที่อยู่ปัจจุบัน</dt><dd>${s.same_address ? 'เหมือนที่อยู่ตามทะเบียนบ้าน' : esc(s.current_address || '—')}</dd></div></dl>`;
+}
