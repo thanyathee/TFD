@@ -320,3 +320,6 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .unit-seg input:focus-visible+span{outline:3px solid var(--focus);outline-offset:1px}
 .age-unit .input{min-width:0}
 .qno{color:var(--brand);margin-right:2px}
+/* คำถามสำคัญ (ได้รับทุนปีที่แล้วหรือไม่) ตัวใหญ่ขึ้นเล็กน้อย คำอธิบายใต้ตัวเลือกเป็นสีแดง */
+.key-q>.label{font-size:17px;color:var(--ink)}
+.key-q .choice .opt small{color:var(--bad)}

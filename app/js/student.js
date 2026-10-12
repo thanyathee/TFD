@@ -533,14 +533,17 @@ function stepMore(s, e) {
       ${field('part_per', 'ต่อ', select('part_per', [['day', 'วัน'], ['month', 'เดือน']], s.part_per || 'day'))}
     </div>
   </section>
-  <section class="card"><h3>เขียนเล่าประวัติและสภาพความเป็นอยู่</h3>
+  ${s.type === 'CONT' ? `<section class="card"><h3>เหตุผลในการขอรับทุนต่อเนื่อง</h3>
+    ${field('reason', needsGoal(s) ? '§.1 เหตุผลในการขอรับทุนต่อเนื่อง' : '', textarea('reason', s.reason, 'rows="3" aria-label="เหตุผลในการขอรับทุนต่อเนื่อง"'), {req: req && needsGoal(s), err: e.reason})}
+    ${needsGoal(s) ? field('goal', '§.2 เป้าหมายในการขอรับทุนเพื่อการศึกษาต่อในระดับอุดมศึกษา', textarea('goal', s.goal, 'rows="3"'), {req: 1, err: e.goal, hint: 'สำหรับผู้ขอทุนระดับ ม.6 / ปวช. / ปวส.'}) : ''}
+  </section>` : `<section class="card"><h3>เขียนเล่าประวัติและสภาพความเป็นอยู่</h3>
     <p class="small muted">${req ? 'กรุณาเล่าเรื่องราวตามจริง ข้อมูลนี้ใช้ประกอบการพิจารณาทุน' : 'ระดับประถมศึกษาปีที่ 5 ไม่บังคับกรอกส่วนนี้'}</p>
     ${STORY_Q.map(([t, h], i) => field('story_' + i, `§.${i + 1} ${t}`,
       textarea('story_' + i, (s.stories || [])[i], `rows="4" data-oninput="count" maxlength="2000" aria-describedby="cnt_${i}"`) +
       `<div class="counter" id="cnt_${i}">${((s.stories || [])[i] || '').length} / 2000</div>`, {req: req && i < 5, hint: h, err: e['story_' + i]})).join('')}
     ${field('reason', `§.${STORY_Q.length + 1} เหตุผลในการขอรับทุน${s.type === 'CONT' ? 'ต่อเนื่อง' : ''}`, textarea('reason', s.reason, 'rows="3"'), {req: req, err: e.reason})}
     ${needsGoal(s) ? field('goal', `§.${STORY_Q.length + 2} เป้าหมายในการขอรับทุนเพื่อการศึกษาต่อในระดับอุดมศึกษา`, textarea('goal', s.goal, 'rows="3"'), {req: 1, err: e.goal, hint: 'สำหรับผู้ขอทุนระดับ ม.6 / ปวช. / ปวส.'}) : ''}
-  </section>
+  </section>`}
   <section class="card"><h3>ยืนยันก่อนส่ง</h3>
     <label class="check ${e.confirm ? 'invalid' : ''}"><input type="checkbox" name="confirm" ${s.confirmed ? 'checked' : ''}> <span>ข้าพเจ้าขอรับรองว่าข้อมูลทั้งหมดที่ได้ให้ไว้ในแบบฟอร์มนี้ เป็นความจริงทุกประการ <span class="req">*</span></span></label>
     ${e.confirm ? `<div class="err">${e.confirm}</div>` : ''}
@@ -630,7 +633,7 @@ App.on('student-step', function (form, ev) {
     Object.assign(s, {allowance: v.allowance || '', other: v.other, other_org: v.other === 'yes' ? v.other_org || '' : '', other_amount: v.other === 'yes' ? v.other_amount || '' : '',
       other_period: v.other === 'yes' ? v.other_period : '', loan: v.loan, loans: v.loan === 'yes' ? readLoans(form) : [], part_time: v.part_time, part_job: v.part_time === 'yes' ? v.part_job || '' : '',
       part_income: v.part_time === 'yes' ? v.part_income || '' : '', part_per: v.part_time === 'yes' ? v.part_per : '',
-      stories: STORY_Q.map((_, i) => v['story_' + i] || ''), reason: v.reason || '', goal: v.goal || '', confirmed: !!v.confirm, pdpa_ack: !!v.pdpa});
+      stories: s.type === 'CONT' ? [] : STORY_Q.map((_, i) => v['story_' + i] || ''), reason: v.reason || '', goal: v.goal || '', confirmed: !!v.confirm, pdpa_ack: !!v.pdpa});
     need('allowance');
     need('other', 'กรุณาเลือกคำตอบ');
     if (v.other === 'yes') need('other_org', 'กรุณาระบุชื่อทุน');
@@ -645,7 +648,7 @@ App.on('student-step', function (form, ev) {
     need('part_time', 'กรุณาเลือกคำตอบ');
     if (v.part_time === 'yes') need('part_job', 'กรุณาระบุงานที่ทำ');
     if (storiesRequired(s)) {
-      STORY_Q.forEach((_, i) => { if (i < 5 && !s.stories[i]) e['story_' + i] = 'กรุณาเล่าเรื่องราวในข้อนี้'; });
+      if (s.type !== 'CONT') STORY_Q.forEach((_, i) => { if (i < 5 && !s.stories[i]) e['story_' + i] = 'กรุณาเล่าเรื่องราวในข้อนี้'; });
       need('reason', 'กรุณาระบุเหตุผลในการขอรับทุน');
     }
     if (needsGoal(s)) need('goal', 'กรุณาระบุเป้าหมายในการศึกษาต่อ');
@@ -722,7 +725,7 @@ App.views['student-entry'] = function (p) {
     <div class="split">
       <form class="card" data-submit="student-login" novalidate>
         ${radioField('received', `ได้รับทุนการศึกษาจากมูลนิธิทิสโก้ เพื่อการกุศล ในปีการศึกษา ${y} หรือไม่`,
-          [['yes', 'ได้รับทุน'], ['no', 'ไม่ได้รับทุน']], v.received, {req: 1, err: e.received,
+          [['yes', 'ได้รับทุน', 'ทุนต่อเนื่อง'], ['no', 'ไม่ได้รับทุน', 'ทุนใหม่']], v.received, {req: 1, err: e.received, cls: 'key-q',
           hint: 'ระบบจะใช้คำตอบนี้เพื่อแสดงแบบฟอร์ม ทุนต่อเนื่อง หรือ ทุนใหม่ ให้อัตโนมัติ'})}
         ${field('cid', 'เลขประจำตัวประชาชน 13 หลัก', input('cid', v.cid, 'inputmode="numeric" maxlength="13" autocomplete="off" placeholder="กรอกตัวเลข 13 หลัก" data-oninput="digits"'),
           {req: 1, err: e.cid, hint: 'กรอกเฉพาะผู้มีเลขประจำตัวประชาชน 13 หลัก ระบบจะตรวจรูปแบบให้อัตโนมัติ'})}

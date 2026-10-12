@@ -324,7 +324,7 @@ function checks(name, items, values = [], attrs = '') {
     `<label class="choice"><input type="checkbox" name="${name}" value="${esc(v)}" ${values.includes(v) ? 'checked' : ''} ${attrs}> ${esc(t)}</label>`).join('')}</div>`;
 }
 function radioField(name, label, items, value, o = {}) {
-  return `<div class="field ${o.err ? 'invalid' : ''}"><span class="label">${label}${o.req ? ' <span class="req">*</span>' : ''}</span>
+  return `<div class="field ${o.err ? 'invalid' : ''} ${o.cls || ''}"><span class="label">${label}${o.req ? ' <span class="req">*</span>' : ''}</span>
     ${radios(name, items, value, o.attrs || '', o.col)}${o.hint ? `<div class="hint">${o.hint}</div>` : ''}${o.err ? `<div class="err">${esc(o.err)}</div>` : ''}</div>`;
 }
 function formData(form) {

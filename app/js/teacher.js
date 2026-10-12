@@ -137,10 +137,10 @@ function applicantSections(s, o = {}) {
         : ` ${esc(s.loan_names || '')}${s.loan_amount ? ` · ผู้ขอทุนได้รับ ${baht(s.loan_amount)}/ปี` : ''}`}` : s.loan === 'no' ? 'ไม่มี' : '-'}</dd></div>
       <div><dt>หลังเลิกเรียน / วันหยุด</dt><dd>${s.part_time === 'yes' ? `ทำงานพิเศษ: ${esc(s.part_job || '')} ${s.part_income ? baht(s.part_income) + '/' + (s.part_per === 'month' ? 'เดือน' : 'วัน') : ''}` : s.part_time === 'no' ? 'ไม่ได้ทำงานหารายได้พิเศษ' : '-'}</dd></div>
     </dl></section>
-    <section class="card"><h3>${n(5)}เขียนเล่าประวัติและสภาพความเป็นอยู่</h3>
-      <details class="more" ${o.openStories ? 'open' : ''}><summary>เปิดดูคำตอบทั้งหมด</summary><div>${STORY_Q.map(([t], i) =>
+    <section class="card"><h3>${n(5)}${s.type === 'CONT' ? 'เหตุผลในการขอรับทุนต่อเนื่อง' : 'เขียนเล่าประวัติและสภาพความเป็นอยู่'}</h3>
+      <details class="more" ${o.openStories ? 'open' : ''}><summary>เปิดดูคำตอบทั้งหมด</summary><div>${s.type === 'CONT' ? '' : STORY_Q.map(([t], i) =>
         `<div class="story"><b class="small">${i + 1}. ${t}</b><span>${esc((s.stories || [])[i] || '—')}</span></div>`).join('')}
-        <div class="story"><b class="small">เหตุผลในการขอรับทุน</b><span>${esc(s.reason || '—')}</span></div>
+        <div class="story"><b class="small">เหตุผลในการขอรับทุน${s.type === 'CONT' ? 'ต่อเนื่อง' : ''}</b><span>${esc(s.reason || '—')}</span></div>
         ${s.goal ? `<div class="story"><b class="small">เป้าหมายในการศึกษาต่อระดับอุดมศึกษา</b><span>${esc(s.goal)}</span></div>` : ''}</div></details></section>`;
 }
 function gradeText(t) {
