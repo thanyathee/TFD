@@ -2,7 +2,7 @@
    จนท. บันทึกแบบสรุปย่อทีละคน → พิมพ์ใบปะหน้าโรงเรียน → ผจก. อนุมัติทีละคน · แอดมินดูผลงานทุกคน */
 'use strict';
 
-const POSTAL_KEY = 'tfd-postal-demo-v8';
+const POSTAL_KEY = 'tfd-postal-demo-v9';
 const P_ROLE = {
   clerk: ['จนท.บันทึกข้อมูล', 'บันทึกใบสมัครทางไปรษณีย์ พิมพ์ใบปะหน้า และดูผลงานของตัวเอง'],
   manager: ['ผจก.อนุมัติทุน', 'ดูทุกโรงเรียน และอนุมัติทุนทีละคน'],
@@ -133,6 +133,11 @@ App.pFresh = function () {
   L = 'L0006';
   recOf(s1).slice(2, 3).forEach(r => cont(s1, r, 'clerk01', '2027-06-16T10:00'));
   nw(s1, 'clerk01', '2027-06-16T10:05', {title: 'เด็กชาย', first: 'ธีรเดช', last: 'คำแก้ว', cls: 'ม.1', gpa: '3.02', housing: 'rent_house', housing_detail: '1000'});
+  /* มหาวิทยาลัย: นักศึกษาส่งเอง มาทีละคน หลายรอบ */
+  L = 'L0007';
+  nw(s3, 'clerk01', '2027-06-02T11:00', {title: 'นาย', first: 'ชยพล', last: 'บุญมา', cls: 'ปริญญาตรี ปี 2', faculty: 'วิศวกรรมศาสตร์', gpa: '2.95', housing: 'dorm', housing_detail: '2500'});
+  L = 'L0008';
+  nw(s3, 'clerk02', '2027-06-04T14:20', {title: 'นางสาว', first: 'ปวีณา', last: 'ศรีสุข', cls: 'ปริญญาตรี ปี 3', faculty: 'พยาบาลศาสตร์', gpa: '3.48', housing: 'rent_room', housing_detail: '3000'});
   const batch = (id, school, no, by, o) => { const t = teacher(school); return [id, {school, no, by, prim_new: 0, prim_cont: 0, wait_new: 0, wait_cont: 0, note: '', letter: '',
     teacher_name: t.name || '', teacher_phone: t.phone || '', teacher_email: t.email || '', done: false, printed: '', updated: '2027-06-07T13:40', ...o}]; };
   return {
@@ -148,7 +153,9 @@ App.pFresh = function () {
       batch('L0002', s2, 1, 'clerk02', {wait_new: 1, letter: 'ที่ วท 112/2570', done: true, updated: '2027-06-05T10:20'}),
       batch('L0003', s3, 1, 'clerk01', {updated: '2027-06-07T13:40'}),
       batch('L0004', s4, 1, 'clerk02', {other_new: 1, wait_new: 2, wait_cont: 1, note: 'อื่น ๆ 1 ราย: นักเรียนการศึกษานอกระบบ (กศน.) ส่งแนบมากับโรงเรียน', letter: 'ที่ ศธ 04297/88 ลงวันที่ 5 มิ.ย. 2570', done: true, updated: '2027-06-08T10:30'}),
-      batch('L0005', s4, 2, 'clerk01', {letter: 'ที่ ศธ 04297/95 ลงวันที่ 12 มิ.ย. 2570', note: 'ส่งเพิ่มเติม (ลอตที่ 2)', done: true, updated: '2027-06-15T09:20'}),
+      batch('L0005', s4, 2, 'clerk01', {letter: 'ที่ ศธ 04297/95 ลงวันที่ 12 มิ.ย. 2570', note: 'ส่งเพิ่มเติม', done: true, updated: '2027-06-15T09:20'}),
+      batch('L0007', s3, 2, 'clerk01', {done: true, created: '2027-06-02T11:00', updated: '2027-06-02T11:05'}),
+      batch('L0008', s3, 3, 'clerk02', {done: true, created: '2027-06-04T14:20', updated: '2027-06-04T14:25'}),
       batch('L0006', s1, 2, 'clerk01', {note: 'ส่งเพิ่มเติม', updated: '2027-06-16T10:05'})]),
   };
 };
@@ -161,7 +168,13 @@ App.pEntriesOf = function (lot) { return this.P().entries.filter(e => e.lot === 
 App.pLot = function (lot) { return this.P().batches[lot]; };
 App.pSc = function (lot) { const b = this.pLot(lot); return b ? this.schoolById[b.school] : null; };
 App.pLotLabel = function (lot) { const b = this.pLot(lot) || {}; return `ลอตที่ ${b.no || 1}`; };
-App.pLotTitle = function (lot) { const sc = this.pSc(lot) || {}; return `${sc.name || '—'} · ${this.pLotLabel(lot)}`; };
+App.pLotTitle = function (lot) { return (this.pSc(lot) || {}).name || '—'; };
+/* วันที่เริ่มบันทึกชุดนี้ — ใช้แยกแถวเมื่อโรงเรียนเดียวกันส่งมาหลายรอบ (ไม่ต้องแสดงคำว่าลอต) */
+App.pLotDate = function (lot) {
+  const b = this.pLot(lot) || {};
+  const first = this.pEntriesOf(lot).map(e => e.at).sort()[0];
+  return thDate(b.created || first || b.updated);
+};
 App.pLotsOf = function (school) {
   return Object.entries(this.P().batches).filter(([, b]) => b.school === school).sort((a, b) => a[1].no - b[1].no).map(([id]) => id);
 };
@@ -169,7 +182,7 @@ App.pNewLot = function (school) {
   const p = this.P();
   const id = 'L' + String(Object.keys(p.batches).reduce((m, k) => Math.max(m, parseInt(k.slice(1), 10) || 0), 0) + 1).padStart(4, '0');
   const t = this.teacherOf(school) || {};
-  p.batches[id] = {school, no: this.pLotsOf(school).length + 1, by: this.session.pUser, prim_new: 0, prim_cont: 0, other_new: 0, other_cont: 0, wait_new: 0, wait_cont: 0,
+  p.batches[id] = {school, no: this.pLotsOf(school).length + 1, by: this.session.pUser, created: nowIso(), prim_new: 0, prim_cont: 0, other_new: 0, other_cont: 0, wait_new: 0, wait_cont: 0,
     note: '', letter: '', teacher_name: t.name || '', teacher_phone: t.phone || '', teacher_email: t.email || '', done: false, printed: '', updated: nowIso()};
   return id;
 };
@@ -329,7 +342,7 @@ App.views['post-form'] = pNeedLogin(function (p) {
   const lot = pf.lot;
   const sc = this.pSc(lot);
   const bar = `<section class="card pf-bar no-print">
-    <div class="field pf-sch"><label class="label" for="p-sq">โรงเรียน</label>${sc && !this.session.pSearch ? `<div class="pf-picked"><div><b>${esc(sc.name)} <span class="pf-lot">${this.pLotLabel(lot)}</span></b>
+    <div class="field pf-sch"><label class="label" for="p-sq">โรงเรียน</label>${sc && !this.session.pSearch ? `<div class="pf-picked"><div><b>${esc(sc.name)}</b>
         <span>${esc(sc.district)} จ.${esc(sc.province)}</span></div>${edit ? '' : '<button type="button" class="btn sm" data-action="p-change">เปลี่ยนโรงเรียน</button>'}</div>`
       : this.pFindHtml()}</div></section>`;
   if (!sc) return {nav: this.pNav(), html: `${this.pRoleBar()}
@@ -395,7 +408,7 @@ App.views['post-form'] = pNeedLogin(function (p) {
   return {nav: this.pNav(), html: `${this.pRoleBar()}
     <div class="page-head"><div><h1>บันทึกใบสมัครทางไปรษณีย์</h1><p class="sub">พิมพ์ทีละคน กด Enter เพื่อบันทึกแล้วไปคนต่อไป</p></div></div>
     ${bar}
-    <div class="split pf-split">${!this.pCanEdit(lot) ? `<div class="card stack"><div class="note warn"><b>ลอตนี้ ${esc(this.pUser(this.pOwner(lot)).name)} เป็นผู้บันทึก</b><br>
+    <div class="split pf-split">${!this.pCanEdit(lot) ? `<div class="card stack"><div class="note warn"><b>รายการชุดนี้ ${esc(this.pUser(this.pOwner(lot)).name)} เป็นผู้บันทึก</b><br>
       ดูรายชื่อได้ แต่บันทึกเพิ่ม / แก้ไขไม่ได้</div>
       <div class="row"><button class="btn" data-action="p-change">เลือกโรงเรียนอื่น</button></div></div>`
     : edit && edit.decision ? `<div class="card"><div class="note warn">ผจก. พิจารณารายการนี้แล้ว (${DECISION[edit.decision.result].label}) จึงแก้ไขไม่ได้</div>
@@ -426,16 +439,16 @@ App.pSchoolPanel = function (lot, editId) {
   const unused = db.recipients.filter(r => r.school === school && !db.entries.some(e => e.cid === r.cid));
   const num = (k, label) => `<label class="pf-num"><span>${label}</span><input class="input" type="number" min="0" name="${k}" value="${esc(b[k] || 0)}" inputmode="numeric"></label>`;
   return `<section class="card stack">
-      <div><h3>${esc(sc.name)} <span class="pf-lot">${this.pLotLabel(lot)}</span></h3><p class="small muted">${esc(sc.address || '')} ${esc(sc.subdistrict || '')} ${esc(sc.district)} จ.${esc(sc.province)} · ${esc(this.regionName(sc.region))}</p>
+      <div><h3>${esc(sc.name)}</h3><p class="small muted">${esc(sc.address || '')} ${esc(sc.subdistrict || '')} ${esc(sc.district)} จ.${esc(sc.province)} · ${esc(this.regionName(sc.region))}</p>
         <div class="row">${pBadge(st)}<button class="btn sm" data-go="post-cover" data-id="${lot}">${icon('print')} ใบปะหน้า</button>
-          ${b.done && this.pCanEdit(lot) ? `<button class="btn sm primary" data-action="p-newlot" data-id="${school}">+ เริ่มลอตใหม่</button>` : ''}</div>
-        ${mine.length ? `<p class="small muted pf-other">ลอตอื่นของโรงเรียนนี้: ${mine.map(id => `<button type="button" class="linkbtn" data-action="p-open" data-id="${id}">${this.pLotLabel(id)} (${this.pEntriesOf(id).length} ราย)</button>`).join(' · ')}</p>` : ''}</div>
+</div>
+        ${mine.length ? `<p class="small muted pf-other">ที่บันทึกไว้ก่อนหน้า: ${mine.map(id => `<button type="button" class="linkbtn" data-action="p-open" data-id="${id}">${this.pLotDate(id)} (${this.pEntriesOf(id).length} ราย)</button>`).join(' · ')}</p>` : ''}</div>
       ${listOf('NEW')}${listOf('CONT')}
       ${unused.length ? `<details class="pf-demo"><summary>เลขบัตรทดลอง (ผู้ได้รับทุนปีที่แล้วของโรงเรียนนี้ → จะเป็นทุนต่อเนื่อง)</summary>
         <div class="choices">${unused.map(r => `<button type="button" class="btn sm" data-action="p-fillcid" data-cid="${r.cid}">${r.cid}</button>`).join('')}</div></details>` : ''}
     </section>
     <form class="card stack" data-pbatch="${lot}" data-submit="p-batch-done" novalidate><fieldset class="pf-fs" ${this.pCanEdit(lot) ? '' : 'disabled'}>
-      <h3>ข้อมูลใบปะหน้า · ${this.pLotLabel(lot)}</h3><p class="small muted">ประถม · อื่น ๆ (ระบุในหมายเหตุ) · รอฟังผล (รอหลักฐานการย้ายสถานศึกษา) ใส่แค่จำนวน · บันทึกอัตโนมัติ</p>
+      <h3>ข้อมูลใบปะหน้า</h3><p class="small muted">ประถม · อื่น ๆ (ระบุในหมายเหตุ) · รอฟังผล (รอหลักฐานการย้ายสถานศึกษา) ใส่แค่จำนวน · บันทึกอัตโนมัติ</p>
       <div class="pf-nums"><span></span><b>ใหม่</b><b>ต่อเนื่อง</b>
         <span>ประถม</span>${num('prim_new', 'ประถม ใหม่')}${num('prim_cont', 'ประถม ต่อเนื่อง')}
         <span>อื่น ๆ</span>${num('other_new', 'อื่น ๆ ใหม่')}${num('other_cont', 'อื่น ๆ ต่อเนื่อง')}
@@ -445,7 +458,7 @@ App.pSchoolPanel = function (lot, editId) {
       ${field('b-tn', 'ครูผู้ดูแลทุน', `<input class="input" id="b-tn" name="teacher_name" value="${esc(b.teacher_name != null ? b.teacher_name : t.name || '')}">`)}
       <div class="grid-2">${field('b-tp', 'เบอร์โทร', `<input class="input" id="b-tp" name="teacher_phone" value="${esc(b.teacher_phone != null ? b.teacher_phone : t.phone || '')}" inputmode="tel">`)}
         ${field('b-te', 'อีเมล', `<input class="input" id="b-te" name="teacher_email" value="${esc(b.teacher_email != null ? b.teacher_email : t.email || '')}" inputmode="email">`)}</div>
-      <label class="check"><input type="checkbox" name="done" ${b.done ? 'checked' : ''}> <span><b>บันทึกลอตนี้ครบแล้ว</b></span></label>
+      <label class="check"><input type="checkbox" name="done" ${b.done ? 'checked' : ''}> <span><b>บันทึกครบแล้ว (พร้อมพิมพ์ใบปะหน้า)</b></span></label>
     </fieldset></form>`;
 };
 
@@ -467,7 +480,7 @@ App.pStore = function (f) {
     ['prim_new', 'prim_cont', 'other_new', 'other_cont', 'wait_new', 'wait_cont'].forEach(k => (b[k] = Math.max(0, parseInt(v[k], 10) || 0)));
     ['note', 'letter', 'teacher_name', 'teacher_phone', 'teacher_email'].forEach(k => (b[k] = v[k] || ''));
     const done = !!v.done;
-    if (done !== b.done) { b.done = done; this.pSave(); this.toast(done ? 'บันทึกลอตนี้เสร็จแล้ว' : 'เปิดให้บันทึกต่อ'); this.render(); return; }
+    if (done !== b.done) { b.done = done; this.pSave(); this.toast(done ? 'บันทึกครบแล้ว' : 'เปิดให้บันทึกต่อ'); this.render(); return; }
   } else {
     this.P().drafts[this.pDraftKey()] = v;
     const s = document.getElementById('p-autosave');
@@ -516,8 +529,8 @@ App.pSchoolResults = function () {
     const lots = this.pLotsOf(s.id).filter(id => this.pSees(id) && this.pLotUsed(id));
     if (!lots.length) return '';
     const open = lots.find(id => !this.pLot(id).done && this.pOwner(id) === this.session.pUser);
-    if (open) return `<span class="pf-tag">${this.pLotLabel(open)} กำลังบันทึก · ${this.pEntriesOf(open).length} ราย</span>`;
-    return `<span class="pf-tag done">${this.session.pRole === 'clerk' ? 'ของฉัน ' : ''}${lots.length} ลอต · เลือกเพื่อเริ่มลอตใหม่</span>`;
+    if (open) return `<span class="pf-tag">กำลังบันทึก · ${this.pEntriesOf(open).length} ราย</span>`;
+    return `<span class="pf-tag done">บันทึกแล้ว ${lots.reduce((a, id) => a + this.pEntriesOf(id).length, 0)} ราย</span>`;
   };
   return `<div class="pf-count">${list.length} โรงเรียน</div><div class="pf-rows">${list.slice(0, MAX).map(s =>
     `<button type="button" data-action="p-pick" data-id="${s.id}"><span class="nm">${esc(s.name)}</span>
@@ -543,7 +556,6 @@ App.on('p-pick', function (el) {
   const lot = open || this.pNewLot(school);
   this.pPref().lot = lot;
   this.pSave();
-  if (!open && this.pLot(lot).no > 1) this.toast(`เปิด${this.pLotLabel(lot)} ของโรงเรียนนี้`);
   this.go('post-form');
 });
 App.on('p-newlot', function (el) {
@@ -551,7 +563,7 @@ App.on('p-newlot', function (el) {
   const lot = this.pNewLot(el.dataset.id);
   this.pPref().lot = lot;
   this.pSave();
-  this.toast(`เปิด${this.pLotLabel(lot)}`);
+  
   this.go('post-form');
 });
 /* เปลี่ยนประเภททุนเอง (กรณีระบบเลือกไม่ตรง เช่น ไม่มีชื่อในรายชื่อปีก่อน) */
@@ -621,7 +633,7 @@ App.on('p-clear', function () {
   this.go('post-form');
 });
 App.on('p-save', function (form) {
-  if (!this.pCanEdit(this.pPref().lot)) { this.toast('ลอตนี้ จนท. คนอื่นเป็นผู้บันทึก'); return; }
+  if (!this.pCanEdit(this.pPref().lot)) { this.toast('รายการชุดนี้ จนท. คนอื่นเป็นผู้บันทึก'); return; }
   clearTimeout(pTimer);
   const v = formData(form);
   const db = this.P();
@@ -657,7 +669,7 @@ App.on('p-save', function (form) {
   this.pTouch(pf.lot);
   delete db.drafts[this.pDraftKey()];
   this.pSave();
-  this.toast(`บันทึก ${pName(data)} แล้ว · ${TYPE[type]} · คนที่ ${this.pEntriesOf(pf.lot).length} ของ${this.pLotLabel(pf.lot)}`);
+  this.toast(`บันทึก ${pName(data)} แล้ว · ${TYPE[type]} · คนที่ ${this.pEntriesOf(pf.lot).length}`);
   this.go('post-form');
 });
 App.on('p-delete', function (el) {
@@ -685,17 +697,17 @@ App.views['post-schools'] = pNeedLogin(function (p) {
   const total = rows.reduce((a, r) => ({NEW: a.NEW + r.c.total.NEW, CONT: a.CONT + r.c.total.CONT}), {NEW: 0, CONT: 0});
   const printable = rows.filter(r => r.st !== 'doing').length;
   return {nav: this.pNav(), html: `${this.pRoleBar()}
-    <div class="page-head"><div><h1>${role === 'manager' ? 'โรงเรียน / ใบปะหน้า' : 'ใบปะหน้าโรงเรียน'}</h1><p class="sub">1 ลอต = ใบสมัครที่มาถึง 1 รอบ · 1 ชุดใบปะหน้า · พิมพ์ทีละลอตหรือทั้งหมด</p></div>
-      <button class="btn primary" data-go="post-cover" data-id="all" ${printable ? '' : 'disabled'}>${icon('print')} พิมพ์ทุกลอตที่บันทึกเสร็จ (${printable})</button></div>
-    <div class="stats"><div class="stat"><span>โรงเรียน / ลอต</span><b>${new Set(rows.map(r => r.sc.id)).size} / ${rows.length}</b></div><div class="stat"><span>ทุนใหม่</span><b>${total.NEW}</b><small>ราย</small></div>
+    <div class="page-head"><div><h1>${role === 'manager' ? 'โรงเรียน / ใบปะหน้า' : 'ใบปะหน้าโรงเรียน'}</h1><p class="sub">ทุกโรงเรียนใช้ใบปะหน้าแบบเดียวกัน · พิมพ์ทีละโรงเรียนหรือทั้งหมด</p></div>
+      <button class="btn primary" data-go="post-cover" data-id="all" ${printable ? '' : 'disabled'}>${icon('print')} พิมพ์ทั้งหมดที่บันทึกเสร็จ (${printable})</button></div>
+    <div class="stats"><div class="stat"><span>โรงเรียน</span><b>${new Set(rows.map(r => r.sc.id)).size}</b></div><div class="stat"><span>ทุนใหม่</span><b>${total.NEW}</b><small>ราย</small></div>
       <div class="stat"><span>ทุนต่อเนื่อง</span><b>${total.CONT}</b><small>ราย</small></div><div class="stat"><span>รวม</span><b>${total.NEW + total.CONT}</b><small>ราย</small></div></div>
     <form class="card filters pf-filters" data-submit="p-sch-filter">
       ${field('q', 'ค้นหาโรงเรียน / จังหวัด', input('q', f.q))}
       ${field('st', 'สถานะ', select('st', Object.entries(P_STATUS).map(([k, [t]]) => [k, t]), f.st, 'ทุกสถานะ'))}
       ${role === 'clerk' ? '' : field('by', 'ผู้บันทึก', select('by', clerks.map(u => [u.username, u.name]), f.by, 'ทุกคน'))}
       <div class="field"><span class="label">&nbsp;</span><button class="btn" type="submit">ค้นหา</button></div></form>
-    ${tbl([{t: '#'}, {t: 'โรงเรียน / ลอต'}, {t: 'ใหม่', r: 1}, {t: 'ต่อเนื่อง', r: 1}, {t: 'รวม', r: 1}, {t: 'สถานะ'}, {t: 'ผู้บันทึก'}, {t: ''}],
-      rows.map((r, i) => [i + 1, `<b>${esc(r.sc.name)}</b> <span class="pf-lot">${this.pLotLabel(r.id)}</span><br><span class="small muted">จ.${esc(r.sc.province)}</span>`, r.c.total.NEW, r.c.total.CONT,
+    ${tbl([{t: '#'}, {t: 'โรงเรียน'}, {t: 'ใหม่', r: 1}, {t: 'ต่อเนื่อง', r: 1}, {t: 'รวม', r: 1}, {t: 'สถานะ'}, {t: 'ผู้บันทึก'}, {t: ''}],
+      rows.map((r, i) => [i + 1, `<b>${esc(r.sc.name)}</b> <br><span class="small muted">จ.${esc(r.sc.province)} · บันทึก ${this.pLotDate(r.id)}</span>`, r.c.total.NEW, r.c.total.CONT,
         `<b>${r.c.total.NEW + r.c.total.CONT}</b>`, pBadge(r.st), esc(this.pUser(r.b.by).name || '—'),
         `<div class="row nowrap"><button class="btn sm" data-go="post-cover" data-id="${r.id}">${icon('print')} ใบปะหน้า</button>
           ${role !== 'manager' && this.pCanEdit(r.id) ? `<button class="btn sm" data-action="p-open" data-id="${r.id}">${r.b.done ? 'เปิดดู / แก้ไข' : 'บันทึกต่อ'}</button>` : ''}
@@ -706,7 +718,7 @@ App.on('p-open', function (el) { this.pKeepForm(); this.session.pSearch = false;
 
 App.pHead = function (sc, sub, lot) {
   return `<div class="a4-head"><span class="a4-logo">TF</span><div><b>มูลนิธิทิสโก้ เพื่อการกุศล</b><span>ใบสมัครทุนการศึกษาทางไปรษณีย์ · ปีการศึกษา ${this.db.cycle.year}</span></div>
-    <div class="cv-hs"><b>${esc(sc.name)}</b><span>${lot ? this.pLotLabel(lot) + ' · ' : ''}${sub}</span></div></div>`;
+    <div class="cv-hs"><b>${esc(sc.name)}</b><span>${sub}</span></div></div>`;
 };
 /* ใบที่ 1: ใบสรุปใบสมัครของสถานศึกษา */
 App.pCoverHtml = function (id) {
@@ -718,7 +730,7 @@ App.pCoverHtml = function (id) {
   return `<div class="paper a4 land cover">
     ${this.pHead(sc, 'ใบสรุป', id)}
     <h3>ใบสรุปใบสมัครของสถานศึกษา</h3>
-    <div class="cv-school"><div class="cv-name">${esc(sc.name)} <span class="cv-lotno">${this.pLotLabel(id)}</span></div>
+    <div class="cv-school"><div class="cv-name">${esc(sc.name)}</div>
       <div>ที่อยู่ ${esc(sc.address || '')} ${esc(sc.subdistrict || '')} ${esc(sc.district)} จังหวัด${esc(sc.province)} ${esc(this.regionName(sc.region))} ${esc(sc.postcode || '')}</div></div>
     <div class="cv-body"><table class="cv-tbl"><thead><tr><th class="cv-ck"></th><th>ระดับ (ชั้นปีหน้า)</th><th class="r">ทุนใหม่ (ราย)</th><th class="r">ทุนต่อเนื่อง (ราย)</th><th class="r">รวม</th></tr></thead>
       <tbody>${c.rows.map(([g, t, r]) => `<tr><td class="cv-ck">${r.NEW + r.CONT ? '☑' : '☐'}</td><td>${t}${g === 'primary' ? ' <small>(ผจก. พิจารณาที่ใบสมัคร)</small>' : g === 'other' ? ' <small>(ระบุในหมายเหตุ)</small>' : g === 'wait' ? ' <small>(รอหลักฐานการย้ายสถานศึกษา)</small>' : ''}</td>
@@ -762,7 +774,7 @@ App.pListHtml = function (id) {
       <td><small>เครื่องใช้:</small> ${arr(e.equipment).map(eqName).join(', ') || '—'} · <small>บ้าน:</small> ${esc(pHouse(e))} · <small>ที่ดิน:</small> ${esc(lab(P_LAND, e.land))}${e.note ? `<br><small>หมายเหตุ:</small> ${esc(e.note)}` : ''}</td></tr>`;
   };
   const hd = (t, gt, n) => `<div class="a4-head cv-lhead"><span class="a4-logo">TF</span>
-    <div><b>${esc(sc.name)} · จังหวัด${esc(sc.province)} · ${esc(this.regionName(sc.region))} · <span class="cv-lotno">${this.pLotLabel(id)}</span></b></div>
+    <div><b>${esc(sc.name)} · จังหวัด${esc(sc.province)} · ${esc(this.regionName(sc.region))}</b></div>
     <div class="cv-hs">${t ? `<div class="cv-grp"><span class="cv-t cv-t-${t}">${TYPE[t]}</span><span class="cv-lv">${gt}</span></div><span class="cv-n">${n} ราย</span>` : ''}</div></div>`;
   const ft = (page, by) => `<div class="cv-foot"><span>${by ? `บันทึกโดย ${esc(by)}` : ''}</span><span>${page}</span></div>`;
   if (!groups.length) return `<div class="paper a4 land cover cv-list">${hd('', '', 0)}<p class="c">— ยังไม่มีรายชื่อที่บันทึก —</p></div>`;
@@ -790,11 +802,11 @@ App.views['post-cover'] = pNeedLogin(function (p) {
   const one = p.id !== 'all';
   const st = one ? this.pStatus(p.id) : null;
   return {nav: this.pNav(), html: `<div class="no-print">${this.pRoleBar()}</div>
-    <div class="page-head no-print"><div><h1>ใบปะหน้า${one ? '' : ' — ทุกลอต'}</h1><p class="sub">${one ? esc(this.pLotTitle(p.id)) : `${ids.length} ลอต`}</p></div>
+    <div class="page-head no-print"><div><h1>ใบปะหน้า${one ? '' : ' — ทั้งหมด'}</h1><p class="sub">${one ? `${esc(this.pLotTitle(p.id))} · บันทึก ${this.pLotDate(p.id)}` : `${ids.length} ชุด`}</p></div>
       <div class="row"><button class="btn" data-go="post-schools">กลับ</button>
         ${one && this.session.pRole !== 'manager' && st === 'doing' ? `<button class="btn" data-action="p-open" data-id="${p.id}">บันทึกต่อ</button>` : ''}
         <button class="btn primary" data-action="p-print" data-id="${esc(p.id)}">${icon('print')} พิมพ์</button></div></div>
-    ${one && st === 'doing' ? '<div class="note warn no-print">ลอตนี้ยังบันทึกไม่เสร็จ ตัวเลขอาจยังไม่ครบ</div>' : ''}
+    ${one && st === 'doing' ? '<div class="note warn no-print">ยังบันทึกไม่เสร็จ ตัวเลขอาจยังไม่ครบ</div>' : ''}
     <div class="row no-print"><span class="small muted">พิมพ์ (A4 แนวนอน):</span>
       <label class="check"><input type="checkbox" data-onchange="p-printpart" data-k="sum" ${pr.sum ? 'checked' : ''}> <span>ใบสรุปใบสมัครของสถานศึกษา</span></label>
       <label class="check"><input type="checkbox" data-onchange="p-printpart" data-k="list" ${pr.list ? 'checked' : ''}> <span>รายชื่อที่บันทึกในระบบ</span></label></div>
@@ -829,9 +841,9 @@ App.views['post-approve'] = pNeedLogin(function (p) {
     const ids = [...new Set(db.entries.map(e => e.lot))].filter(id => this.pSc(id)).sort((a, b) => this.pLotSort(a, b));
     const rows = ids.map(id => { const es = this.pEntriesOf(id); return {id, n: es.length, wait: es.filter(e => !e.decision).length, st: this.pStatus(id)}; });
     return {nav: this.pNav(), html: `${this.pRoleBar()}
-      <div class="page-head"><div><h1>อนุมัติทุน (ทางไปรษณีย์)</h1><p class="sub">เลือกโรงเรียน / ลอต แล้วพิจารณาทีละคน${can ? '' : ' · แอดมินดูได้อย่างเดียว'}</p></div></div>
-      ${tbl([{t: '#'}, {t: 'โรงเรียน / ลอต'}, {t: 'บันทึกแล้ว', r: 1}, {t: 'รอพิจารณา', r: 1}, {t: 'สถานะ'}, {t: ''}],
-        rows.map((r, i) => [i + 1, `<b>${esc(this.pSc(r.id).name)}</b> <span class="pf-lot">${this.pLotLabel(r.id)}</span><br><span class="small muted">จ.${esc(this.pSc(r.id).province)}</span>`, r.n,
+      <div class="page-head"><div><h1>อนุมัติทุน (ทางไปรษณีย์)</h1><p class="sub">เลือกโรงเรียน แล้วพิจารณาทีละคน${can ? '' : ' · แอดมินดูได้อย่างเดียว'}</p></div></div>
+      ${tbl([{t: '#'}, {t: 'โรงเรียน'}, {t: 'บันทึกแล้ว', r: 1}, {t: 'รอพิจารณา', r: 1}, {t: 'สถานะ'}, {t: ''}],
+        rows.map((r, i) => [i + 1, `<b>${esc(this.pSc(r.id).name)}</b> <br><span class="small muted">จ.${esc(this.pSc(r.id).province)} · บันทึก ${this.pLotDate(r.id)}</span>`, r.n,
           r.wait ? `<b>${r.wait}</b>` : '0', pBadge(r.st), `<button class="btn sm ${r.wait ? 'primary' : ''}" data-go="post-approve" data-id="${r.id}">${r.wait ? 'พิจารณา' : 'ดู'}</button>`]))}`};
   }
   if (!this.pLot(p.id)) return this.views['post-approve'].call(this, {});
@@ -869,7 +881,7 @@ App.views['post-approve'] = pNeedLogin(function (p) {
   const amt = es.filter(e => (e.decision || {}).result === 'approved').reduce((a, e) => a + this.pRate(e).amount, 0);
   const ids = [...new Set(db.entries.filter(e => !e.decision).map(e => e.lot))].filter(x => x !== p.id && this.pSc(x)).sort((a, b) => this.pLotSort(a, b));
   return {nav: this.pNav(), html: `${this.pRoleBar()}
-    <div class="page-head"><div><h1>${esc(sc.name)} <span class="pf-lot">${this.pLotLabel(p.id)}</span></h1><p class="sub">จ.${esc(sc.province)} · ${esc(this.regionName(sc.region))} · ดูข้อมูลในระบบประกอบรูปภาพในใบสมัคร</p></div>
+    <div class="page-head"><div><h1>${esc(sc.name)}</h1><p class="sub">จ.${esc(sc.province)} · ${esc(this.regionName(sc.region))} · ดูข้อมูลในระบบประกอบรูปภาพในใบสมัคร</p></div>
       <div class="row"><button class="btn" data-go="post-approve">รายชื่อโรงเรียน</button><button class="btn" data-go="post-cover" data-id="${p.id}">${icon('print')} ใบปะหน้า</button></div></div>
     <div class="stats"><div class="stat"><span>รอพิจารณา</span><b>${wait}</b></div><div class="stat"><span>อนุมัติ</span><b>${cnt('approved')}</b><small>${baht(amt)}</small></div>
       <div class="stat"><span>ไม่อนุมัติ</span><b>${cnt('rejected')}</b></div></div>
@@ -904,14 +916,14 @@ App.views['post-work'] = pNeedLogin(function (p) {
   const list = Object.entries(db.batches).filter(([id, b]) => this.pSc(id) && this.pLotUsed(id) && (!by || b.by === by))
     .sort((a, b) => (b[1].updated || '').localeCompare(a[1].updated || ''));
   return {nav: this.pNav(), html: `${this.pRoleBar()}
-    <div class="page-head"><div><h1>${me ? 'ผลงานของฉัน' : 'ผลงานเจ้าหน้าที่'}</h1><p class="sub">ทำโรงเรียน / ลอตไหนไปแล้ว กี่คน เมื่อไหร่</p></div></div>
+    <div class="page-head"><div><h1>${me ? 'ผลงานของฉัน' : 'ผลงานเจ้าหน้าที่'}</h1><p class="sub">ทำโรงเรียนไหนไปแล้ว กี่คน เมื่อไหร่</p></div></div>
     ${me ? '' : `<form class="card row" data-submit="p-work-filter">${field('by', 'เจ้าหน้าที่', select('by', db.users.filter(u => u.role !== 'manager').map(u => [u.username, u.name]), by, 'ทุกคน', 'data-onchange="p-work-sel"'))}</form>`}
-    ${tbl([{t: 'เจ้าหน้าที่'}, {t: 'ลอต', r: 1}, {t: 'บันทึกเสร็จ', r: 1}, {t: 'ทุนใหม่', r: 1}, {t: 'ทุนต่อเนื่อง', r: 1}, {t: 'ล่าสุด'}],
+    ${tbl([{t: 'เจ้าหน้าที่'}, {t: 'โรงเรียน', r: 1}, {t: 'บันทึกเสร็จ', r: 1}, {t: 'ทุนใหม่', r: 1}, {t: 'ทุนต่อเนื่อง', r: 1}, {t: 'ล่าสุด'}],
       sum.map(r => [`<b>${esc(r.u.name)}</b><br><span class="small muted">${esc(r.u.username)}</span>`, r.schools.length, r.done,
         r.es.filter(e => e.type === 'NEW').length, r.es.filter(e => e.type === 'CONT').length, r.last ? thDate(r.last, true) : '—']))}
-    <h2>รายลอต</h2>
-    ${tbl([{t: '#'}, {t: 'โรงเรียน / ลอต'}, {t: 'ผู้บันทึก'}, {t: 'บันทึก (ราย)', r: 1}, {t: 'สถานะ'}, {t: 'อัปเดตล่าสุด'}, {t: ''}],
-      list.map(([id, b], i) => [i + 1, `<b>${esc(this.pSc(id).name)}</b> <span class="pf-lot">${this.pLotLabel(id)}</span><br><span class="small muted">จ.${esc(this.pSc(id).province)}</span>`,
+    <h2>รายโรงเรียน</h2>
+    ${tbl([{t: '#'}, {t: 'โรงเรียน'}, {t: 'ผู้บันทึก'}, {t: 'บันทึก (ราย)', r: 1}, {t: 'สถานะ'}, {t: 'อัปเดตล่าสุด'}, {t: ''}],
+      list.map(([id, b], i) => [i + 1, `<b>${esc(this.pSc(id).name)}</b> <br><span class="small muted">จ.${esc(this.pSc(id).province)} · บันทึก ${this.pLotDate(id)}</span>`,
         esc(this.pUser(b.by).name), this.pEntriesOf(id).length, pBadge(this.pStatus(id)), b.updated ? thDate(b.updated, true) : '—',
         `<button class="btn sm" data-go="post-cover" data-id="${id}">ใบปะหน้า</button>`]))}`};
 });
