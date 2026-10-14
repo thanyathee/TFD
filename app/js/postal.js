@@ -962,15 +962,20 @@ App.views['post-approve'] = pNeedLogin(function (p) {
     : '<th>สภาพครอบครัว</th><th>เครื่องใช้ · บ้าน · ที่ดิน</th>'}<th>ผลพิจารณา</th>`;
   const amt = es.filter(e => (e.decision || {}).result === 'approved').reduce((a, e) => a + this.pRate(e).amount, 0);
   const ids = [...new Set(db.entries.filter(e => !e.decision).map(e => e.lot))].filter(x => x !== p.id && this.pSc(x) && (this.pLot(x).done || this.pLocked(x))).sort((a, b) => this.pLotSort(a, b));
-  return {nav: this.pNav(), html: `${this.pRoleBar()}
-    <div class="page-head"><div><span class="pf-code lg">เลขที่ใบปะหน้า ${this.pCode(p.id)}</span><h1>${esc(sc.name)}</h1><p class="sub">จ.${esc(sc.province)} · ${esc(this.regionName(sc.region))} · ดูข้อมูลในระบบประกอบรูปภาพในใบสมัคร</p></div>
-      <div class="row"><button class="btn" data-go="post-approve">รายชื่อโรงเรียน</button><button class="btn" data-go="post-cover" data-id="${p.id}">${icon('print')} ใบปะหน้า</button></div></div>
-    <div class="pa-sum"><span>รอพิจารณา <b>${wait}</b></span>${Object.entries(DECISION).map(([k, x]) => `<span class="pa-s-${k}">${x.label} <b>${cnt(k)}</b></span>`).join('')}<span>เงินทุนที่อนุมัติ <b>${baht(amt)}</b></span></div>
-    ${['prim_new', 'prim_cont', 'other_new', 'other_cont', 'wait_new', 'wait_cont'].some(k => Number(b[k])) ? `<div class="note info small">
-      ไม่ได้บันทึกรายคน: ประถม ${(Number(b.prim_new) || 0) + (Number(b.prim_cont) || 0)} ราย — พิจารณาที่ใบสมัครกระดาษ · อื่น ๆ ${(Number(b.other_new) || 0) + (Number(b.other_cont) || 0)} ราย · รอฟังผล ${(Number(b.wait_new) || 0) + (Number(b.wait_cont) || 0)} ราย</div>` : ''}
-    ${groups.map(([t, gt, l]) => `<h3 class="pa-h"><span class="cv-t cv-t-${t}">${TYPE[t]}</span> ${gt} <span class="muted small">(${l.length} ราย)</span></h3>
-      <div class="pa-wrap"><table class="pa-tbl pa-${t}"><thead><tr>${head(t)}</tr></thead><tbody>${l.map(row).join('')}</tbody></table></div>`).join('') || '<div class="empty">ยังไม่มีรายชื่อ</div>'}
-    ${can && !wait && ids.length ? `<div class="row end"><button class="btn primary" data-go="post-approve" data-id="${ids[0]}">ถัดไป: ${esc(this.pLotTitle(ids[0]))}</button></div>` : ''}`,
+  const extra = ['prim_new', 'prim_cont', 'other_new', 'other_cont', 'wait_new', 'wait_cont'].some(k => Number(b[k]));
+  const n2 = (x, y) => (Number(b[x]) || 0) + (Number(b[y]) || 0);
+  return {nav: this.pNav(), html: `${this.pRoleBar()}<div class="pa-page">
+    <section class="pa-top">
+      <div class="pa-title"><span class="pf-code lg">เลขที่ใบปะหน้า ${this.pCode(p.id)}</span><h1>${esc(sc.name)}</h1>
+        <p class="sub">จ.${esc(sc.province)} · ${esc(this.regionName(sc.region))} · ดูข้อมูลในระบบประกอบรูปภาพในใบสมัคร</p></div>
+      <div class="pa-actions"><button class="btn" data-go="post-approve">รายชื่อโรงเรียน</button><button class="btn" data-go="post-cover" data-id="${p.id}">${icon('print')} ใบปะหน้า</button></div>
+      <div class="pa-stats"><div class="pa-st wait"><span>รอพิจารณา</span><b>${wait}</b></div>${Object.entries(DECISION).map(([k, x]) =>
+        `<div class="pa-st ${k}"><span>${x.label}</span><b>${cnt(k)}</b></div>`).join('')}<div class="pa-st money"><span>เงินทุนที่อนุมัติ</span><b>${baht(amt)}</b></div></div>
+      ${extra ? `<p class="pa-extra">ไม่ได้บันทึกรายคน · ประถม ${n2('prim_new', 'prim_cont')} ราย (พิจารณาที่ใบสมัครกระดาษ) · อื่น ๆ ${n2('other_new', 'other_cont')} ราย · รอฟังผล ${n2('wait_new', 'wait_cont')} ราย</p>` : ''}
+    </section>
+    ${groups.map(([t, gt, l]) => `<section class="pa-wrap"><header class="pa-gh"><span class="cv-t cv-t-${t}">${TYPE[t]}</span><b>${gt}</b><span class="muted">${l.length} ราย</span></header>
+      <table class="pa-tbl pa-${t}"><thead><tr>${head(t)}</tr></thead><tbody>${l.map(row).join('')}</tbody></table></section>`).join('') || '<div class="empty">ยังไม่มีรายชื่อ</div>'}
+    ${can && !wait && ids.length ? `<div class="row end"><button class="btn primary" data-go="post-approve" data-id="${ids[0]}">ถัดไป: ${esc(this.pLotTitle(ids[0]))}</button></div>` : ''}</div>`,
     after() { if (p.focus) { const el = document.getElementById('pa-' + p.focus); if (el) el.scrollIntoView({block: 'center'}); } }};
 });
 /* คีย์เลขที่ใบปะหน้าตรงชุดไหน เปิดชุดนั้นเลย · ไม่ตรงก็กรองรายการ */
