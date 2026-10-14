@@ -152,15 +152,16 @@ function classFields(v, e = {}) {
   const g = v.group || groupOfClass(v.class);
   const classes = CLASS_GROUPS[g] || [];
   const higher = ['voc', 'highvoc', 'bachelor'].includes(g);
-  return `<div class="grid-2">
+  /* บรรทัด 1: ช่วงชั้น · ระดับชั้น · หลักสูตร (ปี)   บรรทัด 2: คณะ/สาขา · อุตสาหกรรมหรือไม่ (ปวส.) */
+  return `<div class="${higher ? 'grid-3' : 'grid-2'}">
       ${field('group', 'ช่วงชั้นที่กำลังศึกษา', select('group', EDU_GROUPS, g, 'กรุณาเลือกช่วงชั้น', 'data-onchange="student-class"'), {req: 1, err: e.group, hint: 'เลือกช่วงชั้นก่อน เพื่อลดความผิดพลาดในการเลือกระดับชั้น'})}
       ${field('class', 'กำลังศึกษาอยู่ระดับชั้น', select('class', classes, v.class, g ? 'กรุณาเลือกระดับชั้น' : 'กรุณาเลือกช่วงชั้นก่อน', `data-onchange="student-class" ${g ? '' : 'disabled'}`), {req: 1, err: e.class})}
+      ${higher ? `${field('program_years', 'หลักสูตร (ปี)', select('program_years', ['2', '3', '4', '5', '6'], v.program_years, 'กรุณาเลือก'), {req: 1, err: e.program_years, hint: 'เฉพาะผู้ขอรับทุนที่กำลังศึกษาอยู่ในระดับ ปวช., ปวส. หรือปริญญาตรี'})}` : ''}
     </div>
     ${higher ? `<div class="grid-2">
       ${field('faculty', 'คณะ / สาขา', input('faculty', v.faculty, 'placeholder="เช่น ช่างยนต์ / การบัญชี / พยาบาลศาสตร์"'), {req: 1, err: e.faculty})}
-      ${field('program_years', 'หลักสูตร (ปี)', select('program_years', ['2', '3', '4', '5', '6'], v.program_years, 'กรุณาเลือก'), {req: 1, err: e.program_years, hint: 'เฉพาะผู้ขอรับทุนที่กำลังศึกษาอยู่ในระดับ ปวช., ปวส. หรือปริญญาตรี'})}
+      ${g === 'highvoc' ? radioField('pvs_type', 'เป็นประเภทวิชาอุตสาหกรรมหรือไม่', PVS_TYPES, v.pvs_type, {req: 1, err: e.pvs_type, hint: 'เช่น ช่างยนต์ ช่างไฟฟ้า อิเล็กทรอนิกส์ ช่างกลโรงงาน ก่อสร้าง · สายบัญชี การตลาด ท่องเที่ยว คหกรรม ฯลฯ ให้เลือก “ไม่ใช่”'}) : ''}
     </div>
-    ${g === 'highvoc' ? radioField('pvs_type', 'เรียน ปวส. ประเภทวิชาอุตสาหกรรมหรือไม่', PVS_TYPES, v.pvs_type, {req: 1, err: e.pvs_type, hint: 'เช่น ช่างยนต์ ช่างไฟฟ้า อิเล็กทรอนิกส์ ช่างกลโรงงาน ก่อสร้าง · สายบัญชี การตลาด ท่องเที่ยว คหกรรม ฯลฯ ให้เลือก “ไม่ใช่”'}) : ''}
     ${radioField('study_mode', 'รูปแบบการเรียน', STUDY_MODES_PAPER, v.study_mode, {req: 1, err: e.study_mode, col: 1})}
     <div data-when="study_mode=other">${field('study_mode_other', 'ระบุรูปแบบการเรียน', input('study_mode_other', v.study_mode_other), {err: e.study_mode_other})}</div>` : ''}`;
 }
