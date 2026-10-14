@@ -2,7 +2,7 @@
    จนท. บันทึกแบบสรุปย่อทีละคน → พิมพ์ใบปะหน้าโรงเรียน → ผจก. อนุมัติทีละคน · แอดมินดูผลงานทุกคน */
 'use strict';
 
-const POSTAL_KEY = 'tfd-postal-demo-v9';
+const POSTAL_KEY = 'tfd-postal-demo-v10';
 const P_ROLE = {
   clerk: ['จนท.บันทึกข้อมูล', 'บันทึกใบสมัครทางไปรษณีย์ พิมพ์ใบปะหน้า และดูผลงานของตัวเอง'],
   manager: ['ผจก.อนุมัติทุน', 'ดูทุกโรงเรียน และอนุมัติทุนทีละคน'],
@@ -141,6 +141,11 @@ App.pFresh = function () {
   nw(s3, 'clerk02', '2027-06-04T14:20', {title: 'นางสาว', first: 'ปวีณา', last: 'ศรีสุข', cls: 'ปริญญาตรี ปี 3', faculty: 'พยาบาลศาสตร์', gpa: '3.48', housing: 'rent_room', housing_detail: '3000'});
   const batch = (id, school, no, by, o) => { const t = teacher(school); return [id, {school, no, by, prim_new: 0, prim_cont: 0, wait_new: 0, wait_cont: 0, note: '', letter: '',
     teacher_name: t.name || '', teacher_phone: t.phone || '', teacher_email: t.email || '', done: false, printed: '', updated: '2027-06-07T13:40', ...o}]; };
+  /* ข้อมูลตัวอย่าง: ปวช. / ปวส. / ป.ตรี ต้องมีสาขา · ปวส. ต้องมีประเภทวิชา */
+  entries.forEach((e, i) => {
+    if (pNeedFac(e) && !e.faculty) e.faculty = ['ช่างยนต์', 'การบัญชี', 'ไฟฟ้ากำลัง', 'คอมพิวเตอร์ธุรกิจ'][i % 4];
+    if (/^ปวส/.test(e.next_class) && !e.pvs_type) e.pvs_type = /ช่าง|ไฟฟ้า/.test(e.faculty) ? 'industry' : 'other';
+  });
   return {
     users: [
       {username: 'clerk01', name: 'จนท. บันทึก 01', role: 'clerk', active: true},
@@ -175,6 +180,13 @@ function pNorm(v) {
 function pShortDate(iso) {
   const d = new Date(iso.length <= 10 ? iso + 'T00:00:00' : iso);
   return d.toLocaleDateString('th-TH', {day: 'numeric', month: 'short', year: '2-digit'}) + (iso.length > 10 ? ' · ' + iso.slice(11, 16) : '');
+}
+/* สาขา + ประเภทวิชา ปวส. (ทั่วไป / อุตสาหกรรม) สำหรับแสดงผล */
+const pNeedFac = e => ['voc', 'highvoc', 'bachelor'].includes(groupOfClass(e.cls)) || ['voc', 'highvoc', 'bachelor'].includes(pGroupOf(e));
+function pFac(e) {
+  const pvs = /^ปวส/.test(e.next_class) ? `ปวส. ${(PVS_TYPES.find(x => x[0] === (e.pvs_type || 'other')) || [, ''])[1]}` : '';
+  const fac = e.faculty ? `สาขา${e.faculty.replace(/^สาขา\s*/, '')}` : pNeedFac(e) ? 'สาขา —' : '';
+  return [fac, pvs].filter(Boolean).join(' · ');
 }
 const pName = e => [pAbbr(e.title), e.first, e.last].filter(Boolean).join(' ') || '(ไม่มีชื่อ)';
 App.pUser = function (u) { return this.P().users.find(x => x.username === u) || {name: u}; };
@@ -422,7 +434,7 @@ App.views['post-form'] = pNeedLogin(function (p) {
         ${nextOther ? `<div class="grid-2">${field('next_text', 'พิมพ์ชั้นปีหน้าเอง', input('next_text', nextOther ? v.next_class : '', 'placeholder="เช่น ปริญญาตรี ปี 1 (เทียบโอน)"'))}
           ${field('next_group', 'นับเป็นระดับ', select('next_group', P_LEVELS_ALL, v.next_group || 'other'))}</div>` : ''}</div></div>
     ${rate && rate.amount ? `<div>${rateBadge(rate)}</div>` : ''}
-    ${needFac || isPvs ? `<div class="grid-2">${needFac ? field('faculty', 'สาขา', input('faculty', v.faculty, ro + ' placeholder="เช่น ช่างยนต์ การบัญชี"')) : '<div></div>'}
+    ${needFac || isPvs ? `<div class="grid-2">${needFac ? field('faculty', 'สาขา', input('faculty', v.faculty, (lock && v.faculty ? 'readonly' : '') + ' placeholder="เช่น ช่างยนต์ การบัญชี"'), {req: 1, err: e.faculty}) : '<div></div>'}
       ${isPvs ? radioField('pvs_type', 'ประเภทวิชา (ปวส.)', PVS_TYPES, v.pvs_type || 'other', {attrs: 'data-onchange="p-cls"'}) : ''}</div>` : ''}
     ${field('gpa', type === 'CONT' ? 'เกรดเฉลี่ยปีนี้' : 'เกรดเฉลี่ย', input('gpa', v.gpa, 'inputmode="decimal" placeholder="เช่น 3.25"'), {err: e.gpa, hint: v.gpa_before ? `เกรดตอนได้รับทุนปี ${this.db.cycle.history_year}: <b>${esc(v.gpa_before)}</b>` : ''})}
     ${type === 'NEW' ? `
@@ -690,6 +702,7 @@ App.on('p-save', function (form) {
   pNorm(v);
   if (!v.cls) e.cls = 'กรุณาเลือกหรือพิมพ์ชั้น';
   if (!v.next_class && nextOptions(v.cls).length !== 1) e.next_class = 'กรุณาเลือกหรือพิมพ์ชั้นปีหน้า';
+  if (!v.faculty && pNeedFac({cls: v.cls, next_class: v.next_class || (nextOptions(v.cls).length === 1 ? nextOptions(v.cls)[0] : ''), next_group: v.next_group})) e.faculty = 'กรุณากรอกสาขา';
   if (v.gpa && !(/^\d(\.\d{1,2})?$/.test(v.gpa) && Number(v.gpa) <= 4)) e.gpa = 'เกรดเฉลี่ยต้องอยู่ระหว่าง 0.00–4.00';
   if (Object.keys(e).length) { this.go('post-form', {edit: editId, values: v, errors: e}); return; }
   const next = v.next_class || (nextOptions(v.cls).length === 1 ? nextOptions(v.cls)[0] : '');
@@ -822,7 +835,7 @@ App.pListHtml = function (id) {
       : '<th>เกรด</th><th>สภาพครอบครัว</th><th>เครื่องใช้ในบ้าน · บ้าน · ที่ดินทำกิน</th>');
   const row = (e, i) => {
     const base = `<td class="n">${i + 1}</td><td><span class="cv-id">${esc(e.cid)}</span><br><b>${esc(pName(e))}</b></td>
-      <td>${esc(e.cls)} → ${esc(e.next_class)}${e.faculty || e.pvs_type ? `<br><small>${esc(e.faculty || '')}${e.pvs_type ? ` (${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]})` : ''}</small>` : ''}</td>`;
+      <td>${esc(e.cls)} → ${esc(e.next_class)}${pFac(e) ? `<br><small>${esc(pFac(e))}</small>` : ''}</td>`;
     if (e.type === 'CONT') return `<tr>${base}<td class="nw">${e.gpa_before ? `${esc(e.gpa_before)} → ` : ''}<b>${esc(e.gpa || '—')}</b></td><td>${esc(e.use_money || '—')}${e.note ? `<br><small>หมายเหตุ: ${esc(e.note)}</small>` : ''}</td>
       ${P_DOCS.map(([k]) => `<td class="cv-ck2">${arr(e.docs).includes(k) ? '✓' : '<span class="no">✗</span>'}</td>`).join('')}</tr>`;
     return `<tr>${base}<td><b>${esc(e.gpa || '—')}</b></td><td>${esc(e.family || '—')}</td>
@@ -937,7 +950,7 @@ App.views['post-approve'] = pNeedLogin(function (p) {
     const r = this.pRate(e);
     const d = e.decision;
     const base = `<td class="n">${++no}</td><td><span class="pa-id">${esc(e.cid)}</span><b class="pa-name">${esc(pName(e))}</b></td>
-      <td><span class="pa-cls">${esc(e.cls)}</span><span class="pa-cls">→ ${esc(e.next_class)}</span>${e.faculty || e.pvs_type ? `<small>${esc(e.faculty || '')}${e.pvs_type ? ` (${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]})` : ''}</small>` : ''}</td>
+      <td><span class="pa-cls">${esc(e.cls)}</span><span class="pa-cls">→ ${esc(e.next_class)}</span>${pFac(e) ? `<small class="pa-fac">${pFac(e).split(' · ').map(esc).join('<br>')}</small>` : ''}</td>
       <td class="nw">${e.gpa_before ? `${esc(e.gpa_before)} → ` : ''}<b>${esc(e.gpa || '—')}</b></td>`;
     const note = e.note ? `<small class="pa-note">หมายเหตุ: ${esc(e.note)}</small>` : '';
     const main = e.type === 'CONT'
@@ -1041,7 +1054,7 @@ App.views['post-people'] = pNeedLogin(function (p) {
   const MAX = 200, shown = rows.slice(0, MAX);
   const resBadge = x => x.res === 'wait' ? '<span class="badge t-violet">รอพิจารณา</span>' : `<span class="badge t-${DECISION[x.res].tone}">${DECISION[x.res].label}</span>`;
   this._peopleCsv = [['ลำดับ', 'เลขประจำตัวประชาชน', 'ชื่อ-นามสกุล', 'โรงเรียน', 'จังหวัด', 'ทุน', 'ชั้นปีนี้', 'ชั้นปีหน้า', 'สาขา', 'เกรด', 'เงินทุน', 'ผลพิจารณา', 'ผู้บันทึก', 'วันที่บันทึก']]
-    .concat(rows.map((x, i) => [i + 1, x.e.cid, pName(x.e), x.sc.name, x.sc.province, TYPE[x.e.type], x.e.cls, x.e.next_class, x.e.faculty || '', x.e.gpa || '',
+    .concat(rows.map((x, i) => [i + 1, x.e.cid, pName(x.e), x.sc.name, x.sc.province, TYPE[x.e.type], x.e.cls, x.e.next_class, pFac(x.e), x.e.gpa || '',
       this.pRate(x.e).amount, P_RESULT.find(r => r[0] === x.res)[1], this.pUser(x.e.by).name, (x.e.at || '').slice(0, 10)]));
   return {nav: this.pNav(), html: `${this.pRoleBar()}
     <div class="page-head"><div><h1>รายชื่อผู้สมัคร (ทางไปรษณีย์)</h1><p class="sub">ดูรายคน ค้นหาด้วยเลข 13 หลักหรือชื่อ · กดชื่อเพื่อดูข้อมูลเต็ม</p></div>
@@ -1063,7 +1076,7 @@ App.views['post-people'] = pNeedLogin(function (p) {
       shown.map((x, i) => [i + 1,
         `<span class="small muted">${esc(x.e.cid)}</span><br><button type="button" class="linkbtn pf-pname" data-go="post-approve" data-id="${x.e.lot}" data-focus="${x.e.id}">${esc(pName(x.e))}</button>`,
         `${esc(x.sc.name)}<br><span class="small muted">จ.${esc(x.sc.province)}</span>`,
-        `${TYPE[x.e.type]}<br><span class="small muted">${esc(x.e.cls)} → ${esc(x.e.next_class)}${x.e.faculty ? ' · ' + esc(x.e.faculty) : ''}</span>`,
+        `${TYPE[x.e.type]}<br><span class="small muted">${esc(x.e.cls)} → ${esc(x.e.next_class)}${pFac(x.e) ? ' · ' + esc(pFac(x.e)) : ''}</span>`,
         esc(x.e.gpa || '—'), this.pRate(x.e).amount ? this.pRate(x.e).amount.toLocaleString('th-TH') : '—', resBadge(x),
         `${esc(this.pUser(x.e.by).name)}<br><span class="small muted">${x.e.at ? pShortDate(x.e.at) : ''}</span>`]))}</div>`,
     after() { if (f.q != null) { const q = document.getElementById('q'); if (q && p.f) q.focus(); } }};
