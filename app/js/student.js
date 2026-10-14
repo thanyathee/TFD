@@ -160,7 +160,7 @@ function classFields(v, e = {}) {
     </div>
     ${higher ? `<div class="grid-2">
       ${field('faculty', 'คณะ / สาขา', input('faculty', v.faculty, 'placeholder="เช่น ช่างยนต์ / การบัญชี / พยาบาลศาสตร์"'), {req: 1, err: e.faculty})}
-      ${g === 'highvoc' ? radioField('pvs_type', 'ประเภทวิชา', PVS_TYPES, v.pvs_type, {req: 1, err: e.pvs_type, hint: 'อุตสาหกรรม เช่น ช่างยนต์ ช่างไฟฟ้า อิเล็กทรอนิกส์ ช่างกลโรงงาน ก่อสร้าง · สายบัญชี การตลาด ท่องเที่ยว คหกรรม ฯลฯ เลือก “ทั่วไป”'}) : ''}
+      ${g === 'highvoc' ? radioField('pvs_type', 'ประเภทวิชา', PVS_TYPES, v.pvs_type, {req: 1, err: e.pvs_type}) : ''}
     </div>
     ${radioField('study_mode', 'รูปแบบการเรียน', STUDY_MODES_PAPER, v.study_mode, {req: 1, err: e.study_mode, col: 1})}
     <div data-when="study_mode=other">${field('study_mode_other', 'ระบุรูปแบบการเรียน', input('study_mode_other', v.study_mode_other), {err: e.study_mode_other})}</div>` : ''}`;
@@ -175,7 +175,7 @@ function nextFields(v, e = {}) {
         {req: 1, err: e.next_class, hint: 'ระบบคำนวณให้ในกรณีทั่วไป ส่วน ม.3 / ม.6 / ปวช.3 / ปวส.2 ให้เลือกเอง'})}
       ${nextHigher ? field('next_faculty', 'คณะ / สาขา (ปีหน้า)', input('next_faculty', v.next_faculty, 'placeholder="ถ้าทราบแล้ว"')) : ''}
     </div>
-    ${/^ปวส/.test(next) && v.group !== 'highvoc' ? radioField('next_pvs_type', 'ประเภทวิชา (ปวส. ที่จะเรียน)', PVS_TYPES, v.next_pvs_type, {req: 1, err: e.next_pvs_type, hint: 'อุตสาหกรรม เช่น ช่างยนต์ ช่างไฟฟ้า อิเล็กทรอนิกส์ ช่างกลโรงงาน ก่อสร้าง · สายบัญชี การตลาด ท่องเที่ยว คหกรรม ฯลฯ เลือก “ทั่วไป”', attrs: 'data-onchange="student-next"'}) : ''}
+    ${/^ปวส/.test(next) && v.group !== 'highvoc' ? radioField('next_pvs_type', 'ประเภทวิชา (ปวส. ที่จะเรียน)', PVS_TYPES, v.next_pvs_type, {req: 1, err: e.next_pvs_type, attrs: 'data-onchange="student-next"'}) : ''}
 `;
 }
 App.on('student-class', function (el) {
