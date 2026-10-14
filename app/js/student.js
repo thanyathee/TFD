@@ -822,16 +822,18 @@ function transferDeadlineText(s) {
 App.views['student-status'] = function () {
   const s = this.me();
   const bachelor = s.group === 'bachelor';
-  const flow = bachelor ? ['กรอกใบสมัคร', 'อัปโหลดเอกสารและส่งถึงมูลนิธิฯ', 'เจ้าหน้าที่ตรวจสอบ', 'ผู้จัดการพิจารณา', 'ประกาศผล']
-    : ['กรอกใบสมัคร', 'ครูตรวจและแนบเอกสาร', 'เจ้าหน้าที่ตรวจสอบ', 'ผู้จัดการพิจารณา', 'ประกาศผล'];
-  const pos = {draft: 0, returned_to_student: 0, waiting_teacher: 1, waiting_transfer_proof: 2, waiting_staff: 2, need_more_info: 2, waiting_manager: 3, decided: 4}[s.status];
+  /* ขั้นตอนที่นักเรียนเห็น: กรอก → ครูตรวจ → ส่งมูลนิธิฯ สำเร็จ (ขั้นของมูลนิธิฯ ไม่แสดง) */
+  const sent = ['waiting_transfer_proof', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'].includes(s.status);
+  const flow = bachelor ? ['กำลังกรอกใบสมัคร', 'ส่งมูลนิธิฯ สำเร็จ'] : ['กำลังกรอกใบสมัคร', 'ครูตรวจและแนบเอกสาร', 'ส่งมูลนิธิฯ สำเร็จ'];
+  const pos = sent ? flow.length : s.status === 'waiting_teacher' ? 1 : 0;
+  const nowLabel = {returned_to_student: 'เปิดสิทธิ์ให้แก้ไข', waiting_teacher: 'รอครูดำเนินการ'}[s.status] || '';
   const editable = ['draft', 'returned_to_student'].includes(s.status);
   const t = this.teacherOf(s.school);
   const d = s.decision;
   const docs = docsFor(s);
   const files = s.docFiles || {};
   return {nav: this.studentNav(), html: `
-    <div class="page-head"><div><h1>${editable ? 'สถานะใบสมัคร' : 'ส่งใบสมัครเรียบร้อยแล้ว'}</h1><p class="sub"><span class="num">${s.code}</span> · ${TYPE[s.type]}</p></div>${badge(s)}</div>
+    <div class="page-head"><div><h1>${editable ? 'สถานะใบสมัคร' : 'ส่งใบสมัครเรียบร้อยแล้ว'}</h1><p class="sub"><span class="num">${s.code}</span> · ${TYPE[s.type]}</p></div>${sent && s.status !== 'decided' ? '<span class="badge t-ok">ส่งมูลนิธิฯ สำเร็จ</span>' : s.status === 'draft' ? '<span class="badge t-idle">กำลังกรอกใบสมัคร</span>' : badge(s)}</div>
     ${editable ? `<div class="note ${s.status === 'returned_to_student' ? 'warn' : 'info'} row between"><span>${s.status === 'returned_to_student'
       ? '<b>ครูเปิดสิทธิ์ให้แก้ไข:</b> ' + esc(s.return_reason || '') : 'ใบสมัครยังไม่ได้ส่ง กรอกต่อให้ครบแล้วกดส่ง'}</span>
       <button class="btn primary" data-go="student-form" data-step="${s.step || 1}">กรอกใบสมัครต่อ</button></div>`
@@ -857,7 +859,7 @@ App.views['student-status'] = function () {
       </div>
       <aside class="stack no-print">
         <section class="card"><h3>ขั้นตอน</h3>
-          <ol class="timeline">${flow.map((x, i) => `<li class="${i < pos ? 'done' : i === pos ? 'now' : ''}">${x}${i === pos ? `<small>${STATUS[s.status].label}</small>` : ''}</li>`).join('')}</ol></section>
+          <ol class="timeline">${flow.map((x, i) => `<li class="${i < pos ? 'done' : i === pos ? 'now' : ''}">${x}${i === pos && nowLabel ? `<small>${nowLabel}</small>` : ''}</li>`).join('')}</ol></section>
         ${!bachelor ? `<section class="card"><h3>ครูผู้ดูแลทุน</h3><p class="small muted">${esc(this.schoolName(s.school))}</p>
           ${t ? `<div><b>${esc(t.name)}</b><div class="small"><span class="num">${esc(t.phone)}</span> · ${esc(t.email)}</div></div>` : '<p class="small muted">ระบบจะแสดงชื่อจากฐานข้อมูลสถานศึกษา</p>'}</section>` : ''}
       </aside>
