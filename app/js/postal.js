@@ -252,7 +252,9 @@ App.pStatus = function (school) {
   return 'doing';
 };
 /* ผจก. / แอดมินเห็น "บันทึกสำเร็จ" เป็น "รอพิจารณา" (งานส่งต่อจาก จนท. แล้ว) */
-const pBadgeFor = (k, role) => k === 'done' && role !== 'clerk' ? '<span class="badge t-violet">รอพิจารณา</span>' : pBadge(k);
+/* สีแยกชัด: รอพิจารณา = ส้ม · กำลังพิจารณา = ฟ้า · พิจารณาครบแล้ว = เขียว */
+const P_MGR_LABEL = {done: ['รอพิจารณา', 'warn'], reviewing: ['กำลังพิจารณา', 'info'], approved: ['พิจารณาครบแล้ว', 'ok']};
+const pBadgeFor = (k, role) => role !== 'clerk' && P_MGR_LABEL[k] ? `<span class="badge t-${P_MGR_LABEL[k][1]}">${P_MGR_LABEL[k][0]}</span>` : pBadge(k);
 const pBadge = k => k ? `<span class="badge t-${P_STATUS[k][1]}">${P_STATUS[k][0]}</span>` : '<span class="muted small">ยังไม่เริ่ม</span>';
 App.pTouch = function (lot) {
   const b = this.pLot(lot);
