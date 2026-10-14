@@ -124,6 +124,24 @@ DEMO_CASES = [
     {'status': 'decided', 'result': 'rejected', 'class': 'ม.1', 'type': 'NEW', 'note': 'ไม่ผ่าน'},
     {'status': 'decided', 'result': 'reserve', 'class': 'ม.5', 'type': 'NEW', 'note': 'สำรอง'},
     {'status': 'decided', 'result': 'ineligible', 'class': 'ม.6', 'type': 'NEW', 'loan': True, 'note': 'ไม่เข้าเกณฑ์ (กู้ กยศ.)'},
+    # วิทยาลัยตัวอย่าง (sch010): ปวช. / ปวส. ครบทุกสถานะ — pvs = ประเภทวิชา ปวส. (industry = อุตสาหกรรม 14,000, other = ทั่วไป 9,000)
+    {'school': 10, 'status': 'draft', 'class': 'ปวช.1', 'type': 'NEW', 'note': 'ปวช.1 กำลังกรอก'},
+    {'school': 10, 'status': 'returned_to_student', 'class': 'ปวช.2', 'type': 'NEW', 'note': 'ปวช. เปิดสิทธิ์ให้แก้ไข'},
+    {'school': 10, 'status': 'waiting_teacher', 'class': 'ปวช.3', 'next': 'ปวส.1', 'pvs': 'industry', 'type': 'NEW', 'docs': 'partial', 'loan': True, 'note': 'ปวช.3 → ปวส.1 อุตสาหกรรม แนบบางส่วน'},
+    {'school': 10, 'status': 'waiting_teacher', 'class': 'ปวส.1', 'pvs': 'industry', 'type': 'NEW', 'docs': 'full', 'note': 'ปวส. อุตสาหกรรม เอกสารครบ ยังไม่เขียนความคิดเห็น'},
+    {'school': 10, 'status': 'waiting_teacher', 'class': 'ปวส.2', 'next': 'ปริญญาตรี ปี 1', 'type': 'CONT', 'docs': 'none', 'transfer': True, 'note': 'ปวส.2 → ป.ตรี ย้ายสถานศึกษา'},
+    {'school': 10, 'status': 'waiting_staff', 'class': 'ปวส.1', 'pvs': 'other', 'type': 'NEW', 'note': 'ปวส. ทั่วไป รอเจ้าหน้าที่'},
+    {'school': 10, 'status': 'need_more_info', 'class': 'ปวช.2', 'type': 'CONT', 'note': 'ปวช. ขอข้อมูลเพิ่มเติม'},
+    {'school': 10, 'status': 'waiting_manager', 'class': 'ปวส.1', 'pvs': 'industry', 'type': 'NEW', 'note': 'ปวส. อุตสาหกรรม รอผู้จัดการ'},
+    {'school': 10, 'status': 'decided', 'result': 'approved', 'class': 'ปวช.1', 'type': 'NEW', 'note': 'ปวช. อนุมัติ'},
+    {'school': 10, 'status': 'decided', 'result': 'reserve', 'class': 'ปวส.1', 'pvs': 'other', 'type': 'CONT', 'note': 'ปวส. ทั่วไป สำรอง'},
+    # มหาวิทยาลัยตัวอย่าง (sch022): ป.ตรี ส่งตรงถึงมูลนิธิฯ ไม่ผ่านครู
+    {'school': 22, 'status': 'draft', 'class': 'ปริญญาตรี ปี 1', 'type': 'NEW', 'note': 'ป.ตรี ปี 1 กำลังกรอก'},
+    {'school': 22, 'status': 'waiting_staff', 'class': 'ปริญญาตรี ปี 2', 'type': 'NEW', 'note': 'ป.ตรี ส่งแล้ว รอเจ้าหน้าที่'},
+    {'school': 22, 'status': 'need_more_info', 'class': 'ปริญญาตรี ปี 3', 'type': 'CONT', 'note': 'ป.ตรี ขอข้อมูลเพิ่มเติม'},
+    {'school': 22, 'status': 'waiting_manager', 'class': 'ปริญญาตรี ปี 1', 'type': 'NEW', 'loan': True, 'note': 'ป.ตรี กู้ กยศ. รอผู้จัดการ'},
+    {'school': 22, 'status': 'decided', 'result': 'approved', 'class': 'ปริญญาตรี ปี 2', 'type': 'CONT', 'note': 'ป.ตรี อนุมัติ'},
+    {'school': 22, 'status': 'decided', 'result': 'rejected', 'class': 'ปริญญาตรี ปี 3', 'type': 'NEW', 'note': 'ป.ตรี ไม่ผ่าน'},
 ]
 STATUS_PLAN = (['draft'] * 20 + ['waiting_teacher'] * 25 + ['returned_to_student'] * 5 + ['waiting_staff'] * 20 +
                ['need_more_info'] * 5 + ['waiting_manager'] * 10 + ['decided'] * 15)
@@ -266,7 +284,7 @@ def main():
     users = staff + teachers
 
     # ---------------- นักเรียน 100 คน: กระจุกในบางโรงเรียนเพื่อให้หน้าครูมีรายชื่อพอทดลอง
-    slots = ([1] * len(DEMO_CASES) + [3] * 5 + [2] * 5 + list(range(4, 101)))[:100]
+    slots = ([c.get('school', 1) for c in DEMO_CASES] + [3] * 5 + [2] * 5 + list(range(4, 101)))[:100]
     # sch001 ได้ครบทุกสถานะ / ทุกกรณีตาม DEMO_CASES ที่เหลือสุ่มจากแผนเดิม (ยอดรวมเท่าเดิม)
     statuses = STATUS_PLAN[:]
     decisions_left = DECISION_PLAN[:]
@@ -288,11 +306,11 @@ def main():
         if case:
             cur = case['class']
             group = next(g for g, l in CLASS_GROUPS.items() if cur in l)
-        nxt = rng.choice(NEXT[cur])
+        nxt = case.get('next') or rng.choice(NEXT[cur])
         bachelor = group == 'bachelor'
         higher = group in ('voc', 'highvoc', 'bachelor')
-        pvs = rng.choice(['industry', 'other']) if group == 'highvoc' else None
-        next_pvs = rng.choice(['industry', 'other']) if nxt.startswith('ปวส') and group != 'highvoc' else None
+        pvs = (case.get('pvs') or rng.choice(['industry', 'other'])) if group == 'highvoc' else None
+        next_pvs = (case.get('pvs') or rng.choice(['industry', 'other'])) if nxt.startswith('ปวส') and group != 'highvoc' else None
         rate = rate_of(nxt, pvs or next_pvs)
         age = AGE[cur]
         birth = date(2026 - age, 1, 1) + timedelta(days=rng.randint(0, 364))

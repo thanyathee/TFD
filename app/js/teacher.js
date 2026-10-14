@@ -29,7 +29,8 @@ App.views['teacher-entry'] = function (p) {
       <aside class="card"><h3>ทดลองใช้งาน</h3>
         <p class="small muted">Username <b>sch001</b> ถึง <b>sch100</b> · Password <b>Demo@1234</b></p>
         <button class="btn" data-action="teacher-sample" data-u="sch001">โรงเรียนที่มีนักเรียนหลายคน (sch001)</button>
-        <button class="btn" data-action="teacher-sample" data-u="${esc((this.db.teachers.find(t => (this.schoolById[t.school] || {}).type === 'university') || {}).username || 'sch022')}">มหาวิทยาลัย (ป.ตรี ส่งตรง)</button>
+        <button class="btn" data-action="teacher-sample" data-u="sch010">วิทยาลัย ปวช. / ปวส. (sch010)</button>
+        <button class="btn" data-action="teacher-sample" data-u="sch022">มหาวิทยาลัย ป.ตรี ส่งตรง (sch022)</button>
       </aside>
     </div>`, after: focusFirstError};
 };

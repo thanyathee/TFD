@@ -741,7 +741,7 @@ App.views['student-entry'] = function (p) {
       </form>
       <aside class="card"><h3>ทดลองใช้งาน</h3>
         <p class="small muted">กรอกเลขบัตรใหม่ที่ถูกต้องเพื่อเริ่มใบสมัครใหม่ หรือเลือกนักเรียนตัวอย่าง</p>
-        ${[['draft', 'NEW', 'ป.5'], ['draft', 'CONT'], ['returned_to_student'], ['waiting_teacher'], ['waiting_staff'], ['decided']].map(([st, ty, cl]) =>
+        ${[['draft', 'NEW', 'ป.5'], ['draft', 'CONT'], ['draft', 'NEW', 'ปวช.1'], ['draft', 'NEW', 'ปริญญาตรี ปี 1'], ['returned_to_student'], ['waiting_teacher'], ['waiting_staff'], ['decided']].map(([st, ty, cl]) =>
           this.db.students.find(x => x.demo_note && x.status === st && (!ty || x.type === ty) && (!cl || x.class === cl))).filter(Boolean).map(x =>
           `<button class="btn sample" data-action="student-sample" data-code="${x.code}"><b>${esc(x.class)} ${TYPE[x.type]}</b><span>${esc(STATUS[x.status].label)}</span></button>`).join('')}
         <button class="btn" data-action="student-newid">สร้างเลขบัตรใหม่สำหรับทดลอง</button>
