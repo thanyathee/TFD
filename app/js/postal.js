@@ -2,7 +2,7 @@
    จนท. บันทึกแบบสรุปย่อทีละคน → พิมพ์ใบปะหน้าโรงเรียน → ผจก. อนุมัติทีละคน · แอดมินดูผลงานทุกคน */
 'use strict';
 
-const POSTAL_KEY = 'tfd-postal-demo-v10';
+const POSTAL_KEY = 'tfd-postal-demo-v11';
 const P_ROLE = {
   clerk: ['จนท.บันทึกข้อมูล', 'บันทึกใบสมัครทางไปรษณีย์ พิมพ์ใบปะหน้า และดูผลงานของตัวเอง'],
   manager: ['ผจก.อนุมัติทุน', 'ดูทุกโรงเรียน และอนุมัติทุนทีละคน'],
@@ -99,7 +99,7 @@ App.pFresh = function () {
   L = 'L0001';
   nw(s1, 'clerk01', '2027-06-03T09:10', {title: 'เด็กหญิง', first: 'กัญญารัตน์', last: 'ดวงดี', cls: 'ม.2', gpa: '3.45', decision: {result: 'approved', by: 'manager01', at: '2027-06-10T14:00'}});
   nw(s1, 'clerk01', '2027-06-03T09:14', {title: 'เด็กชาย', first: 'ปิยะพงษ์', last: 'ศรีวงศ์', cls: 'ม.3', next_class: 'ม.4', gpa: '2.98', equipment: [], housing: 'rent_house', housing_detail: '1500', land: 'rent',
-    family: 'บิดาเสียชีวิต มารดารับจ้างทั่วไป มีน้อง 2 คน', decision: {result: 'rejected', by: 'manager01', at: '2027-06-10T14:05'}});
+    family: 'บิดาเสียชีวิต มารดารับจ้างทั่วไป มีน้อง 2 คน', decision: {result: 'rejected', by: 'manager02', at: '2027-06-11T09:30'}});
   nw(s1, 'clerk01', '2027-06-03T09:20', {title: 'นางสาว', first: 'สุนิสา', last: 'แก้วมณี', cls: 'ม.5', gpa: '3.80', housing: 'relative', housing_detail: 'ป้า', family: 'อาศัยกับป้า บิดามารดาทำงานต่างจังหวัด'});
   recOf(s1).slice(0, 2).forEach((r, i) => cont(s1, r, 'clerk01', `2027-06-03T09:${30 + i * 4}`, i ? {docs: ['cert', 'bank', 'expense'], note: 'ไม่มีใบเสร็จ ค่าใช้จ่ายต่ำกว่า 500 บาท'} : {}));
   L = 'L0002';
@@ -150,7 +150,8 @@ App.pFresh = function () {
     users: [
       {username: 'clerk01', name: 'จนท. บันทึก 01', role: 'clerk', active: true},
       {username: 'clerk02', name: 'จนท. บันทึก 02', role: 'clerk', active: true},
-      {username: 'manager01', name: 'ผู้จัดการทุน', role: 'manager', active: true},
+      {username: 'manager01', name: 'ผู้จัดการทุน 01', role: 'manager', active: true},
+      {username: 'manager02', name: 'ผู้จัดการทุน 02', role: 'manager', active: true},
       {username: 'admin01', name: 'ผู้ดูแลระบบ', role: 'admin', active: true}],
     recipients, entries, prefs: {}, drafts: {},
     batches: Object.fromEntries([
@@ -923,8 +924,9 @@ App.views['post-approve'] = pNeedLogin(function (p) {
         ${field('q', 'เลขที่ใบปะหน้า / ชื่อโรงเรียน', input('q', f.q, 'placeholder="เช่น 70-0006 หรือ 6" autocomplete="off"'), {err: p.err})}
         ${field('st', 'สถานะ', select('st', Object.entries(P_MGR_LABEL).map(([k, [t]]) => [k, t]), f.st, 'ทุกสถานะ', 'data-onchange="p-approve-st"'))}
         <div class="field"><span class="label">&nbsp;</span><button class="btn primary" type="submit">ค้นหา</button></div></form>
-      <div class="pf-stbl pf-atbl">${tbl([{t: 'เลขที่'}, {t: 'โรงเรียน'}, {t: 'ผู้บันทึก'}, {t: 'บันทึกแล้ว', r: 1}, {t: 'รอพิจารณา', r: 1}, {t: 'สถานะ'}, {t: ''}],
-        rows.map(r => [`<b class="pf-code">${this.pCode(r.id)}</b>`, `<span class="pf-sname"><b>${esc(this.pSc(r.id).name)}</b><span class="small muted">จ.${esc(this.pSc(r.id).province)} · บันทึก ${this.pLotDate(r.id)}</span></span>`, `<span class="nw">${esc(this.pUser(this.pOwner(r.id)).name)}</span>`, r.n,
+      <div class="pf-stbl pf-atbl">${tbl([{t: 'เลขที่'}, {t: 'โรงเรียน'}, {t: 'ผู้บันทึก'}, {t: 'ผู้พิจารณา'}, {t: 'บันทึกแล้ว', r: 1}, {t: 'รอพิจารณา', r: 1}, {t: 'สถานะ'}, {t: ''}],
+        rows.map(r => [`<b class="pf-code">${this.pCode(r.id)}</b>`, `<span class="pf-sname"><b>${esc(this.pSc(r.id).name)}</b><span class="small muted">จ.${esc(this.pSc(r.id).province)} · บันทึก ${this.pLotDate(r.id)}</span></span>`, `<span class="nw">${esc(this.pUser(this.pOwner(r.id)).name)}</span>`,
+          (rv => rv.length ? rv.map(u => `<span class="nw pa-rv">${esc(this.pUser(u).name)}</span>`).join('') : '<span class="muted">—</span>')([...new Set(this.pEntriesOf(r.id).filter(e => e.decision).map(e => e.decision.by))]), r.n,
           r.wait ? `<b>${r.wait}</b>` : '0', pBadgeFor(r.st, this.session.pRole), `<button class="btn sm ${r.wait ? 'primary' : ''}" data-go="post-approve" data-id="${r.id}">${r.wait ? 'พิจารณา' : 'ดู'}</button>`]))}</div>`,
       after() { const x = document.getElementById('q'); if (x) x.focus(); }};
   }
@@ -971,7 +973,8 @@ App.views['post-approve'] = pNeedLogin(function (p) {
     <section class="pa-top">
       <div class="pa-title"><span class="pf-code lg">เลขที่ใบปะหน้า ${this.pCode(p.id)}</span><h1>${esc(sc.name)}</h1>
         <p class="sub">จ.${esc(sc.province)} · ${esc(this.regionName(sc.region))} · ดูข้อมูลในระบบประกอบรูปภาพในใบสมัคร</p>
-        <p class="pa-by">บันทึกโดย <b>${esc(this.pUser(this.pOwner(p.id)).name)}</b> · ${this.pLotDate(p.id)}${b.updated ? ` · แก้ไขล่าสุด ${pShortDate(b.updated)}` : ''}</p></div>
+        <p class="pa-by">บันทึกโดย <b>${esc(this.pUser(this.pOwner(p.id)).name)}</b> · ${this.pLotDate(p.id)}${b.updated ? ` · แก้ไขล่าสุด ${pShortDate(b.updated)}` : ''}
+          ${(rv => rv.length ? `<br>ผู้พิจารณา <b>${rv.map(u => esc(this.pUser(u).name)).join(', ')}</b>` : '')([...new Set(es.filter(e => e.decision).map(e => e.decision.by))])}</p></div>
       <div class="pa-actions"><button class="btn" data-go="post-approve">รายชื่อโรงเรียน</button><button class="btn" data-go="post-cover" data-id="${p.id}">${icon('print')} ใบปะหน้า</button></div>
       <div class="pa-stats"><div class="pa-st wait"><span>รอพิจารณา</span><b>${wait}</b></div>${Object.entries(DECISION).map(([k, x]) =>
         `<div class="pa-st ${k}"><span>${x.label}</span><b>${cnt(k)}</b></div>`).join('')}<div class="pa-st money"><span>เงินทุนที่อนุมัติ</span><b>${baht(amt)}</b></div></div>

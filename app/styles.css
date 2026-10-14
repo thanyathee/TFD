@@ -909,3 +909,14 @@ body:has(.pa-page) .topbar-in,body:has(.pa-page) .tabs{max-width:1440px}
   .pf-atbl .tbl td:nth-child(4),.pf-atbl .tbl td:nth-child(5){font-size:13px;color:var(--ink-2)}
   .pf-atbl .tbl td:last-child{flex-basis:auto;margin-left:auto!important}
 }
+.pa-rv{display:block}
+@media (max-width:760px){
+  .pf-atbl .tbl td:nth-child(4){flex-basis:100%;font-size:13px;color:var(--ink)}
+  .pf-atbl .tbl td:nth-child(4)::before{content:"ผู้พิจารณา ";color:var(--muted)}
+  .pf-atbl .tbl td:nth-child(4) .pa-rv{display:inline}
+  .pf-atbl .tbl td:nth-child(4) .pa-rv+.pa-rv::before{content:", "}
+  .pf-atbl .tbl td:nth-child(5)::before{content:"บันทึกแล้ว "}
+  .pf-atbl .tbl td:nth-child(6)::before{content:"รอพิจารณา "}
+  .pf-atbl .tbl td:nth-child(5),.pf-atbl .tbl td:nth-child(6){font-size:13px;color:var(--ink-2)}
+  .pf-atbl .tbl td:nth-child(7){flex-basis:auto}
+}
