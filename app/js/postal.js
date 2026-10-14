@@ -9,7 +9,7 @@ const P_ROLE = {
   admin: ['แอดมิน', 'ดูผลงานทุกคน และจัดการผู้ใช้งาน'],
 };
 const P_STATUS = {
-  doing: ['กำลังบันทึก', 'warn'], done: ['บันทึกเสร็จ', 'info'],
+  doing: ['กำลังบันทึก', 'warn'], done: ['บันทึกสำเร็จ', 'info'],
   reviewing: ['ผจก.กำลังพิจารณา', 'violet'], approved: ['ผจก.พิจารณาครบแล้ว', 'ok'],
 };
 /* ระดับในใบปะหน้า: นับตามชั้นปีหน้า (ชั้นที่ได้รับทุน) */
@@ -94,7 +94,7 @@ App.pFresh = function () {
     docs: ['cert', 'bank', 'expense', 'receipt'], ...o});
   const nw = (school, by, at, o) => { let cid; do { cid = pMakeId(rand); } while (used.has(cid)); used.add(cid);
     add(school, by, at, {type: 'NEW', cid, family: 'อาศัยกับยาย บิดามารดาแยกทางกัน รายได้ครอบครัวไม่แน่นอน', equipment: ['pickup'], housing: 'own', land: 'none', ...o}); };
-  /* โรงเรียนตัวอย่าง 3 แห่ง: พิมพ์แล้ว + ผจก. พิจารณาบางส่วน / บันทึกเสร็จ / กำลังบันทึก */
+  /* โรงเรียนตัวอย่าง 3 แห่ง: พิมพ์แล้ว + ผจก. พิจารณาบางส่วน / บันทึกสำเร็จ / กำลังบันทึก */
   const s1 = 'SCH-001', s2 = 'SCH-010', s3 = 'SCH-022';
   L = 'L0001';
   nw(s1, 'clerk01', '2027-06-03T09:10', {title: 'เด็กหญิง', first: 'กัญญารัตน์', last: 'ดวงดี', cls: 'ม.2', gpa: '3.45', decision: {result: 'approved', by: 'manager01', at: '2027-06-10T14:00'}});
@@ -251,7 +251,7 @@ App.pStatus = function (school) {
   if (b && b.done) return 'done';
   return 'doing';
 };
-/* ผจก. / แอดมินเห็น "บันทึกเสร็จ" เป็น "รอพิจารณา" (งานส่งต่อจาก จนท. แล้ว) */
+/* ผจก. / แอดมินเห็น "บันทึกสำเร็จ" เป็น "รอพิจารณา" (งานส่งต่อจาก จนท. แล้ว) */
 const pBadgeFor = (k, role) => k === 'done' && role !== 'clerk' ? '<span class="badge t-violet">รอพิจารณา</span>' : pBadge(k);
 const pBadge = k => k ? `<span class="badge t-${P_STATUS[k][1]}">${P_STATUS[k][0]}</span>` : '<span class="muted small">ยังไม่เริ่ม</span>';
 App.pTouch = function (lot) {
@@ -767,7 +767,7 @@ App.views['post-schools'] = pNeedLogin(function (p) {
   const printable = rows.filter(r => r.st !== 'doing').length;
   return {nav: this.pNav(), html: `${this.pRoleBar()}
     <div class="page-head"><div><h1>${role === 'manager' ? 'โรงเรียน / ใบปะหน้า' : 'ใบปะหน้าโรงเรียน'}</h1><p class="sub">ทุกโรงเรียนใช้ใบปะหน้าแบบเดียวกัน · พิมพ์ทีละโรงเรียนหรือทั้งหมด</p></div>
-      <button class="btn primary" data-go="post-cover" data-id="all" ${printable ? '' : 'disabled'}>${icon('print')} พิมพ์ทั้งหมดที่บันทึกเสร็จ (${printable})</button></div>
+      <button class="btn primary" data-go="post-cover" data-id="all" ${printable ? '' : 'disabled'}>${icon('print')} พิมพ์ทั้งหมดที่บันทึกสำเร็จ (${printable})</button></div>
     <div class="stats"><div class="stat"><span>โรงเรียน</span><b>${new Set(rows.map(r => r.sc.id)).size}</b></div><div class="stat"><span>ทุนใหม่</span><b>${total.NEW}</b><small>ราย</small></div>
       <div class="stat"><span>ทุนต่อเนื่อง</span><b>${total.CONT}</b><small>ราย</small></div><div class="stat"><span>รวม</span><b>${total.NEW + total.CONT}</b><small>ราย</small></div></div>
     <form class="card filters pf-filters" data-submit="p-sch-filter">
@@ -1016,7 +1016,7 @@ App.views['post-work'] = pNeedLogin(function (p) {
   return {nav: this.pNav(), html: `${this.pRoleBar()}
     <div class="page-head"><div><h1>${me ? 'ผลงานของฉัน' : 'ผลงานเจ้าหน้าที่'}</h1><p class="sub">ทำโรงเรียนไหนไปแล้ว กี่คน เมื่อไหร่</p></div></div>
     ${me ? '' : `<form class="card row" data-submit="p-work-filter">${field('by', 'เจ้าหน้าที่', select('by', db.users.filter(u => u.role !== 'manager').map(u => [u.username, u.name]), by, 'ทุกคน', 'data-onchange="p-work-sel"'))}</form>`}
-    ${tbl([{t: 'เจ้าหน้าที่'}, {t: 'โรงเรียน', r: 1}, {t: 'บันทึกเสร็จ', r: 1}, {t: 'ทุนใหม่', r: 1}, {t: 'ทุนต่อเนื่อง', r: 1}, {t: 'ล่าสุด'}],
+    ${tbl([{t: 'เจ้าหน้าที่'}, {t: 'โรงเรียน', r: 1}, {t: 'บันทึกสำเร็จ', r: 1}, {t: 'ทุนใหม่', r: 1}, {t: 'ทุนต่อเนื่อง', r: 1}, {t: 'ล่าสุด'}],
       sum.map(r => [`<b>${esc(r.u.name)}</b><br><span class="small muted">${esc(r.u.username)}</span>`, r.schools.length, r.done,
         r.es.filter(e => e.type === 'NEW').length, r.es.filter(e => e.type === 'CONT').length, r.last ? thDate(r.last, true) : '—']))}
     <h2>รายโรงเรียน</h2>
