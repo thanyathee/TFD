@@ -645,3 +645,9 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .cv-dv span{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;display:inline-block;font-size:11px}
 .paper .cv-ltbl td.cv-ck2{text-align:center;vertical-align:middle;font-size:15px;padding:2px}
 .cv-ck2 .no{color:#b3261e}
+/* ตัวอย่างกระดาษสีฟ้าอ่อน (ทุนต่อเนื่อง) — บนจอเท่านั้น */
+.paper.paper-blue{background:#dcecfa}
+.paper.paper-blue th{background:#c9e0f6}
+@media print{.paper.paper-blue,.paper.paper-blue th{background:#fff!important}.paper.paper-blue th{background:#eef3fb!important}}
+.pf-lv{font-size:13px;font-weight:600;color:var(--brand);margin:4px 0 2px}
+.pf-lv span{color:var(--muted);font-weight:500}

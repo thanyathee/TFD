@@ -2,7 +2,7 @@
    จนท. บันทึกแบบสรุปย่อทีละคน → พิมพ์ใบปะหน้าโรงเรียน → ผจก. อนุมัติทีละคน · แอดมินดูผลงานทุกคน */
 'use strict';
 
-const POSTAL_KEY = 'tfd-postal-demo-v3';
+const POSTAL_KEY = 'tfd-postal-demo-v4';
 const P_ROLE = {
   clerk: ['จนท.บันทึกข้อมูล', 'บันทึกใบสมัครทางไปรษณีย์ พิมพ์ใบปะหน้า และดูผลงานของตัวเอง'],
   manager: ['ผจก.อนุมัติทุน', 'ดูทุกโรงเรียน และอนุมัติทุนทีละคน'],
@@ -118,7 +118,7 @@ App.pFresh = function () {
         done: true, printed: '2027-06-04T08:30', updated: '2027-06-04T08:30'}),
       batch(s2, 'clerk02', {wait_new: 1, letter: 'ที่ วท 112/2570', done: true, updated: '2027-06-05T10:20'}),
       batch(s3, 'clerk01', {updated: '2027-06-07T13:40'}),
-      batch(s4, 'clerk01', {prim_new: 0, wait_new: 2, wait_cont: 1, letter: 'ที่ ศธ 04297/88 ลงวันที่ 5 มิ.ย. 2570', done: true, updated: '2027-06-08T10:30'})]),
+      batch(s4, 'clerk01', {other_new: 1, wait_new: 2, wait_cont: 1, note: 'อื่น ๆ 1 ราย: นักเรียนการศึกษานอกระบบ (กศน.) ส่งแนบมากับโรงเรียน', letter: 'ที่ ศธ 04297/88 ลงวันที่ 5 มิ.ย. 2570', done: true, updated: '2027-06-08T10:30'})]),
   };
 };
 
@@ -139,6 +139,7 @@ App.pCounts = function (school) {
     if (g === 'primary') { r.NEW += Number(b.prim_new) || 0; r.CONT += Number(b.prim_cont) || 0; }
     return [g, t, r];
   });
+  rows.push(['other', 'อื่น ๆ', {NEW: Number(b.other_new) || 0, CONT: Number(b.other_cont) || 0}]);
   rows.push(['wait', 'รอฟังผล', {NEW: Number(b.wait_new) || 0, CONT: Number(b.wait_cont) || 0}]);
   const total = rows.reduce((a, [, , r]) => ({NEW: a.NEW + r.NEW, CONT: a.CONT + r.CONT}), {NEW: 0, CONT: 0});
   return {rows, total, entered: es.length};
@@ -343,10 +344,12 @@ App.pSchoolPanel = function (school, editId) {
   const t = this.teacherOf(school) || {};
   const es = this.pEntriesOf(school);
   const st = this.pStatus(school);
-  const listOf = k => { const l = es.filter(e => e.type === k);
-    return `<h4 class="pf-h">${TYPE[k]} <span class="muted">(${l.length})</span></h4>${l.length ? `<ol class="pf-list">${l.map(e =>
+  const listOf = k => { const all = es.filter(e => e.type === k);
+    return `<h4 class="pf-h">${TYPE[k]} <span class="muted">(${all.length})</span></h4>${all.length ? '' : '<p class="small muted">ยังไม่มี</p>'}` + P_LEVELS.map(([g, gt]) => {
+      const l = all.filter(e => groupOfClass(e.next_class) === g);
+      return l.length ? `<div class="pf-lv">${TYPE[k]} ${gt} <span>(${l.length})</span></div><ol class="pf-list">${l.map(e =>
       `<li><button type="button" data-go="post-form" data-edit="${e.id}" ${e.id === editId ? 'aria-current="true"' : ''}><b>${esc(pName(e))}</b>
-        <span>${esc(e.cls)} → ${esc(e.next_class)}${e.decision ? ` · ${DECISION[e.decision.result].label}` : ''}</span></button></li>`).join('')}</ol>` : '<p class="small muted">ยังไม่มี</p>'}`; };
+        <span>${esc(e.cls)} → ${esc(e.next_class)}${e.decision ? ` · ${DECISION[e.decision.result].label}` : ''}</span></button></li>`).join('')}</ol>` : ''; }).join(''); };
   const unused = db.recipients.filter(r => r.school === school && !db.entries.some(e => e.cid === r.cid));
   const num = (k, label) => `<label class="pf-num"><span>${label}</span><input class="input" type="number" min="0" name="${k}" value="${esc(b[k] || 0)}" inputmode="numeric"></label>`;
   return `<section class="card stack">
@@ -357,9 +360,10 @@ App.pSchoolPanel = function (school, editId) {
         <div class="choices">${unused.map(r => `<button type="button" class="btn sm" data-action="p-fillcid" data-cid="${r.cid}">${r.cid}</button>`).join('')}</div></details>` : ''}
     </section>
     <form class="card stack" data-pbatch="${school}" data-submit="p-batch-done" novalidate>
-      <h3>ข้อมูลใบปะหน้า</h3><p class="small muted">ประถม และรอฟังผล (รอหลักฐานการย้ายสถานศึกษา) ใส่แค่จำนวน · บันทึกอัตโนมัติ</p>
+      <h3>ข้อมูลใบปะหน้า</h3><p class="small muted">ประถม · อื่น ๆ (ระบุในหมายเหตุ) · รอฟังผล (รอหลักฐานการย้ายสถานศึกษา) ใส่แค่จำนวน · บันทึกอัตโนมัติ</p>
       <div class="pf-nums"><span></span><b>ใหม่</b><b>ต่อเนื่อง</b>
         <span>ประถม</span>${num('prim_new', 'ประถม ใหม่')}${num('prim_cont', 'ประถม ต่อเนื่อง')}
+        <span>อื่น ๆ</span>${num('other_new', 'อื่น ๆ ใหม่')}${num('other_cont', 'อื่น ๆ ต่อเนื่อง')}
         <span>รอฟังผล</span>${num('wait_new', 'รอฟังผล ใหม่')}${num('wait_cont', 'รอฟังผล ต่อเนื่อง')}</div>
       ${field('b-note', 'หมายเหตุ', `<input class="input" id="b-note" name="note" value="${esc(b.note || '')}">`)}
       ${field('b-letter', 'หนังสือนำส่ง', `<input class="input" id="b-letter" name="letter" value="${esc(b.letter || '')}" placeholder="เช่น ที่ ศธ 0000/123 ลงวันที่ ...">`)}
@@ -384,7 +388,7 @@ App.pStore = function (f) {
   const v = formData(f);
   if (f.hasAttribute('data-pbatch')) {
     const b = this.pTouch(f.dataset.pbatch);
-    ['prim_new', 'prim_cont', 'wait_new', 'wait_cont'].forEach(k => (b[k] = Math.max(0, parseInt(v[k], 10) || 0)));
+    ['prim_new', 'prim_cont', 'other_new', 'other_cont', 'wait_new', 'wait_cont'].forEach(k => (b[k] = Math.max(0, parseInt(v[k], 10) || 0)));
     ['note', 'letter', 'teacher_name', 'teacher_phone', 'teacher_email'].forEach(k => (b[k] = v[k] || ''));
     const done = !!v.done;
     if (done !== b.done) { b.done = done; this.pSave(); this.toast(done ? 'บันทึกโรงเรียนนี้เสร็จแล้ว' : 'เปิดให้บันทึกต่อ'); this.render(); return; }
@@ -596,7 +600,7 @@ App.pCoverHtml = function (id) {
     <div class="cv-school"><div class="cv-name">${esc(sc.name)}</div>
       <div>ที่อยู่ ${esc(sc.address || '')} ${esc(sc.subdistrict || '')} ${esc(sc.district)} จังหวัด${esc(sc.province)} ${esc(this.regionName(sc.region))} ${esc(sc.postcode || '')}</div></div>
     <div class="cv-body"><table class="cv-tbl"><thead><tr><th class="cv-ck"></th><th>ระดับ (ชั้นปีหน้า)</th><th class="r">ทุนใหม่ (ราย)</th><th class="r">ทุนต่อเนื่อง (ราย)</th><th class="r">รวม</th></tr></thead>
-      <tbody>${c.rows.map(([g, t, r]) => `<tr><td class="cv-ck">${r.NEW + r.CONT ? '☑' : '☐'}</td><td>${t}${g === 'primary' ? ' <small>(ผจก. พิจารณาที่ใบสมัคร)</small>' : g === 'wait' ? ' <small>(รอหลักฐานการย้ายสถานศึกษา)</small>' : ''}</td>
+      <tbody>${c.rows.map(([g, t, r]) => `<tr><td class="cv-ck">${r.NEW + r.CONT ? '☑' : '☐'}</td><td>${t}${g === 'primary' ? ' <small>(ผจก. พิจารณาที่ใบสมัคร)</small>' : g === 'other' ? ' <small>(ระบุในหมายเหตุ)</small>' : g === 'wait' ? ' <small>(รอหลักฐานการย้ายสถานศึกษา)</small>' : ''}</td>
         <td class="r">${n(r.NEW)}</td><td class="r">${n(r.CONT)}</td><td class="r">${n(r.NEW + r.CONT)}</td></tr>`).join('')}
       <tr class="cv-total"><td></td><td>รวม</td><td class="r">${c.total.NEW}</td><td class="r">${c.total.CONT}</td><td class="r">${c.total.NEW + c.total.CONT}</td></tr></tbody></table>
     <div class="cv-lines">
@@ -646,7 +650,7 @@ App.pListHtml = function (id) {
     for (let i = 0; i < l.length; i += P_PER_SHEET) pages.push(l.slice(i, i + P_PER_SHEET));
     return pages.map((chunk, pi) => {
       const by = [...new Set(chunk.map(e => this.pUser(e.by).name))].join(', ');
-      return `<div class="paper a4 land cover cv-list">
+      return `<div class="paper a4 land cover cv-list ${t === 'CONT' ? 'paper-blue' : ''}">
       ${hd(`${TYPE[t]} ${gt} <span>(${l.length} ราย)</span>`, `แผ่นที่ ${pi + 1} / ${pages.length}`, by)}
       <table class="cv-ltbl"><colgroup>${P_LIST_COLS[t].map(w => `<col style="width:${w}%">`).join('')}</colgroup>
         <thead><tr>${head(t)}</tr></thead><tbody>${chunk.map((e, i) => row(e, pi * P_PER_SHEET + i)).join('')}</tbody></table></div>`;
@@ -671,6 +675,7 @@ App.views['post-cover'] = pNeedLogin(function (p) {
     <div class="row no-print"><span class="small muted">พิมพ์ (A4 แนวนอน):</span>
       <label class="check"><input type="checkbox" data-onchange="p-printpart" data-k="sum" ${pr.sum ? 'checked' : ''}> <span>ใบสรุปใบสมัครของสถานศึกษา</span></label>
       <label class="check"><input type="checkbox" data-onchange="p-printpart" data-k="list" ${pr.list ? 'checked' : ''}> <span>รายชื่อที่บันทึกในระบบ</span></label></div>
+    <div class="note info small no-print">ตัวอย่างสีกระดาษ: ใบสรุป และทุนใหม่ = <b>กระดาษขาว</b> · ทุนต่อเนื่อง = <b>กระดาษสีฟ้าอ่อน</b> (สีฟ้าแสดงบนจอเท่านั้น ตอนพิมพ์ไม่มีสี)</div>
     <div class="a4-wrap cover-wrap">${ids.map(id => (pr.sum ? this.pCoverHtml(id) : '') + (pr.list ? this.pListHtml(id) : '')).join('') || '<div class="empty">เลือกอย่างน้อย 1 ใบ</div>'}</div>`, after: pFitA4};
 });
 function pFitA4() {
@@ -746,8 +751,8 @@ App.views['post-approve'] = pNeedLogin(function (p) {
       <div class="row"><button class="btn" data-go="post-approve">รายชื่อโรงเรียน</button><button class="btn" data-go="post-cover" data-id="${p.id}">${icon('print')} ใบปะหน้า</button></div></div>
     <div class="stats"><div class="stat"><span>รอพิจารณา</span><b>${wait}</b></div><div class="stat"><span>อนุมัติ</span><b>${cnt('approved')}</b><small>${baht(amt)}</small></div>
       <div class="stat"><span>ไม่อนุมัติ</span><b>${cnt('rejected')}</b></div></div>
-    ${(Number(b.prim_new) || 0) + (Number(b.prim_cont) || 0) + (Number(b.wait_new) || 0) + (Number(b.wait_cont) || 0) ? `<div class="note info">
-      ประถม ${(Number(b.prim_new) || 0) + (Number(b.prim_cont) || 0)} ราย — พิจารณาที่ใบสมัครกระดาษ · รอฟังผล ${(Number(b.wait_new) || 0) + (Number(b.wait_cont) || 0)} ราย — รอหลักฐานการย้ายสถานศึกษา</div>` : ''}
+    ${['prim_new', 'prim_cont', 'other_new', 'other_cont', 'wait_new', 'wait_cont'].some(k => Number(b[k])) ? `<div class="note info">
+      ประถม ${(Number(b.prim_new) || 0) + (Number(b.prim_cont) || 0)} ราย — พิจารณาที่ใบสมัครกระดาษ · อื่น ๆ ${(Number(b.other_new) || 0) + (Number(b.other_cont) || 0)} ราย · รอฟังผล ${(Number(b.wait_new) || 0) + (Number(b.wait_cont) || 0)} ราย — รอหลักฐานการย้ายสถานศึกษา</div>` : ''}
     <div class="stack">${es.map(card).join('') || '<div class="empty">ยังไม่มีรายชื่อ</div>'}</div>
     ${can && !wait && ids.length ? `<div class="row end"><button class="btn primary" data-go="post-approve" data-id="${ids[0]}">โรงเรียนถัดไป: ${esc(this.schoolName(ids[0]))}</button></div>` : ''}`,
     after() { if (p.focus) { const el = document.getElementById('pa-' + p.focus); if (el) el.scrollIntoView({block: 'center'}); } }};
