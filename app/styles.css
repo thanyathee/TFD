@@ -721,3 +721,8 @@ h1 .pf-lot{font-size:15px;padding:3px 12px}
 .pf-done{margin:10px 0 8px;padding:10px 12px;border-radius:12px;background:var(--fill);border:2px solid transparent}
 .pf-done.on{background:var(--ok-soft);border-color:var(--ok)}
 .tbl .nw{white-space:nowrap}
+/* ชื่อโรงเรียนในตาราง: บรรทัดเดียว (ยาวมากค่อยขึ้นบรรทัดใหม่) */
+.pf-sname{display:inline-block;min-width:300px}
+.pf-sname b{white-space:nowrap}
+@media (max-width:900px){.pf-sname{min-width:220px}.pf-sname b{white-space:normal}}
+.btn.sm.pf-ic{padding:0 12px}

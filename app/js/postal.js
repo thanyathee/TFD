@@ -169,6 +169,11 @@ function pNorm(v) {
   if ('next_sel' in v) v.next_class = v.next_sel === '__other' ? (v.next_text || '') : v.next_sel;
   return v;
 }
+/* วันเวลาแบบสั้น เช่น 16 มิ.ย. 70 · 10:05 */
+function pShortDate(iso) {
+  const d = new Date(iso.length <= 10 ? iso + 'T00:00:00' : iso);
+  return d.toLocaleDateString('th-TH', {day: 'numeric', month: 'short', year: '2-digit'}) + (iso.length > 10 ? ' · ' + iso.slice(11, 16) : '');
+}
 const pName = e => [e.title, e.first, e.last].filter(Boolean).join(' ') || '(ไม่มีชื่อ)';
 App.pUser = function (u) { return this.P().users.find(x => x.username === u) || {name: u}; };
 /* ลอต = ใบสมัครของโรงเรียนที่มาถึง 1 รอบ (โรงเรียนเดียวกันมาได้หลายลอต) · 1 ลอต = จนท. 1 คน · 1 ชุดใบปะหน้า */
@@ -740,11 +745,11 @@ App.views['post-schools'] = pNeedLogin(function (p) {
       ${role === 'clerk' ? '' : field('by', 'ผู้บันทึก', select('by', clerks.map(u => [u.username, u.name]), f.by, 'ทุกคน'))}
       <div class="field"><span class="label">&nbsp;</span><button class="btn" type="submit">ค้นหา</button></div></form>
     ${tbl([{t: '#'}, {t: 'โรงเรียน'}, {t: 'ใหม่', r: 1}, {t: 'ต่อเนื่อง', r: 1}, {t: 'รวม', r: 1}, {t: 'สถานะ'}, {t: 'แก้ไขล่าสุด'}].concat(role === 'clerk' ? [] : [{t: 'ผู้บันทึก'}], [{t: ''}]),
-      rows.map((r, i) => [i + 1, `<b>${esc(r.sc.name)}</b><br><span class="small muted">จ.${esc(r.sc.province)}</span>`, r.c.total.NEW, r.c.total.CONT,
-        `<b>${r.c.total.NEW + r.c.total.CONT}</b>`, pBadge(r.st), `<span class="nw">${r.b.updated ? thDate(r.b.updated, true) : '—'}</span>`]
+      rows.map((r, i) => [i + 1, `<span class="pf-sname"><b>${esc(r.sc.name)}</b> <span class="small muted">จ.${esc(r.sc.province)}</span></span>`, r.c.total.NEW, r.c.total.CONT,
+        `<b>${r.c.total.NEW + r.c.total.CONT}</b>`, pBadge(r.st), `<span class="nw">${r.b.updated ? pShortDate(r.b.updated) : '—'}</span>`]
         .concat(role === 'clerk' ? [] : [esc(this.pUser(r.b.by).name || '—')], [
-        `<div class="row nowrap"><button class="btn sm" data-go="post-cover" data-id="${r.id}">${icon('print')} ใบปะหน้า</button>
-          ${role !== 'manager' && this.pCanEdit(r.id) ? `<button class="btn sm" data-action="p-open" data-id="${r.id}">${r.b.done ? 'เปิดดู / แก้ไข' : 'บันทึกต่อ'}</button>` : ''}
+        `<div class="row nowrap"><button class="btn sm pf-ic" data-go="post-cover" data-id="${r.id}" title="ใบปะหน้า" aria-label="ใบปะหน้า">${icon('print')}</button>
+          ${role !== 'manager' && this.pCanEdit(r.id) ? `<button class="btn sm" data-action="p-open" data-id="${r.id}">${r.b.done ? 'แก้ไข' : 'บันทึกต่อ'}</button>` : ''}
           ${role !== 'clerk' && r.c.entered ? `<button class="btn sm" data-go="post-approve" data-id="${r.id}">อนุมัติ</button>` : ''}</div>`])))}`};
 });
 App.on('p-sch-filter', function (form) { this.go('post-schools', {f: formData(form)}); });
