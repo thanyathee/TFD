@@ -271,12 +271,12 @@ App.appFilter = function (f) {
       && (!f.round || String(s.round || '') === f.round) && (!f.loan || s.loan === f.loan) && (!f.type || s.type === f.type)
       && (!f.move || s.school_next === f.move) && (!f.rate || (f.rate === 'special') === this.stdRate(s).special)
       && (!f.region || sc.region === f.region) && (!f.province || sc.province === f.province) && (!f.district || sc.district === f.district)
-      && (!f.school || s.school === f.school) && (!f.levels || !f.levels.length || f.levels.includes(s.group || groupOfClass(s.class)))
+      && (!f.school || s.school === f.school) && (!f.classes || !f.classes.length || f.classes.includes(s.class))
       && (!f.q || (s.code + fullName(s)).toLowerCase().includes(f.q.toLowerCase()));
   });
 };
 App.views['staff-apps'] = function (p) {
-  const f = p.work || p.reset ? {work: p.work || 'all', levels: []} : (this._appF || {work: 'all', levels: []});
+  const f = p.work || p.reset ? {work: p.work || 'all', classes: []} : (this._appF || {work: 'all', classes: []});
   this._appF = f;
   const rows = this.appFilter(f);
   const role = this.session.staffRole;
@@ -296,8 +296,10 @@ App.views['staff-apps'] = function (p) {
       <div class="field"><span class="label">เลือกโรงเรียนที่ต้องการรีวิว</span>
         <div class="grid-4" data-area='{"any":true,"school":true}'>${this.areaPicker('fa', f, {any: true, school: true})}</div>
         <div class="hint">ช่อง “โรงเรียน” จะแสดงเฉพาะสถานศึกษาที่ถูกเพิ่มไว้ในระบบของมูลนิธิฯ เท่านั้น</div></div>
-      <div class="field"><span class="label">ระดับชั้น (เลือกได้มากกว่า 1 ระดับ)</span>
-        <div class="choices">${EDU_GROUPS.map(([k]) => `<label class="choice"><input type="checkbox" name="f_levels" value="${k}" ${(f.levels || []).includes(k) ? 'checked' : ''}> ${GROUP_SHORT[k]}</label>`).join('')}</div></div>
+      <div class="field"><span class="label">ระดับชั้น (เลือกทั้งช่วงชั้น หรือเลือกเป็นรายชั้นก็ได้)</span>
+        <div class="lv-grid">${EDU_GROUPS.map(([k]) => { const cls = CLASS_GROUPS[k] || []; const on = cls.filter(c => (f.classes || []).includes(c));
+          return `<div class="lv-row"><label class="choice lv-group"><input type="checkbox" data-group="${k}" data-onchange="lv-group" ${on.length === cls.length ? 'checked' : ''}> <b>${k === 'primary' ? 'ประถม' : GROUP_SHORT[k]}</b></label>
+            <div class="lv-classes">${cls.map(c => `<label class="choice"><input type="checkbox" name="f_classes" value="${c}" data-g="${k}" data-onchange="lv-class" ${(f.classes || []).includes(c) ? 'checked' : ''}> ${c.replace('ปริญญาตรี ', 'ป.ตรี ')}</label>`).join('')}</div></div>`; }).join('')}</div></div>
       <div class="row between"><button class="btn" type="button" data-action="print">${icon('print')} พิมพ์ผลการค้นหา</button>
         <div class="row"><button class="btn" type="button" data-go="staff-apps" data-reset="1">ล้างตัวกรอง</button><button class="btn primary" type="submit">ค้นหา / แสดงผล</button></div></div>
     </form>
@@ -318,7 +320,7 @@ App.on('apps-filter', function (form) {
   const v = formData(form);
   const a = this.readArea('fa');
   this._appF = {work: v.f_work, result: v.f_result, round: v.f_round, loan: v.f_loan, type: v.f_type, move: v.f_move, rate: v.f_rate, q: v.f_q,
-    region: a.region, province: a.province, district: a.district, school: a.school, levels: arr(v.f_levels)};
+    region: a.region, province: a.province, district: a.district, school: a.school, classes: arr(v.f_classes)};
   this.go('staff-apps');
 });
 
@@ -995,4 +997,13 @@ App.on('user-reset', function (el) {
   this.auditLog('รีเซ็ตรหัสผ่าน', u.username);
   this.save();
   this.toast(`รีเซ็ตรหัสผ่านของ ${u.username} แล้ว · รหัสผ่านชั่วคราว ${pw}`);
+});
+
+/* ตัวกรองระดับชั้น: ติ๊กช่วงชั้น = เลือก/ไม่เลือกทุกชั้นในช่วงนั้น, ติ๊กรายชั้นแล้วช่วงชั้นติ๊กตามเมื่อครบ */
+App.on('lv-group', function (el) {
+  el.form.querySelectorAll(`[name=f_classes][data-g="${el.dataset.group}"]`).forEach(x => { x.checked = el.checked; });
+});
+App.on('lv-class', function (el) {
+  const all = [...el.form.querySelectorAll(`[name=f_classes][data-g="${el.dataset.g}"]`)];
+  el.form.querySelector(`[data-group="${el.dataset.g}"]`).checked = all.every(x => x.checked);
 });

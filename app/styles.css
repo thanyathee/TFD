@@ -476,3 +476,10 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
   .us-list .trow{display:flex;flex-wrap:wrap;gap:4px 10px}
   .us-list .trow>span{min-width:0}
 }
+/* ตัวกรองระดับชั้น: ช่วงชั้น + รายชั้น */
+.lv-grid{display:grid;gap:8px}
+.lv-row{display:grid;grid-template-columns:150px 1fr;gap:8px;align-items:start}
+.lv-classes{display:flex;flex-wrap:wrap;gap:6px}
+.lv-classes .choice{min-height:40px;padding:6px 12px}
+.lv-group{min-height:40px;padding:6px 12px}
+@media (max-width:600px){.lv-row{grid-template-columns:1fr}}
