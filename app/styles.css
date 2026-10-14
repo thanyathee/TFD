@@ -847,3 +847,18 @@ h1 .pf-lot{font-size:15px;padding:3px 12px}
 .pa-CONT th:nth-child(4){width:110px}.pa-NEW th:nth-child(4){width:64px}
 .pa-tbl th:nth-last-child(2){width:80px}.pa-tbl th:last-child{width:190px}
 .pa-NEW th:nth-child(6){width:24%}.pa-CONT th:nth-child(6){width:165px}
+/* หน้าอนุมัติ: ไม่มีช่องเงินทุน · ช่องลำดับกว้างพอ · สลับสีแถวอ่อน ๆ */
+.pa-tbl th.n,.pa-tbl td.n{width:56px;padding-left:8px;padding-right:8px;white-space:nowrap;text-align:center}
+.pa-tbl th:nth-last-child(2){width:auto}
+.pa-NEW th:nth-child(6){width:26%}
+.pa-tbl tbody tr:nth-child(even) td{background:#f7f9fc}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pa-tbl tbody tr:nth-child(even) td{background:rgba(255,255,255,.03)}}
+:root[data-theme="dark"] .pa-tbl tbody tr:nth-child(even) td{background:rgba(255,255,255,.03)}
+@media (max-width:900px){.pa-tbl tbody tr:nth-child(even){background:#f7f9fc}.pa-tbl tbody tr:nth-child(even) td{background:none}.pa-tbl td.n{width:auto;padding:0}
+  .pa-tbl td:nth-last-child(2)::before{content:none}}
+@media (max-width:900px){
+  .pa-tbl tr td:first-child{box-shadow:none!important}
+  .pa-tbl tr.pa-r-approved{box-shadow:inset 4px 0 0 var(--ok)}
+  .pa-tbl tr.pa-r-reserve{box-shadow:inset 4px 0 0 var(--warn)}
+  .pa-tbl tr.pa-r-rejected,.pa-tbl tr.pa-r-ineligible{box-shadow:inset 4px 0 0 var(--bad)}
+}

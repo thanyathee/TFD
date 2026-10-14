@@ -943,10 +943,10 @@ App.views['post-approve'] = pNeedLogin(function (p) {
     const main = e.type === 'CONT'
       ? `<td>${esc(e.use_money || '—')}${note}</td><td class="pa-docs">${P_DOCS.map(([k, t]) => `<span class="${arr(e.docs).includes(k) ? 'ok' : 'no'}">${arr(e.docs).includes(k) ? '✓' : '✗'} ${t}</span>`).join('')}</td>`
       : `<td>${esc(e.family || '—')}</td><td><small>เครื่องใช้:</small> ${arr(e.equipment).map(eqName).join(', ') || '—'}<br><small>บ้าน:</small> ${esc(pHouse(e))}<br><small>ที่ดิน:</small> ${esc((P_LAND.find(x => x[0] === e.land) || [, '—'])[1])}${note}</td>`;
-    return `<tr id="pa-${e.id}" class="${d ? 'pa-r-' + d.result : ''}">${base}${main}<td class="r nw">${r.amount ? r.amount.toLocaleString('th-TH') : '—'}</td><td>${dec(e)}</td></tr>`;
+    return `<tr id="pa-${e.id}" class="${d ? 'pa-r-' + d.result : ''}">${base}${main}<td>${dec(e)}</td></tr>`;
   };
   const head = t => `<th class="n">#</th><th>เลขบัตร / ชื่อ</th><th>ระดับชั้น</th><th>เกรด</th>${t === 'CONT' ? '<th>นำเงินทุนไปใช้จ่าย</th><th>เอกสารแนบ</th>'
-    : '<th>สภาพครอบครัว</th><th>เครื่องใช้ · บ้าน · ที่ดิน</th>'}<th class="r">เงินทุน</th><th>ผลพิจารณา</th>`;
+    : '<th>สภาพครอบครัว</th><th>เครื่องใช้ · บ้าน · ที่ดิน</th>'}<th>ผลพิจารณา</th>`;
   const amt = es.filter(e => (e.decision || {}).result === 'approved').reduce((a, e) => a + this.pRate(e).amount, 0);
   const ids = [...new Set(db.entries.filter(e => !e.decision).map(e => e.lot))].filter(x => x !== p.id && this.pSc(x) && (this.pLot(x).done || this.pLocked(x))).sort((a, b) => this.pLotSort(a, b));
   return {nav: this.pNav(), html: `${this.pRoleBar()}
