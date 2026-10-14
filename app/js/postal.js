@@ -14,8 +14,7 @@ const P_STATUS = {
 };
 /* ระดับในใบปะหน้า: นับตามชั้นปีหน้า (ชั้นที่ได้รับทุน) */
 const P_LEVELS = [['primary', 'ประถม'], ['lowersec', 'ม.ต้น'], ['uppersec', 'ม.ปลาย'], ['voc', 'ปวช.'], ['highvoc', 'ปวส.'], ['bachelor', 'ปริญญาตรี']];
-/* ประถม (ป.5 → ป.6) ผจก. พิจารณาที่ใบสมัครกระดาษ จึงไม่บันทึกรายคน — เริ่มที่ ป.6 */
-const P_CLASSES = ['ป.6', 'ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5', 'ม.6', 'ปวช.1', 'ปวช.2', 'ปวช.3', 'ปวส.1', 'ปวส.2',
+const P_CLASSES = ['ป.5', 'ป.6', 'ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5', 'ม.6', 'ปวช.1', 'ปวช.2', 'ปวช.3', 'ปวส.1', 'ปวส.2',
   'ปริญญาตรี ปี 1', 'ปริญญาตรี ปี 2', 'ปริญญาตรี ปี 3', 'ปริญญาตรี ปี 4'];
 const P_TITLES = ['เด็กชาย', 'เด็กหญิง', 'นาย', 'นางสาว'];
 const P_LAND = [['own', 'มีที่ดินของตนเอง'], ['rent', 'เช่าที่ดินผู้อื่น'], ['none', 'ไม่มีที่ดินทำกิน']];
@@ -161,6 +160,15 @@ App.pFresh = function () {
 };
 
 /* ---------- ตัวช่วย ---------- */
+/* ระดับของรายการ: นับตามชั้นปีหน้า · ชั้นที่พิมพ์เอง ใช้ระดับที่ จนท. เลือก */
+const P_LEVELS_ALL = P_LEVELS.concat([['other', 'อื่น ๆ']]);
+const pGroupOf = e => groupOfClass(e.next_class) || e.next_group || 'other';
+/* ช่องชั้น: เลือกจากรายการ หรือ "อื่น ๆ" แล้วพิมพ์เอง */
+function pNorm(v) {
+  if ('cls_sel' in v) v.cls = v.cls_sel === '__other' ? (v.cls_text || '') : v.cls_sel;
+  if ('next_sel' in v) v.next_class = v.next_sel === '__other' ? (v.next_text || '') : v.next_sel;
+  return v;
+}
 const pName = e => [e.title, e.first, e.last].filter(Boolean).join(' ') || '(ไม่มีชื่อ)';
 App.pUser = function (u) { return this.P().users.find(x => x.username === u) || {name: u}; };
 /* ลอต = ใบสมัครของโรงเรียนที่มาถึง 1 รอบ (โรงเรียนเดียวกันมาได้หลายลอต) · 1 ลอต = จนท. 1 คน · 1 ชุดใบปะหน้า */
@@ -202,13 +210,14 @@ App.pRate = function (e) {
 App.pCounts = function (school) {
   const b = this.P().batches[school] || {};
   const es = this.pEntriesOf(school);
-  const row = g => ({NEW: es.filter(e => e.type === 'NEW' && groupOfClass(e.next_class) === g).length, CONT: es.filter(e => e.type === 'CONT' && groupOfClass(e.next_class) === g).length});
+  const row = g => ({NEW: es.filter(e => e.type === 'NEW' && pGroupOf(e) === g).length, CONT: es.filter(e => e.type === 'CONT' && pGroupOf(e) === g).length});
   const rows = P_LEVELS.map(([g, t]) => {
     const r = row(g);
     if (g === 'primary') { r.NEW += Number(b.prim_new) || 0; r.CONT += Number(b.prim_cont) || 0; }
     return [g, t, r];
   });
-  rows.push(['other', 'อื่น ๆ', {NEW: Number(b.other_new) || 0, CONT: Number(b.other_cont) || 0}]);
+  const ro = row('other');
+  rows.push(['other', 'อื่น ๆ', {NEW: ro.NEW + (Number(b.other_new) || 0), CONT: ro.CONT + (Number(b.other_cont) || 0)}]);
   rows.push(['wait', 'รอฟังผล', {NEW: Number(b.wait_new) || 0, CONT: Number(b.wait_cont) || 0}]);
   const total = rows.reduce((a, [, , r]) => ({NEW: a.NEW + r.NEW, CONT: a.CONT + r.CONT}), {NEW: 0, CONT: 0});
   return {rows, total, entered: es.length};
@@ -350,11 +359,15 @@ App.views['post-form'] = pNeedLogin(function (p) {
     ${bar}<div class="note info">เลือกโรงเรียนก่อน แล้วเริ่มบันทึกได้เลย</div>`, after() { const s = document.getElementById('p-sq'); if (s) s.focus(); }};
 
   const draft = edit ? null : db.drafts[this.pDraftKey()];
-  const v = Object.assign({}, edit || draft || {}, p.values || {});
+  const v = pNorm(Object.assign({}, edit || draft || {}, p.values || {}));
   const e = p.errors || {};
   const type = v.type === 'CONT' ? 'CONT' : 'NEW';
   const nexts = nextOptions(v.cls);
-  if (!nexts.includes(v.next_class)) v.next_class = nexts[0] || '';
+  if (!v.next_class && v.next_sel !== '__other') v.next_class = nexts[0] || '';
+  const clsOther = v.cls_sel === '__other' || (!!v.cls && !P_CLASSES.includes(v.cls));
+  const nextOther = v.next_sel === '__other' || (!!v.next_class && !P_CLASSES.includes(v.next_class));
+  const OTHER = ['__other', 'อื่น ๆ (พิมพ์เอง)'];
+  const nextItems = nexts.map(x => [x, `${x} (คิดให้)`]).concat(P_CLASSES.filter(x => !nexts.includes(x)).map(x => [x, x]), [OTHER]);
   const g = groupOfClass(v.cls), gn = groupOfClass(v.next_class);
   const needFac = ['voc', 'highvoc', 'bachelor'].includes(g) || ['voc', 'highvoc', 'bachelor'].includes(gn);
   const isPvs = /^ปวส/.test(v.next_class);
@@ -379,12 +392,14 @@ App.views['post-form'] = pNeedLogin(function (p) {
       ${field('first', 'ชื่อ', input('first', v.first, ro), {req: 1, err: e.first})}
       ${field('last', 'นามสกุล', input('last', v.last, ro), {req: 1, err: e.last})}</div>
     <div class="grid-2">
-      ${field('cls', type === 'CONT' ? 'ชั้นปีนี้' : 'ชั้นปัจจุบัน', lock ? input('cls', v.cls, 'readonly') : select('cls', P_CLASSES, v.cls, 'เลือกชั้น', 'data-onchange="p-cls"'),
-        {req: 1, err: e.cls, hint: 'ป.5 (ประถม) ไม่บันทึกรายคน ใส่แค่จำนวนในใบปะหน้า'})}
-      ${nexts.length > 1 ? radioField('next_class', 'ชั้นปีหน้า', nexts.map(x => [x, x]), v.next_class, {req: 1, attrs: 'data-onchange="p-cls"'})
-        : field('', 'ชั้นปีหน้า (คิดให้อัตโนมัติ)', `<div class="pf-next">${v.next_class ? esc(v.next_class) : '—'}${rate ? ' ' + rateBadge(rate) : ''}</div>
-          <input type="hidden" name="next_class" value="${esc(v.next_class)}">`)}</div>
-    ${nexts.length > 1 && rate ? `<div>${rateBadge(rate)}</div>` : ''}
+      <div class="stack">${field('cls_sel', type === 'CONT' ? 'ชั้นปีนี้' : 'ชั้นปัจจุบัน', lock ? input('cls', v.cls, 'readonly')
+          : select('cls_sel', P_CLASSES.map(x => [x, x]).concat([OTHER]), clsOther ? '__other' : v.cls, 'เลือกชั้น', 'data-onchange="p-cls"'), {req: 1, err: e.cls})}
+        ${!lock && clsOther ? field('cls_text', 'พิมพ์ชั้นเอง', input('cls_text', clsOther ? v.cls : '', 'placeholder="เช่น ปวส.1 (ต่อเนื่อง 2 ปี)"')) : ''}</div>
+      <div class="stack">${field('next_sel', 'ชั้นปีหน้า <span class="small muted">(คิดให้อัตโนมัติ · แก้ได้)</span>',
+          select('next_sel', nextItems, nextOther ? '__other' : v.next_class, 'เลือกชั้น', 'data-onchange="p-cls"'), {req: 1, err: e.next_class})}
+        ${nextOther ? `<div class="grid-2">${field('next_text', 'พิมพ์ชั้นปีหน้าเอง', input('next_text', nextOther ? v.next_class : '', 'placeholder="เช่น ปริญญาตรี ปี 1 (เทียบโอน)"'))}
+          ${field('next_group', 'นับเป็นระดับ', select('next_group', P_LEVELS_ALL, v.next_group || 'other'))}</div>` : ''}</div></div>
+    ${rate && rate.amount ? `<div>${rateBadge(rate)}</div>` : ''}
     ${needFac || isPvs ? `<div class="grid-2">${needFac ? field('faculty', 'สาขา', input('faculty', v.faculty, ro + ' placeholder="เช่น ช่างยนต์ การบัญชี"')) : '<div></div>'}
       ${isPvs ? radioField('pvs_type', 'ประเภทวิชา (ปวส.)', PVS_TYPES, v.pvs_type || 'other', {attrs: 'data-onchange="p-cls"'}) : ''}</div>` : ''}
     ${field('gpa', type === 'CONT' ? 'เกรดเฉลี่ยปีนี้' : 'เกรดเฉลี่ย', input('gpa', v.gpa, 'inputmode="decimal" placeholder="เช่น 3.25"'), {err: e.gpa, hint: v.gpa_before ? `เกรดตอนได้รับทุนปี ${this.db.cycle.history_year}: <b>${esc(v.gpa_before)}</b>` : ''})}
@@ -431,8 +446,8 @@ App.pSchoolPanel = function (lot, editId) {
   const st = this.pStatus(lot);
   const mine = this.pLotsOf(school).filter(id => id !== lot && this.pSees(id) && this.pLotUsed(id));
   const listOf = k => { const all = es.filter(e => e.type === k);
-    return `<h4 class="pf-h">${TYPE[k]} <span class="muted">(${all.length})</span></h4>${all.length ? '' : '<p class="small muted">ยังไม่มี</p>'}` + P_LEVELS.map(([g, gt]) => {
-      const l = all.filter(e => groupOfClass(e.next_class) === g);
+    return `<h4 class="pf-h">${TYPE[k]} <span class="muted">(${all.length})</span></h4>${all.length ? '' : '<p class="small muted">ยังไม่มี</p>'}` + P_LEVELS_ALL.map(([g, gt]) => {
+      const l = all.filter(e => pGroupOf(e) === g);
       return l.length ? `<div class="pf-lv">${TYPE[k]} ${gt} <span>(${l.length})</span></div><ol class="pf-list">${l.map(e =>
       `<li><button type="button" data-go="post-form" data-edit="${e.id}" ${e.id === editId ? 'aria-current="true"' : ''}><b>${esc(pName(e))}</b>
         <span>${esc(e.cls)} → ${esc(e.next_class)}${e.decision ? ` · ${DECISION[e.decision.result].label}` : ''}</span></button></li>`).join('')}</ol>` : ''; }).join(''); };
@@ -448,7 +463,7 @@ App.pSchoolPanel = function (lot, editId) {
         <div class="choices">${unused.map(r => `<button type="button" class="btn sm" data-action="p-fillcid" data-cid="${r.cid}">${r.cid}</button>`).join('')}</div></details>` : ''}
     </section>
     <form class="card stack" data-pbatch="${lot}" data-submit="p-batch-done" novalidate><fieldset class="pf-fs" ${this.pCanEdit(lot) ? '' : 'disabled'}>
-      <h3>ข้อมูลใบปะหน้า</h3><p class="small muted">ประถม · อื่น ๆ (ระบุในหมายเหตุ) · รอฟังผล (รอหลักฐานการย้ายสถานศึกษา) ใส่แค่จำนวน · บันทึกอัตโนมัติ</p>
+      <h3>ข้อมูลใบปะหน้า</h3><p class="small muted">ใส่จำนวนเฉพาะที่<b>ไม่ได้บันทึกรายคน</b> (เช่น ประถมที่ ผจก. พิจารณาที่ใบสมัคร · อื่น ๆ ระบุในหมายเหตุ · รอฟังผล = รอหลักฐานการย้ายสถานศึกษา) · บันทึกอัตโนมัติ</p>
       <div class="pf-nums"><span></span><b>ใหม่</b><b>ต่อเนื่อง</b>
         <span>ประถม</span>${num('prim_new', 'ประถม ใหม่')}${num('prim_cont', 'ประถม ต่อเนื่อง')}
         <span>อื่น ๆ</span>${num('other_new', 'อื่น ๆ ใหม่')}${num('other_cont', 'อื่น ๆ ต่อเนื่อง')}
@@ -588,8 +603,12 @@ App.on('p-house', function (el) {
 App.on('p-cls', function (el) {
   const f = el.form;
   const v = formData(f);
-  if (f.hasAttribute('data-pdraft')) { this.P().drafts[this.pDraftKey()] = v; this.pSave(); this.go('post-form', {focus: el.name === 'cls' ? 'gpa' : el.id || 'gpa'}); }
-  else this.go('post-form', {edit: this.view.params.edit, values: v, focus: 'gpa'});
+  /* เปลี่ยนชั้นปัจจุบัน → คิดชั้นปีหน้าใหม่ · เลือก "อื่น ๆ" → ไปช่องพิมพ์เอง */
+  if (el.name === 'cls_sel') { delete v.next_sel; delete v.next_text; v.next_class = ''; }
+  pNorm(v);
+  if (el.name === 'next_sel' && v.next_sel !== '__other') delete v.next_text;
+  const focus = el.value === '__other' ? (el.name === 'cls_sel' ? 'cls_text' : 'next_text') : el.name === 'cls_sel' ? 'next_sel' : 'gpa';
+  this.pRerender(v, focus);
 });
 /* พิมพ์เลข 13 หลักครบ → ระบบเลือกประเภททุนให้: พบในรายชื่อผู้ได้รับทุนปีก่อน = ทุนต่อเนื่อง (ดึงชื่อ / ชั้น) · ไม่พบ = ทุนใหม่ */
 App.on('p-cid', function (el) {
@@ -604,13 +623,13 @@ App.on('p-cid', function (el) {
   const r = this.P().recipients.find(x => x.cid === cid);
   if (r) {
     if (v.type === 'CONT' && v.from_db && v.first === r.first && v.last === r.last) return;
-    this.pRerender({...v, cid, type: 'CONT', auto: '1', title: r.title, first: r.first, last: r.last, cls: r.cls, faculty: r.faculty, pvs_type: r.pvs_type,
-      gpa_before: r.gpa, from_db: '1', unlocked: '', next_class: ''}, 'gpa');
+    this.pRerender({...v, cid, type: 'CONT', auto: '1', title: r.title, first: r.first, last: r.last, cls: r.cls, cls_sel: r.cls, faculty: r.faculty, pvs_type: r.pvs_type,
+      gpa_before: r.gpa, from_db: '1', unlocked: '', next_class: '', next_sel: '', next_text: ''}, 'gpa');
     return;
   }
   if (v.type === 'NEW' && !v.from_db) return;
   /* ไม่พบในรายชื่อปีก่อน → ทุนใหม่ (ล้างข้อมูลที่ดึงมาจากคนก่อนหน้า) */
-  const clean = v.from_db ? {title: '', first: '', last: '', cls: '', faculty: '', pvs_type: '', next_class: ''} : {};
+  const clean = v.from_db ? {title: '', first: '', last: '', cls: '', cls_sel: '', faculty: '', pvs_type: '', next_class: '', next_sel: '', next_text: ''} : {};
   this.pRerender({...v, ...clean, cid, type: 'NEW', auto: '1', from_db: '', unlocked: '', gpa_before: ''}, v.from_db ? 'title' : 'title');
 });
 App.on('p-fillcid', function (el) {
@@ -646,12 +665,14 @@ App.on('p-save', function (form) {
   if (!v.title) e.title = 'กรุณาเลือก';
   if (!v.first) e.first = 'กรุณากรอกชื่อ';
   if (!v.last) e.last = 'กรุณากรอกนามสกุล';
-  if (!v.cls) e.cls = 'กรุณาเลือกชั้น';
+  pNorm(v);
+  if (!v.cls) e.cls = 'กรุณาเลือกหรือพิมพ์ชั้น';
+  if (!v.next_class && !nextOptions(v.cls).length) e.next_class = 'กรุณาเลือกหรือพิมพ์ชั้นปีหน้า';
   if (v.gpa && !(/^\d(\.\d{1,2})?$/.test(v.gpa) && Number(v.gpa) <= 4)) e.gpa = 'เกรดเฉลี่ยต้องอยู่ระหว่าง 0.00–4.00';
   if (Object.keys(e).length) { this.go('post-form', {edit: editId, values: v, errors: e}); return; }
-  const next = nextOptions(v.cls).includes(v.next_class) ? v.next_class : nextOptions(v.cls)[0] || '';
+  const next = v.next_class || nextOptions(v.cls)[0] || '';
   const type = v.type === 'CONT' ? 'CONT' : 'NEW';
-  const data = {type, school: this.pLot(pf.lot).school, cid: v.cid, title: v.title, first: v.first, last: v.last, cls: v.cls, next_class: next,
+  const data = {type, school: this.pLot(pf.lot).school, cid: v.cid, title: v.title, first: v.first, last: v.last, cls: v.cls, next_class: next, next_group: groupOfClass(next) ? '' : v.next_group || 'other',
     faculty: v.faculty || '', pvs_type: /^ปวส/.test(next) ? v.pvs_type || 'other' : '', gpa: v.gpa || '', note: v.note || '', from_db: !!v.from_db && !v.unlocked, gpa_before: v.gpa_before || ''};
   if (type === 'NEW') Object.assign(data, {family: v.family || '', equipment: arr(v.equipment), housing: v.housing || '', housing_detail: (P_HOUSING.find(x => x[0] === v.housing) || [])[2] ? v.housing_detail || '' : '', land: v.land || ''});
   else Object.assign(data, {use_money: v.use_money || '', docs: arr(v.docs)});
@@ -757,8 +778,8 @@ App.pListHtml = function (id) {
   const eqName = k => k === 'none' ? 'ไม่มีเลย' : (EQUIP.find(x => x[0] === k) || [, k])[1];
   const lab = (list, k) => (list.find(x => x[0] === k) || [, '—'])[1];
   const groups = [];
-  ['CONT', 'NEW'].forEach(t => P_LEVELS.forEach(([g, gt]) => {
-    const l = es.filter(e => e.type === t && groupOfClass(e.next_class) === g).sort((a, b) => P_CLASSES.indexOf(a.next_class) - P_CLASSES.indexOf(b.next_class));
+  ['CONT', 'NEW'].forEach(t => P_LEVELS_ALL.forEach(([g, gt]) => {
+    const l = es.filter(e => e.type === t && pGroupOf(e) === g).sort((a, b) => P_CLASSES.indexOf(a.next_class) - P_CLASSES.indexOf(b.next_class));
     if (l.length) groups.push([t, gt, l]);
   }));
   const DOC_SHORT = {cert: 'หนังสือ<br>รับรอง', bank: 'เดิน<br>บัญชี', expense: 'รายการ<br>ใช้จ่าย', receipt: 'ใบเสร็จ'};
