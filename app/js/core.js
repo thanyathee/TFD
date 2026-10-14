@@ -86,7 +86,12 @@ const ICONS = {
   chev: '<path d="m9 6 6 6-6 6"/>', back: '<path d="m15 6-6 6 6 6"/>',
   upload: '<path d="M12 16V4m-5 5 5-5 5 5"/><path d="M4 20h16"/>',
   print: '<path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
+  status: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
 };
+/* ไอคอนของแท็บเมนู 2 ปุ่ม */
+const TAB_ICON = {'student-status': 'status', 'student-form': 'edit', 'teacher-home': 'list', 'teacher-report': 'print'};
 const icon = (n, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
 
 const App = {
@@ -206,7 +211,7 @@ const App = {
       <button class="btn sm" data-action="home">ออกจากระบบ</button>` : '';
     const duo = nav && nav.length === 2;   // เมนู 2 ปุ่ม (ครู): ปุ่มกว้างเท่ากัน มีแถบสีเลื่อนไปมา
     const tabs = nav ? `<nav class="tabs ${duo ? 'duo' : ''}" aria-label="เมนู">${duo ? '<span class="ind" aria-hidden="true"></span>' : ''}${nav.map(n =>
-      `<button data-go="${n[0]}" ${n[0] === this.view.name || (n[2] || []).includes(this.view.name) ? 'aria-current="page"' : ''}>${esc(n[1])}</button>`).join('')}</nav>` : '';
+      `<button data-go="${n[0]}" ${n[0] === this.view.name || (n[2] || []).includes(this.view.name) ? 'aria-current="page"' : ''}>${duo && TAB_ICON[n[0]] ? icon(TAB_ICON[n[0]]) : ''}${esc(n[1])}</button>`).join('')}</nav>` : '';
     return `<div class="topbar-in">
       <button class="brand" data-action="home" aria-label="กลับหน้าแรก"><span class="logo">TF</span>
         <span class="brand-text"><b>ทุนการศึกษามูลนิธิทิสโก้</b><span>ปีการศึกษา ${this.db.cycle.year} · ต้นแบบทดลองใช้งาน</span></span></button>
