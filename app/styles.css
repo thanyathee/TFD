@@ -825,3 +825,25 @@ h1 .pf-lot{font-size:15px;padding:3px 12px}
   .pa-dec{grid-template-columns:repeat(4,auto);justify-content:start}
   .pa-docs span{display:inline-block;margin-right:8px}
 }
+/* หน้าอนุมัติ: กว้างขึ้นและอ่านสบายตา */
+.pa-wrap{width:min(1440px,calc(100vw - 32px));margin-left:calc(50% - min(720px,calc(50vw - 16px)))}
+.pa-tbl{font-size:15px;line-height:1.65}
+.pa-tbl th{font-size:13px;padding:11px 14px;line-height:1.4}
+.pa-tbl td{padding:14px;overflow-wrap:break-word;word-break:normal}
+.pa-tbl td small{font-size:13px;line-height:1.55}
+.pa-id{font-size:13px;margin-bottom:2px}
+.pa-tbl th:nth-child(2){width:200px}.pa-tbl th:nth-child(3){width:150px}.pa-tbl th:nth-child(4){width:120px}
+.pa-tbl th:nth-last-child(2){width:84px}.pa-tbl th:last-child{width:200px}
+.pa-NEW th:nth-child(6){width:28%}.pa-CONT th:nth-child(6){width:160px}
+.pa-docs span{font-size:13.5px;line-height:1.7}
+.pa-dec{gap:6px}
+.pa-b{padding:6px 8px;font-size:13.5px}
+@media (max-width:900px){
+  .pa-wrap{width:auto;margin-left:0}
+  .pa-tbl td{padding:0}
+  .pa-tbl tr{gap:6px 12px;padding:14px 16px}
+}
+.pa-tbl th:nth-child(2){width:190px}.pa-tbl th:nth-child(3){width:130px}
+.pa-CONT th:nth-child(4){width:110px}.pa-NEW th:nth-child(4){width:64px}
+.pa-tbl th:nth-last-child(2){width:80px}.pa-tbl th:last-child{width:190px}
+.pa-NEW th:nth-child(6){width:24%}.pa-CONT th:nth-child(6){width:165px}
