@@ -15,6 +15,7 @@ CREATE TYPE app_status AS ENUM (
   'draft',               -- นักเรียนกำลังกรอกข้อมูล
   'waiting_teacher',     -- ส่งแล้ว รอครูดำเนินการ (ข้อมูลถูกล็อก)
   'returned_to_student', -- ครู/จนท. เปิดสิทธิ์ให้นักเรียนแก้ไข
+  'waiting_transfer_proof', -- ส่งมูลนิธิฯ แล้ว แต่ติ๊กย้ายสถานศึกษา: รอหลักฐานการย้าย (จนท. บันทึกการย้ายแล้วจึงไป waiting_staff)
   'waiting_staff',       -- ส่งมูลนิธิฯ แล้ว รอเจ้าหน้าที่ดำเนินการ
   'need_more_info',      -- รอข้อมูลเพิ่มเติม
   'waiting_manager',     -- ส่งต่อให้ผู้จัดการพิจารณา
@@ -418,8 +419,7 @@ CREATE TABLE school_transfers (            -- ย้ายสถานศึก�
   notified_date   date NOT NULL,             -- วันที่แจ้งย้ายสถานศึกษา
   recorded_by     uuid NOT NULL REFERENCES staff_users(id),
   note            text,
-  created_at      timestamptz NOT NULL DEFAULT now(),
-  CHECK (to_school_id <> from_school_id)
+  created_at      timestamptz NOT NULL DEFAULT now()   -- to_school_id = from_school_id ได้ (แจ้งย้ายแต่สุดท้ายเรียนที่เดิม)
 );
 CREATE INDEX ON school_transfers (application_id, created_at);
 

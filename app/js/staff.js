@@ -13,13 +13,13 @@ const ROLE = {
   admin: ['แอดมินระบบ', 'ดูข้อมูลทั้งหมดและสถานะทุกขั้นตอน รวมถึง Audit Trail'],
 };
 const WORK = [['all', 'ทั้งหมด'], ['draft', 'นักเรียนกำลังกรอกข้อมูล'], ['waiting_teacher', 'รอครูดำเนินการ'],
-  ['waiting_reviewer', 'รอเจ้าหน้าที่ดำเนินการ'], ['waiting_manager', 'รอผู้จัดการพิจารณา'], ['manager_done', 'ดำเนินการเรียบร้อย']];
+  ['waiting_transfer', 'รอหลักฐานการย้ายสถานศึกษา'], ['waiting_reviewer', 'รอเจ้าหน้าที่ดำเนินการ'], ['waiting_manager', 'รอผู้จัดการพิจารณา'], ['manager_done', 'ดำเนินการเรียบร้อย']];
 const WORK_TEST = {
-  all: () => true, draft: s => ['draft', 'returned_to_student'].includes(s.status), waiting_teacher: s => s.status === 'waiting_teacher',
+  all: () => true, draft: s => ['draft', 'returned_to_student'].includes(s.status), waiting_teacher: s => s.status === 'waiting_teacher', waiting_transfer: s => s.status === 'waiting_transfer_proof',
   waiting_reviewer: s => ['waiting_staff', 'need_more_info'].includes(s.status), waiting_manager: s => s.status === 'waiting_manager',
   manager_done: s => s.status === 'decided',
 };
-const PIPE = ['draft', 'waiting_teacher', 'returned_to_student', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'];
+const PIPE = ['draft', 'waiting_teacher', 'returned_to_student', 'waiting_transfer_proof', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'];
 const TONE_COLOR = {idle: 'var(--idle)', warn: 'var(--warn)', bad: 'var(--bad)', info: 'var(--info)', violet: 'var(--violet)', ok: 'var(--ok)'};
 const ACTIVITY = [
   ['started', 'นักเรียนเริ่มกรอกใบสมัคร', k => k === 'started'],
@@ -324,7 +324,9 @@ App.views['staff-app'] = function (p) {
   let panel;
   if (role === 'reviewer') {
     const can = ['waiting_staff', 'need_more_info'].includes(s.status);
-    panel = can ? `<form class="stack" data-submit="staff-review" data-code="${s.code}" novalidate>
+    if (s.status === 'waiting_transfer_proof') panel = `<div class="note warn"><b>รอหลักฐานการย้ายสถานศึกษา</b><br>นักเรียนแจ้งย้ายสถานศึกษา ต้องบันทึกการย้ายก่อน (แม้เรียนต่อที่เดิมก็ต้องบันทึก) จึงจะพิจารณาต่อได้</div>
+      <button class="btn primary block" data-go="staff-transfer" data-code="${s.code}">ไปบันทึกการย้ายสถานศึกษา</button>`;
+    else panel = can ? `<form class="stack" data-submit="staff-review" data-code="${s.code}" novalidate>
       ${field('r_comment', 'ความคิดเห็นของเจ้าหน้าที่รีวิว', textarea('r_comment', v.r_comment ?? (sr && sr.comment) ?? '', 'rows="4" placeholder="สรุปข้อเท็จจริง ความจำเป็น ประเด็นสำคัญ หรือเหตุผลที่ไม่เข้าเกณฑ์"'), {err: e.r_comment})}
       ${field('r_result', 'ผลการรีวิว', select('r_result', [['forward', 'ส่งต่อให้ผู้จัดการพิจารณา'], ['ineligible', 'ไม่เข้าเกณฑ์'], ['need_more_info', 'รอข้อมูลเพิ่มเติม']], v.r_result || 'forward'))}
       ${field('r_round', 'จัดเข้ารอบ', select('r_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], v.r_round || s.round || (s.school_next === 'transfer' && !['ป.6', 'ม.3'].includes(s.class) ? '2' : '1')),
@@ -516,7 +518,7 @@ function transferForm(p) {
     ${errNote(e)}
     <div class="split">
       <form class="card stack" data-submit="transfer-save" data-code="${s.code}" novalidate>
-        <h3>สถานศึกษาใหม่</h3>
+        <h3>สถานศึกษาใหม่</h3><p class="small muted">ถ้าสุดท้ายเรียนต่อที่เดิม ให้เลือกสถานศึกษาเดิม</p>
         <div class="grid-2" data-area='{"school":true,"required":true,"schoolLabel":"ชื่อสถานศึกษาใหม่"}'>${this.areaPicker('tr', v, {school: true, required: true, schoolLabel: 'ชื่อสถานศึกษาใหม่'})}</div>
         ${e.school ? `<div class="err">${e.school}</div>` : ''}
         <p class="small muted">ไม่พบสถานศึกษา? <button class="btn ghost sm" type="button" data-action="transfer-addschool">+ เพิ่มสถานศึกษาใหม่</button></p>
@@ -575,7 +577,6 @@ App.on('transfer-save', function (form) {
   const from = last ? last.from : s.school;
   const e = {};
   if (!a.school) e.school = 'กรุณาเลือกสถานศึกษาใหม่';
-  else if (a.school === from) e.school = 'สถานศึกษาใหม่ต้องไม่ใช่สถานศึกษาเดิม';
   if (!v.t_class) e.cls = 'กรุณาเลือกระดับชั้นที่ไปเรียน';
   if (!v.notified) e.notified = 'กรุณาระบุวันที่แจ้งย้ายสถานศึกษา';
   if (Object.keys(e).length) { this.go('staff-transfer', {code: s.code, values: {...a, cls: v.t_class, notified: v.notified, note: v.note}, errors: e}); return; }
@@ -584,6 +585,7 @@ App.on('transfer-save', function (form) {
   addHistory(s, `${last ? 'แก้ไขการย้าย' : 'ย้ายสถานศึกษา'}: ${this.schoolName(from)} → ${this.schoolName(a.school)} (${v.t_class}) — ${this.session.name}`, 'transfer');
   s.school = a.school;
   s.next_class = v.t_class;
+  if (s.status === 'waiting_transfer_proof') { s.status = 'waiting_staff'; addHistory(s, 'ได้รับหลักฐานการย้ายสถานศึกษาแล้ว — รอเจ้าหน้าที่ดำเนินการ', 'transfer_proof'); }
   this.save();
   this.toast(`บันทึกการย้ายสถานศึกษาของ ${fullName(s)} แล้ว`);
   this.go('staff-transfer', {code: s.code});

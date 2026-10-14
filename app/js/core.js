@@ -2,13 +2,14 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v14';
+const STORE_KEY = 'tfd-scholarship-demo-v15';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
   draft:               {label: 'นักเรียนกำลังกรอกข้อมูล', tone: 'idle'},
   waiting_teacher:     {label: 'รอครูดำเนินการ',         tone: 'warn'},
   returned_to_student: {label: 'เปิดสิทธิ์ให้แก้ไข',        tone: 'bad'},
+  waiting_transfer_proof: {label: 'รอหลักฐานการย้ายสถานศึกษา', tone: 'warn'},
   waiting_staff:       {label: 'รอเจ้าหน้าที่ดำเนินการ',    tone: 'info'},
   need_more_info:      {label: 'รอข้อมูลเพิ่มเติม',        tone: 'warn'},
   waiting_manager:     {label: 'รอผู้จัดการพิจารณา',      tone: 'violet'},
@@ -120,9 +121,9 @@ const App = {
   fresh() {
     const s = this.data.seed;
     const copy = o => JSON.parse(JSON.stringify(o));
-    const sent = ['waiting_staff', 'need_more_info', 'waiting_manager', 'decided'];
+    const sent = ['waiting_transfer_proof', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'];
     return {
-      students: s.students.map(x => {
+      students: s.students.map(x => x.school_next === 'transfer' && x.status === 'waiting_staff' ? {...x, status: 'waiting_transfer_proof'} : x).map(x => {
         /* เอกสารตัวอย่าง: ส่งแล้ว = ครบ, รอครู = ตาม demo_docs (none / partial / full) */
         const docs = docsFor(x).filter(d => !d[3]);
         const n = sent.includes(x.status) || x.demo_docs === 'full' ? docs.length : x.demo_docs === 'partial' ? Math.ceil(docs.length / 2) : 0;
@@ -133,7 +134,9 @@ const App = {
         /* รูปแบบหลักสูตรตัวอย่าง: วิทยาลัย = ปกติ + ทวิภาคี, มหาวิทยาลัย = ปกติ + ภาคพิเศษ, โรงเรียน = ปกติ */
         modes: x.type === 'college' ? ['regular', 'dual'] : x.type === 'university' ? ['regular', 'special'] : ['regular']})),
       teachers: copy(s.teachers),
-      transfers: [],
+      /* ข้อมูลตัวอย่าง: นักเรียนที่ติ๊กย้าย ถ้าผ่าน จนท. ไปแล้ว ถือว่าบันทึกการย้ายแล้ว (เรียนที่เดิม) */
+      transfers: s.students.filter(x => x.school_next === 'transfer' && ['need_more_info', 'waiting_manager', 'decided'].includes(x.status))
+        .map(x => ({code: x.code, from: x.school, to: x.school, cls: x.next_class, date: '2027-05-10', note: 'ข้อมูลตัวอย่าง', by: 'จนท. 01', at: '2027-05-10T10:00'})),
       cycle: {year: 2570, history_year: 2569, status: 'open', open: '2026-11-01', close: '2027-01-31',
         transfer_open: '2027-03-01', first_cutoff: '2027-05-15', transfer_close: '2027-07-31'},
       pdpa: {version: '2026-08', effective: '2026-08-01', url: 'https://tiscofoundation.org/wp-content/uploads/pdpa_privacy_notice_tiscof.pdf'},
@@ -333,6 +336,10 @@ function validThaiId(id) {
   let sum = 0;
   for (let i = 0; i < 12; i++) sum += Number(id[i]) * (13 - i);
   return (11 - sum % 11) % 10 === Number(id[12]);
+}
+/* ใบสมัครถึงมูลนิธิฯ: ติ๊กย้ายและยังไม่บันทึกการย้าย → รอหลักฐานการย้ายสถานศึกษา */
+function arrivalStatus(s, transfers) {
+  return s.school_next === 'transfer' && !(transfers || []).some(t => t.code === s.code) ? 'waiting_transfer_proof' : 'waiting_staff';
 }
 function addHistory(s, text, kind) { (s.history = s.history || []).push({at: nowIso(), text, kind}); }
 

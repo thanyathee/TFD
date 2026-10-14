@@ -1,7 +1,7 @@
 /* บทบาทครู / สถานศึกษา (ตาม v28): 1 โรงเรียน = 1 Username → รายชื่อนักเรียน → แฟ้มนักเรียน → ส่งมูลนิธิฯ → ใบสรุปเสนอ ผอ. */
 'use strict';
 
-const SENT = ['waiting_staff', 'need_more_info', 'waiting_manager', 'decided'];
+const SENT = ['waiting_transfer_proof', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'];
 /* ครูเห็นสถานะแค่ 4 แบบ ผลการพิจารณาของมูลนิธิฯ ไม่แสดงฝั่งครู */
 function teacherBadge(s) {
   if (SENT.includes(s.status)) return '<span class="badge t-ok">ส่งมูลนิธิฯ สำเร็จ</span>';
@@ -258,8 +258,9 @@ App.on('teacher-send', function (form) {
     if (e.grade_before) { this.go('teacher-student', {code: s.code, values: v, errors: e}); return; }
   }
   s.teacher_review = {teacher: this.session.teacher, grade_type: v.grade_type, grade_value: g, grade_before: s.type === 'CONT' ? Number(v.grade_before) : null, comment: v.comment, sent_at: nowIso()};
-  s.status = 'waiting_staff';
+  s.status = arrivalStatus(s, this.db.transfers);
   addHistory(s, 'ครูส่งข้อมูลให้มูลนิธิฯ — ' + this.schoolName(s.school), 'teacher_sent');
+  if (s.status === 'waiting_transfer_proof') addHistory(s, 'รอหลักฐานการย้ายสถานศึกษา', 'waiting_transfer_proof');
   this.save();
   this.toast('ส่งข้อมูลนักเรียนรายนี้มายังมูลนิธิฯ เรียบร้อยแล้ว');
   this.go('teacher-home');

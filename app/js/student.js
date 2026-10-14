@@ -665,7 +665,7 @@ App.on('student-step', function (form, ev) {
   const missing = [1, 2].find(n => !stepComplete(s, n));
   if (missing) { this.toast(`ขั้นตอนที่ ${missing} ยังกรอกไม่ครบ`); this.go('student-form', {step: missing}); return; }
   const direct = s.group === 'bachelor';
-  s.status = direct ? 'waiting_staff' : 'waiting_teacher';
+  s.status = direct ? arrivalStatus(s, this.db.transfers) : 'waiting_teacher';
   s.submitted_at = nowIso();
   s.age_at_submit = ageAt(s.birth_date);
   s.pdpa_version = this.db.pdpa.version;
@@ -823,7 +823,7 @@ App.views['student-status'] = function () {
   const bachelor = s.group === 'bachelor';
   const flow = bachelor ? ['กรอกใบสมัคร', 'อัปโหลดเอกสารและส่งถึงมูลนิธิฯ', 'เจ้าหน้าที่ตรวจสอบ', 'ผู้จัดการพิจารณา', 'ประกาศผล']
     : ['กรอกใบสมัคร', 'ครูตรวจและแนบเอกสาร', 'เจ้าหน้าที่ตรวจสอบ', 'ผู้จัดการพิจารณา', 'ประกาศผล'];
-  const pos = {draft: 0, returned_to_student: 0, waiting_teacher: 1, waiting_staff: 2, need_more_info: 2, waiting_manager: 3, decided: 4}[s.status];
+  const pos = {draft: 0, returned_to_student: 0, waiting_teacher: 1, waiting_transfer_proof: 2, waiting_staff: 2, need_more_info: 2, waiting_manager: 3, decided: 4}[s.status];
   const editable = ['draft', 'returned_to_student'].includes(s.status);
   const t = this.teacherOf(s.school);
   const d = s.decision;
@@ -848,7 +848,7 @@ App.views['student-status'] = function () {
           <div class="subcard"><span class="label">เอกสารที่นักเรียนควรเตรียมส่งให้ครู</span><ul class="small" style="margin:0;padding-left:20px">${docs.map(x => `<li>${x[1]}</li>`).join('')}</ul></div></section>` : ''}
         ${bachelor && !editable ? `<section class="card"><div class="card-head"><h3>สำหรับระดับปริญญาตรี</h3><span class="sub">ประเภททุน: ${TYPE[s.type]}</span></div>
           <p class="small">นักศึกษาอัปโหลดเอกสารด้วยตนเอง เมื่อกรอกข้อมูลและแนบเอกสารครบแล้ว ใบสมัครจะถูกส่งมายังมูลนิธิฯ โดยตรง</p>
-          <div>${docs.map(([code, name, multi, opt]) => docRow(s, code, name, multi, s.status === 'waiting_staff' || s.status === 'need_more_info', 'student-file', opt)).join('')}</div></section>` : ''}
+          <div>${docs.map(([code, name, multi, opt]) => docRow(s, code, name, multi, ['waiting_transfer_proof', 'waiting_staff', 'need_more_info'].includes(s.status), 'student-file', opt)).join('')}</div></section>` : ''}
         <section class="card"><div class="card-head"><h3>สรุปใบสมัคร</h3>
           <button class="btn sm no-print" data-action="print">${icon('print')} พิมพ์ / บันทึกเป็น PDF</button></div>
           <p class="small muted no-print">ใบสมัครสรุป 1 หน้า A4 รูปแบบเดียวกันทุกคน สำหรับพิมพ์หรือบันทึกเป็น PDF เก็บไว้เป็นหลักฐาน ไม่ต้องส่งฉบับพิมพ์ให้มูลนิธิฯ</p>

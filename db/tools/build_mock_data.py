@@ -117,6 +117,7 @@ DEMO_CASES = [
     {'status': 'waiting_teacher', 'class': 'ม.6', 'type': 'NEW', 'docs': 'full', 'loan': True, 'transfer': True, 'note': 'ม.6 กู้ กยศ. เอกสารครบ ยังไม่เขียนความคิดเห็น'},
     {'status': 'waiting_teacher', 'class': 'ป.5', 'type': 'NEW', 'docs': 'partial', 'note': 'ป.5 แนบบางส่วน (มูลนิธิฯ พิจารณาจากความเห็นครู)'},
     {'status': 'waiting_staff', 'class': 'ม.2', 'type': 'NEW', 'note': 'ส่งมูลนิธิฯ แล้ว รอเจ้าหน้าที่'},
+    {'status': 'waiting_staff', 'class': 'ม.3', 'type': 'NEW', 'transfer': True, 'note': 'ส่งมูลนิธิฯ แล้ว รอหลักฐานการย้ายสถานศึกษา'},
     {'status': 'need_more_info', 'class': 'ม.5', 'type': 'CONT', 'note': 'เจ้าหน้าที่ขอข้อมูลเพิ่มเติม'},
     {'status': 'waiting_manager', 'class': 'ม.3', 'type': 'NEW', 'note': 'รอผู้จัดการพิจารณา'},
     {'status': 'decided', 'result': 'approved', 'class': 'ป.6', 'type': 'NEW', 'transfer': True, 'note': 'อนุมัติ (ย้ายไป ม.1 ที่อื่น)'},
@@ -340,6 +341,8 @@ def main():
         part = rng.random() < 0.3
         n_sib = rng.randint(0, 4)
         transfer = case.get('transfer', False) if case else rng.random() < (0.6 if cur in ('ม.3', 'ม.6', 'ปวช.3', 'ปวส.2') else 0.15)
+        if transfer and status == 'waiting_staff':
+            status = 'waiting_transfer_proof'   # ติ๊กย้าย: รอหลักฐานการย้ายก่อน จนท. ดำเนินการ
         apps.append({
             'id': aid, 'app_code': f'TF2570-{n:06d}', 'cycle_id': 1, 'student_id': sid, 'school_id': sc['id'],
             'applicant_type': 'CONT' if cont else 'NEW', 'received_prev_year': cont,
@@ -453,7 +456,7 @@ def main():
         if submitted:
             ev.append((submitted, 'นักศึกษาส่งใบสมัครถึงมูลนิธิฯ โดยตรง' if bachelor else 'นักเรียนส่งข้อมูลให้ครู', 'submitted'))
         t_sent = None
-        if status in ('waiting_staff', 'need_more_info', 'waiting_manager', 'decided'):
+        if status in ('waiting_transfer_proof', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'):
             t_sent = submitted + timedelta(days=rng.randint(1, 6), hours=rng.randint(0, 8))
             if not bachelor:
                 gpa = rng.random() < 0.7
