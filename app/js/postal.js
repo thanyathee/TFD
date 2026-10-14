@@ -616,7 +616,7 @@ App.pCoverHtml = function (id) {
 /* ใบที่ 2: รายชื่อที่บันทึกในระบบ — 1 ตาราง / 1 แผ่น · ต่อเนื่องก่อน แล้วทุนใหม่ แยกตามระดับชั้นปีหน้า
    ทุกตารางใช้ช่องและความกว้างเดียวกัน (ความสูงตามข้อมูล) · หัวกระดาษบอกโรงเรียน / กลุ่ม เพื่อให้ตารางได้พื้นที่มากที่สุด */
 /* ความกว้างช่อง (%) — ทุกแผ่นของประเภททุนเดียวกันเท่ากัน */
-const P_LIST_COLS = {CONT: [6, 19, 12, 10, 37, 4, 4, 4, 4], NEW: [6, 19, 12, 6, 32, 25]};
+const P_LIST_COLS = {CONT: [6, 19, 12, 10, 33, 5, 5, 5, 5], NEW: [6, 19, 12, 6, 32, 25]};
 const P_PER_SHEET = 12;   // คนต่อแผ่น (A4 แนวนอน · เว้นช่องลำดับให้ ผจก. วงผล)
 App.pListHtml = function (id) {
   const sc = this.schoolById[id];
@@ -628,9 +628,9 @@ App.pListHtml = function (id) {
     const l = es.filter(e => e.type === t && groupOfClass(e.next_class) === g).sort((a, b) => P_CLASSES.indexOf(a.next_class) - P_CLASSES.indexOf(b.next_class));
     if (l.length) groups.push([t, gt, l]);
   }));
-  const DOC_SHORT = {cert: 'หนังสือรับรอง', bank: 'รายการเดินบัญชี', expense: 'ใบรายการใช้จ่าย', receipt: 'ใบเสร็จ'};
+  const DOC_SHORT = {cert: 'หนังสือ<br>รับรอง', bank: 'เดิน<br>บัญชี', expense: 'รายการ<br>ใช้จ่าย', receipt: 'ใบเสร็จ'};
   const head = t => '<th class="n">ลำดับ</th><th>เลขประจำตัวประชาชน<br>ชื่อ–นามสกุล</th><th>ระดับชั้น<br><small>ปีนี้ → ปีหน้า · สาขา</small></th>'
-    + (t === 'CONT' ? '<th>เกรดเฉลี่ย<br><small>ก่อนรับทุน → ปีนี้</small></th><th>นำเงินทุนไปใช้จ่าย</th>' + P_DOCS.map(([k]) => `<th class="cv-dv"><span>${DOC_SHORT[k]}</span></th>`).join('')
+    + (t === 'CONT' ? '<th>เกรดเฉลี่ย<br><small>ก่อนรับทุน → ปีนี้</small></th><th>นำเงินทุนไปใช้จ่าย</th>' + P_DOCS.map(([k]) => `<th class="cv-dv">${DOC_SHORT[k]}</th>`).join('')
       : '<th>เกรด</th><th>สภาพครอบครัว</th><th>เครื่องใช้ในบ้าน · บ้าน · ที่ดินทำกิน</th>');
   const row = (e, i) => {
     const base = `<td class="n">${i + 1}</td><td><span class="cv-id">${esc(e.cid)}</span><br><b>${esc(pName(e))}</b></td>
@@ -640,10 +640,11 @@ App.pListHtml = function (id) {
     return `<tr>${base}<td><b>${esc(e.gpa || '—')}</b></td><td>${esc(e.family || '—')}</td>
       <td><small>เครื่องใช้:</small> ${arr(e.equipment).map(eqName).join(', ') || '—'} · <small>บ้าน:</small> ${esc(lab(P_HOUSING, e.housing))} · <small>ที่ดิน:</small> ${esc(lab(P_LAND, e.land))}</td></tr>`;
   };
-  const hd = (title, page, by) => `<div class="a4-head cv-lhead"><span class="a4-logo">TF</span>
-    <div><b>${esc(sc.name)} · จังหวัด${esc(sc.province)}</b><span>รายชื่อที่บันทึกในระบบ (${es.length} ราย) · ใบสมัครทางไปรษณีย์ ปีการศึกษา ${this.db.cycle.year} · ระดับชั้นนับตามชั้นปีหน้า</span></div>
-    <div class="cv-hs"><b class="cv-grp">${title}</b><span>${page}${by ? ` · บันทึกโดย ${esc(by)}` : ''}</span></div></div>`;
-  if (!groups.length) return `<div class="paper a4 land cover cv-list">${hd('ไม่มีรายชื่อ', '', '')}<p class="c">— ยังไม่มีรายชื่อที่บันทึก —</p></div>`;
+  const hd = (t, gt, n) => `<div class="a4-head cv-lhead"><span class="a4-logo">TF</span>
+    <div><b>${esc(sc.name)} · จังหวัด${esc(sc.province)} · ${esc(this.regionName(sc.region))}</b></div>
+    <div class="cv-hs">${t ? `<div class="cv-grp"><span class="cv-t cv-t-${t}">${TYPE[t]}</span><span class="cv-lv">${gt}</span></div><span class="cv-n">${n} ราย</span>` : ''}</div></div>`;
+  const ft = (page, by) => `<div class="cv-foot"><span>${by ? `บันทึกโดย ${esc(by)}` : ''}</span><span>${page}</span></div>`;
+  if (!groups.length) return `<div class="paper a4 land cover cv-list">${hd('', '', 0)}<p class="c">— ยังไม่มีรายชื่อที่บันทึก —</p></div>`;
   /* นับแผ่นแยกตามกลุ่ม เช่น ทุนต่อเนื่อง ม.ปลาย แผ่นที่ 1 / 1 */
   return groups.map(([t, gt, l]) => {
     const pages = [];
@@ -651,9 +652,10 @@ App.pListHtml = function (id) {
     return pages.map((chunk, pi) => {
       const by = [...new Set(chunk.map(e => this.pUser(e.by).name))].join(', ');
       return `<div class="paper a4 land cover cv-list ${t === 'CONT' ? 'paper-blue' : ''}">
-      ${hd(`${TYPE[t]} ${gt} <span>(${l.length} ราย)</span>`, `แผ่นที่ ${pi + 1} / ${pages.length}`, by)}
+      ${hd(t, gt, l.length)}
       <table class="cv-ltbl"><colgroup>${P_LIST_COLS[t].map(w => `<col style="width:${w}%">`).join('')}</colgroup>
-        <thead><tr>${head(t)}</tr></thead><tbody>${chunk.map((e, i) => row(e, pi * P_PER_SHEET + i)).join('')}</tbody></table></div>`;
+        <thead><tr>${head(t)}</tr></thead><tbody>${chunk.map((e, i) => row(e, pi * P_PER_SHEET + i)).join('')}</tbody></table>
+      ${ft(`แผ่นที่ ${pi + 1} / ${pages.length}`, by)}</div>`;
     }).join('');
   }).join('');
 };

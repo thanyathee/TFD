@@ -646,8 +646,41 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .paper .cv-ltbl td.cv-ck2{text-align:center;vertical-align:middle;font-size:15px;padding:2px}
 .cv-ck2 .no{color:#b3261e}
 /* ตัวอย่างกระดาษสีฟ้าอ่อน (ทุนต่อเนื่อง) — บนจอเท่านั้น */
-.paper.paper-blue{background:#dcecfa}
-.paper.paper-blue th{background:#c9e0f6}
+.paper.paper-blue{background:#f3f9ff}
+.paper.paper-blue th{background:#e9f2fc}
 @media print{.paper.paper-blue,.paper.paper-blue th{background:#fff!important}.paper.paper-blue th{background:#eef3fb!important}}
 .pf-lv{font-size:13px;font-weight:600;color:var(--brand);margin:4px 0 2px}
 .pf-lv span{color:var(--muted);font-weight:500}
+/* หัว / ท้ายใบรายชื่อ */
+.cv-list{display:flex;flex-direction:column}
+.cv-lhead{align-items:center}
+.cv-lhead>div:nth-child(2) b{font-size:16px}
+.cv-grp{display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.cv-grp .cv-t,.cv-grp .cv-lv{font-size:16px;font-weight:700;padding:3px 12px;border-radius:8px;line-height:1.4}
+.cv-t-CONT{background:#0055b8;color:#fff}.cv-t-NEW{background:#137a45;color:#fff}
+.cv-lv{border:2px solid #0055b8;color:#0055b8}
+.cv-n{display:block;font-size:13px;color:#333;margin-top:4px;text-align:right}
+.cv-foot{margin-top:auto;padding-top:8px;display:flex;justify-content:space-between;font-size:12px;color:#555}
+.cv-foot span:last-child{font-weight:700;color:#222}
+.paper .cv-ltbl th.cv-dv{height:auto;padding:5px 2px;font-size:11px;line-height:1.3;vertical-align:bottom;text-align:center}
+@media print{
+  .cv-list{min-height:186mm!important}
+  .cv-t-CONT,.cv-t-NEW{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+.cv-lhead .cv-hs{flex:none;white-space:nowrap}
+.cv-lhead>div:nth-child(2){flex:1;min-width:0}
+@media print{.cv-list{min-height:182mm!important}}
+.a4-head .cv-grp{display:flex!important;flex-direction:row}
+.a4-head .cv-hs{display:block}
+.paper .cv-ltbl td{padding:4px 6px}
+.cv-grp .cv-t-CONT,.cv-grp .cv-t-NEW{color:#fff}
+.cv-grp .cv-lv{color:#0055b8}
+.paper.a4.cv-list{display:flex;flex-direction:column}
+.a4-head .cv-grp span.cv-t,.a4-head .cv-grp span.cv-lv{font-size:17px;font-weight:700;padding:3px 14px;border-radius:8px;line-height:1.4}
+.a4-head .cv-grp span.cv-t{color:#fff}
+.a4-head .cv-grp span.cv-lv{color:#0055b8}
+.a4-head span.cv-n{font-size:14px;color:#222;font-weight:600}
+@media print{
+  .paper.a4.cv-list{display:block;position:relative;height:184mm;min-height:0!important;break-inside:auto}
+  .cv-list .cv-foot{position:absolute;left:0;right:0;bottom:0}
+}
