@@ -355,16 +355,14 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .tabs button:hover{transform:translateY(-1px);filter:brightness(.96)}
 .tabs button:active{transform:translateY(0)}
 /* เมนูครู 2 ปุ่ม: กว้างเท่ากัน แถบสีวิ่งจากปุ่มหนึ่งไปอีกปุ่ม (รายชื่อ = ดำ, ใบสรุป ผอ. = แดง) */
-.tabs.duo{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:0;width:calc(100% - 32px);max-width:560px;margin:0 auto 12px;padding:4px;
-  background:var(--surface);border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--line);overflow:visible}
-.tabs.duo .ind{position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:999px;background:var(--ink);
-  transform:translateX(calc(var(--i, 0) * 100%));transition:transform .35s cubic-bezier(.3,.7,.2,1),background-color .35s}
-.tabs.duo:has([data-go="teacher-report"])[data-at="1"] .ind{background:#d93025}
-.tabs.duo button{position:relative;z-index:1;justify-content:center;background:none;box-shadow:none;padding:11px 16px;font-size:15.5px;transition:color .3s}
-.tabs.duo button:hover{transform:none;filter:none;background:rgba(0,0,0,.04)}
-.tabs.duo button[aria-current="page"]{background:none;color:#fff}
-.tabs.duo button[data-go="teacher-report"]:not([aria-current]){color:#d93025}
-.tabs.duo button[aria-current="page"]:hover{background:none}
+/* เมนู 2 แท็บ (นักเรียน / ครู): แท็บมาตรฐาน ตัวหนังสือชัด เส้นใต้สีน้ำเงินเลื่อนตามแท็บที่เลือก */
+.tabs.duo{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:0;max-width:1080px;margin:0 auto;padding:0 16px;overflow:visible;
+  border-bottom:1px solid var(--line)}
+.tabs.duo .ind{position:absolute;bottom:-1px;left:16px;height:3px;width:calc((100% - 32px) / 2);border-radius:3px 3px 0 0;background:var(--brand);
+  transform:translateX(calc(var(--i, 0) * 100%));transition:transform .3s cubic-bezier(.3,.7,.2,1)}
+.tabs.duo button{justify-content:center;background:none;box-shadow:none;border-radius:0;padding:14px 12px;font-size:16px;font-weight:600;color:var(--muted);transition:color .2s,background-color .2s}
+.tabs.duo button:hover{transform:none;filter:none;background:var(--fill);color:var(--ink)}
+.tabs.duo button[aria-current="page"]{background:none;color:var(--brand)}
 @media (prefers-reduced-motion:reduce){.tabs button,.tabs button:hover,.tabs.duo .ind{transition:none;transform:none}.tabs.duo .ind{transform:translateX(calc(var(--i, 0) * 100%))}}
 /* ใบสรุปเสนอ ผอ. ขนาด A4 แนวตั้ง */
 .a4-wrap{overflow:hidden}
