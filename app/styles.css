@@ -750,3 +750,26 @@ h1 .pf-lot{font-size:15px;padding:3px 12px}
 .pf-st{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
 .pf-st>span:not(.badge){font-size:13px;color:var(--ink-2);white-space:nowrap}
 @media (max-width:760px){.pf-stbl .pf-st{flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 10px}}
+/* รายชื่อผู้สมัคร (ไปรษณีย์) */
+.pf-pfilters{grid-template-columns:repeat(4,minmax(0,1fr))}
+.pf-pfilters .field:first-child{grid-column:span 2}
+.pf-pname{text-align:left;font-weight:700;color:var(--ink);text-decoration:none}
+.pf-pname:hover{color:var(--brand);text-decoration:underline}
+.pf-ptbl .table-wrap{overflow-x:visible}
+.pf-ptbl .tbl{width:100%}
+.pf-ptbl .tbl td{vertical-align:top}
+.pf-ptbl .tbl td:nth-child(5),.pf-ptbl .tbl td:nth-child(6),.pf-ptbl .tbl td:nth-child(7){white-space:nowrap}
+@media (max-width:900px){.pf-pfilters{grid-template-columns:1fr 1fr}}
+@media (max-width:760px){
+  .pf-ptbl .tbl thead{display:none}
+  .pf-ptbl .tbl,.pf-ptbl .tbl tbody{display:block}
+  .pf-ptbl .tbl tr{display:flex;flex-wrap:wrap;gap:4px 12px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .pf-ptbl .tbl td{display:block;border:0;padding:0}
+  .pf-ptbl .tbl td:nth-child(1){color:var(--muted)}
+  .pf-ptbl .tbl td:nth-child(2){flex:1 1 calc(100% - 40px)}
+  .pf-ptbl .tbl td:nth-child(n+3){font-size:13px;margin-left:24px}
+  .pf-ptbl .tbl td:nth-child(3),.pf-ptbl .tbl td:nth-child(4),.pf-ptbl .tbl td:nth-child(8){flex-basis:100%}
+  .pf-ptbl .tbl td:nth-child(5)::before{content:"เกรด "}
+  .pf-ptbl .tbl td:nth-child(6)::before{content:"เงินทุน "}
+}
+.pf-ptbl .tbl td:nth-child(8){white-space:nowrap}

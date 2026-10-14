@@ -263,9 +263,9 @@ App.pNav = function () {
   const r = this.session.pRole;
   const all = {
     form: ['post-form', 'บันทึกข้อมูล'], schools: ['post-schools', 'ใบปะหน้าโรงเรียน', ['post-cover']],
-    approve: ['post-approve', 'อนุมัติทุน'], work: ['post-work', r === 'clerk' ? 'ผลงานของฉัน' : 'ผลงานเจ้าหน้าที่'], users: ['post-users', 'ผู้ใช้งาน'], recipients: ['post-recipients', 'ผู้ได้รับทุนปีก่อน'],
+    approve: ['post-approve', 'อนุมัติทุน'], work: ['post-work', r === 'clerk' ? 'ผลงานของฉัน' : 'ผลงานเจ้าหน้าที่'], users: ['post-users', 'ผู้ใช้งาน'], people: ['post-people', 'รายชื่อผู้สมัคร'], recipients: ['post-recipients', 'ผู้ได้รับทุนปีก่อน'],
   };
-  const keys = r === 'clerk' ? ['form', 'schools', 'work'] : r === 'manager' ? ['schools', 'approve', 'work'] : ['form', 'schools', 'approve', 'work', 'recipients', 'users'];
+  const keys = r === 'clerk' ? ['form', 'schools', 'work'] : r === 'manager' ? ['schools', 'people', 'approve', 'work'] : ['form', 'schools', 'people', 'approve', 'work', 'recipients', 'users'];
   return keys.map(k => all[k]);
 };
 App.pRoleBar = function () {
@@ -745,7 +745,7 @@ App.views['post-schools'] = pNeedLogin(function (p) {
       ${role === 'clerk' ? '' : field('by', 'ผู้บันทึก', select('by', clerks.map(u => [u.username, u.name]), f.by, 'ทุกคน'))}
       <div class="field"><span class="label">&nbsp;</span><button class="btn" type="submit">ค้นหา</button></div></form>
     <div class="pf-stbl">${tbl([{t: '#'}, {t: 'โรงเรียน'}, {t: 'ใหม่', r: 1}, {t: 'ต่อเนื่อง', r: 1}, {t: 'รวม', r: 1}, {t: 'สถานะ · แก้ไขล่าสุด'}, {t: ''}],
-      rows.map((r, i) => [i + 1, `<span class="pf-sname"><b>${esc(r.sc.name)}</b><span class="small muted">จ.${esc(r.sc.province)}</span></span>`, r.c.total.NEW, r.c.total.CONT,
+      rows.map((r, i) => [i + 1, `<span class="pf-sname"><b>${role === 'clerk' ? esc(r.sc.name) : `<button type="button" class="linkbtn" data-go="post-people" data-school="${r.sc.id}">${esc(r.sc.name)}</button>`}</b><span class="small muted">จ.${esc(r.sc.province)}</span></span>`, r.c.total.NEW, r.c.total.CONT,
         `<b>${r.c.total.NEW + r.c.total.CONT}</b>`, `<div class="pf-st">${pBadge(r.st)}<span>${r.b.updated ? pShortDate(r.b.updated) : '—'}${role === 'clerk' ? '' : ` · ${esc(this.pUser(r.b.by).name || '—')}`}</span></div>`,
         `<div class="row nowrap"><button class="btn sm pf-ic" data-go="post-cover" data-id="${r.id}" title="ใบปะหน้า" aria-label="ใบปะหน้า">${icon('print')}</button>
           ${role !== 'manager' && this.pCanEdit(r.id) ? `<button class="btn sm" data-action="p-open" data-id="${r.id}">${r.b.done ? 'แก้ไข' : 'บันทึกต่อ'}</button>` : ''}
@@ -967,6 +967,84 @@ App.views['post-work'] = pNeedLogin(function (p) {
 });
 App.on('p-work-sel', function (el) { this.go('post-work', {f: {by: el.value}}); });
 App.on('p-work-filter', function (form) { this.go('post-work', {f: formData(form)}); });
+
+/* ---------- แอดมิน / ผจก.: รายชื่อผู้สมัครทางไปรษณีย์ รายคน ---------- */
+const P_RESULT = [['wait', 'รอพิจารณา'], ['approved', 'อนุมัติ'], ['rejected', 'ไม่อนุมัติ']];
+App.pPeopleRows = function (f) {
+  const db = this.P();
+  const q = (f.q || '').trim();
+  return db.entries.filter(e => this.pSc(e.lot)).map(e => ({e, sc: this.pSc(e.lot), res: e.decision ? e.decision.result : 'wait'}))
+    .filter(x => !q || x.e.cid.includes(q.replace(/\D/g, '') || '#') || pName(x.e).includes(q) || `${x.e.first} ${x.e.last}`.includes(q))
+    .filter(x => !f.region || x.sc.region === f.region)
+    .filter(x => !f.province || x.sc.province === f.province)
+    .filter(x => !f.school || x.sc.id === f.school)
+    .filter(x => !f.type || x.e.type === f.type)
+    .filter(x => !f.g || pGroupOf(x.e) === f.g)
+    .filter(x => !f.res || x.res === f.res)
+    .filter(x => !f.by || x.e.by === f.by)
+    .sort((a, b) => a.sc.province.localeCompare(b.sc.province, 'th') || a.sc.name.localeCompare(b.sc.name, 'th') || a.e.type.localeCompare(b.e.type)
+      || P_CLASSES.indexOf(a.e.next_class) - P_CLASSES.indexOf(b.e.next_class) || a.e.first.localeCompare(b.e.first, 'th'));
+};
+App.views['post-people'] = pNeedLogin(function (p) {
+  if (this.session.pRole === 'clerk') return this.views['post-work'].call(this, {});
+  const db = this.P();
+  const f = p.f || (p.school ? {school: p.school} : this.session.pPeopleF || {});
+  this.session.pPeopleF = f;
+  const rows = this.pPeopleRows(f);
+  const sch = this.db.schools;
+  const used = [...new Set(db.entries.map(e => (this.pSc(e.lot) || {}).id).filter(Boolean))].map(id => this.schoolById[id]);
+  const regions = this.data.geo.regions.filter(r => used.some(s => s.region === r.code)).map(r => [r.code, r.name]);
+  const provs = [...new Set(used.filter(s => !f.region || s.region === f.region).map(s => s.province))].sort((a, b) => a.localeCompare(b, 'th'));
+  const schools = used.filter(s => (!f.region || s.region === f.region) && (!f.province || s.province === f.province)).sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  const cnt = k => rows.filter(x => x.e.type === k).length;
+  const amt = rows.filter(x => x.res === 'approved').reduce((a, x) => a + this.pRate(x.e).amount, 0);
+  const MAX = 200, shown = rows.slice(0, MAX);
+  const resBadge = x => x.res === 'wait' ? '<span class="badge t-violet">รอพิจารณา</span>' : `<span class="badge t-${DECISION[x.res].tone}">${DECISION[x.res].label}</span>`;
+  this._peopleCsv = [['ลำดับ', 'เลขประจำตัวประชาชน', 'ชื่อ-นามสกุล', 'โรงเรียน', 'จังหวัด', 'ทุน', 'ชั้นปีนี้', 'ชั้นปีหน้า', 'สาขา', 'เกรด', 'เงินทุน', 'ผลพิจารณา', 'ผู้บันทึก', 'วันที่บันทึก']]
+    .concat(rows.map((x, i) => [i + 1, x.e.cid, pName(x.e), x.sc.name, x.sc.province, TYPE[x.e.type], x.e.cls, x.e.next_class, x.e.faculty || '', x.e.gpa || '',
+      this.pRate(x.e).amount, P_RESULT.find(r => r[0] === x.res)[1], this.pUser(x.e.by).name, (x.e.at || '').slice(0, 10)]));
+  return {nav: this.pNav(), html: `${this.pRoleBar()}
+    <div class="page-head"><div><h1>รายชื่อผู้สมัคร (ทางไปรษณีย์)</h1><p class="sub">ดูรายคน ค้นหาด้วยเลข 13 หลักหรือชื่อ · กดชื่อเพื่อดูข้อมูลเต็ม</p></div>
+      <button class="btn" data-action="p-people-export">Export Excel</button></div>
+    <div class="stats"><div class="stat"><span>ทั้งหมด</span><b>${rows.length}</b><small>คน</small></div><div class="stat"><span>ทุนใหม่</span><b>${cnt('NEW')}</b></div>
+      <div class="stat"><span>ทุนต่อเนื่อง</span><b>${cnt('CONT')}</b></div><div class="stat"><span>อนุมัติแล้ว</span><b>${rows.filter(x => x.res === 'approved').length}</b><small>${baht(amt)}</small></div></div>
+    <form class="card filters pf-pfilters" data-submit="p-people-filter">
+      ${field('q', 'เลข 13 หลัก / ชื่อ–นามสกุล', input('q', f.q, 'placeholder="พิมพ์บางส่วนก็ได้"'))}
+      ${field('region', 'ภาค', select('region', regions, f.region, 'ทุกภาค', 'data-onchange="p-people-sel"'))}
+      ${field('province', 'จังหวัด', select('province', provs, f.province, 'ทุกจังหวัด', 'data-onchange="p-people-sel"'))}
+      ${field('school', 'โรงเรียน', select('school', schools.map(s => [s.id, s.name]), f.school, 'ทุกโรงเรียน', 'data-onchange="p-people-sel"'))}
+      ${field('type', 'ทุน', select('type', Object.entries(TYPE), f.type, 'ทุกประเภท', 'data-onchange="p-people-sel"'))}
+      ${field('g', 'ระดับ (ชั้นปีหน้า)', select('g', P_LEVELS_ALL, f.g, 'ทุกระดับ', 'data-onchange="p-people-sel"'))}
+      ${field('res', 'ผลพิจารณา', select('res', P_RESULT, f.res, 'ทั้งหมด', 'data-onchange="p-people-sel"'))}
+      ${field('by', 'ผู้บันทึก', select('by', db.users.filter(u => u.role !== 'manager').map(u => [u.username, u.name]), f.by, 'ทุกคน', 'data-onchange="p-people-sel"'))}
+      <div class="field"><span class="label">&nbsp;</span><div class="row nowrap"><button class="btn primary" type="submit">ค้นหา</button><button class="btn ghost" type="button" data-action="p-people-clear">ล้าง</button></div></div></form>
+    <p class="small muted">พบ ${rows.length} คน${rows.length > shown.length ? ` · แสดง ${shown.length} คนแรก` : ''}</p>
+    <div class="pf-ptbl">${tbl([{t: '#'}, {t: 'เลขบัตร / ชื่อ'}, {t: 'โรงเรียน'}, {t: 'ทุน · ชั้น'}, {t: 'เกรด', r: 1}, {t: 'เงินทุน', r: 1}, {t: 'ผล'}, {t: 'ผู้บันทึก'}],
+      shown.map((x, i) => [i + 1,
+        `<span class="small muted">${esc(x.e.cid)}</span><br><button type="button" class="linkbtn pf-pname" data-go="post-approve" data-id="${x.e.lot}" data-focus="${x.e.id}">${esc(pName(x.e))}</button>`,
+        `${esc(x.sc.name)}<br><span class="small muted">จ.${esc(x.sc.province)}</span>`,
+        `${TYPE[x.e.type]}<br><span class="small muted">${esc(x.e.cls)} → ${esc(x.e.next_class)}${x.e.faculty ? ' · ' + esc(x.e.faculty) : ''}</span>`,
+        esc(x.e.gpa || '—'), this.pRate(x.e).amount ? this.pRate(x.e).amount.toLocaleString('th-TH') : '—', resBadge(x),
+        `${esc(this.pUser(x.e.by).name)}<br><span class="small muted">${x.e.at ? pShortDate(x.e.at) : ''}</span>`]))}</div>`,
+    after() { if (f.q != null) { const q = document.getElementById('q'); if (q && p.f) q.focus(); } }};
+});
+App.on('p-people-filter', function (form) { this.go('post-people', {f: formData(form)}); });
+App.on('p-people-sel', function (el) {
+  const f = formData(el.form);
+  if (el.name === 'region') { f.province = ''; f.school = ''; }
+  if (el.name === 'province') f.school = '';
+  this.go('post-people', {f});
+});
+App.on('p-people-clear', function () { this.go('post-people', {f: {}}); });
+App.on('p-people-export', function () {
+  const csv = '\ufeff' + (this._peopleCsv || []).map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
+    a.download = `postal-applicants-${this.db.cycle.year}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+  } catch (e) { this.toast('Export ไม่สำเร็จ'); }
+});
 
 /* ---------- แอดมิน: รายชื่อผู้ได้รับทุนปีล่าสุด (ใช้เทียบทุนใหม่ / ต่อเนื่อง) ---------- */
 App.views['post-recipients'] = pNeedLogin(function (p) {
