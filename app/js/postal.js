@@ -9,7 +9,7 @@ const P_ROLE = {
   admin: ['แอดมิน', 'ดูผลงานทุกคน และจัดการผู้ใช้งาน'],
 };
 const P_STATUS = {
-  doing: ['กำลังบันทึก', 'warn'], done: ['บันทึกเสร็จ', 'info'], printed: ['พิมพ์ใบปะหน้าแล้ว', 'violet'],
+  doing: ['กำลังบันทึก', 'warn'], done: ['บันทึกเสร็จ', 'info'],
   reviewing: ['ผจก.กำลังพิจารณา', 'violet'], approved: ['ผจก.พิจารณาครบแล้ว', 'ok'],
 };
 /* ระดับในใบปะหน้า: นับตามชั้นปีหน้า (ชั้นที่ได้รับทุน) */
@@ -248,10 +248,11 @@ App.pStatus = function (school) {
   const decided = es.filter(e => e.decision).length;
   if (es.length && decided === es.length) return 'approved';
   if (decided) return 'reviewing';
-  if (b && b.printed) return 'printed';
   if (b && b.done) return 'done';
   return 'doing';
 };
+/* ผจก. / แอดมินเห็น "บันทึกเสร็จ" เป็น "รอพิจารณา" (งานส่งต่อจาก จนท. แล้ว) */
+const pBadgeFor = (k, role) => k === 'done' && role !== 'clerk' ? '<span class="badge t-violet">รอพิจารณา</span>' : pBadge(k);
 const pBadge = k => k ? `<span class="badge t-${P_STATUS[k][1]}">${P_STATUS[k][0]}</span>` : '<span class="muted small">ยังไม่เริ่ม</span>';
 App.pTouch = function (lot) {
   const b = this.pLot(lot);
@@ -776,7 +777,7 @@ App.views['post-schools'] = pNeedLogin(function (p) {
       <div class="field"><span class="label">&nbsp;</span><button class="btn" type="submit">ค้นหา</button></div></form>
     <div class="pf-stbl">${tbl([{t: '#'}, {t: 'โรงเรียน'}, {t: 'ใหม่', r: 1}, {t: 'ต่อเนื่อง', r: 1}, {t: 'รวม', r: 1}, {t: 'สถานะ · แก้ไขล่าสุด'}, {t: ''}],
       rows.map((r, i) => [i + 1, `<span class="pf-sname"><b>${role === 'clerk' ? esc(r.sc.name) : `<button type="button" class="linkbtn" data-go="post-people" data-school="${r.sc.id}">${esc(r.sc.name)}</button>`}</b><span class="small muted">จ.${esc(r.sc.province)}</span></span>`, r.c.total.NEW, r.c.total.CONT,
-        `<b>${r.c.total.NEW + r.c.total.CONT}</b>`, `<div class="pf-st">${pBadge(r.st)}<span>${r.b.updated ? pShortDate(r.b.updated) : '—'}${role === 'clerk' ? '' : ` · ${esc(this.pUser(r.b.by).name || '—')}`}</span></div>`,
+        `<b>${r.c.total.NEW + r.c.total.CONT}</b>`, `<div class="pf-st">${pBadgeFor(r.st, role)}<span>${r.b.updated ? pShortDate(r.b.updated) : '—'}${role === 'clerk' ? '' : ` · ${esc(this.pUser(r.b.by).name || '—')}`}</span></div>`,
         `<div class="row nowrap"><button class="btn sm pf-ic" data-go="post-cover" data-id="${r.id}" title="ใบปะหน้า" aria-label="ใบปะหน้า">${icon('print')}</button>
           ${role !== 'manager' ? `<button class="btn sm" data-action="p-open" data-id="${r.id}">${!this.pCanEdit(r.id) ? 'ดู' : r.b.done ? 'แก้ไข' : 'บันทึกต่อ'}</button>` : ''}
           ${role !== 'clerk' && r.c.entered ? `<button class="btn sm" data-go="post-approve" data-id="${r.id}">อนุมัติ</button>` : ''}</div>`]))}</div>`};
@@ -922,7 +923,7 @@ App.views['post-approve'] = pNeedLogin(function (p) {
         <div class="field"><span class="label">&nbsp;</span><button class="btn primary" type="submit">ค้นหา</button></div></form>
       <div class="pf-stbl pf-atbl">${tbl([{t: 'เลขที่'}, {t: 'โรงเรียน'}, {t: 'ผู้บันทึก'}, {t: 'บันทึกแล้ว', r: 1}, {t: 'รอพิจารณา', r: 1}, {t: 'สถานะ'}, {t: ''}],
         rows.map(r => [`<b class="pf-code">${this.pCode(r.id)}</b>`, `<span class="pf-sname"><b>${esc(this.pSc(r.id).name)}</b><span class="small muted">จ.${esc(this.pSc(r.id).province)} · บันทึก ${this.pLotDate(r.id)}</span></span>`, `<span class="nw">${esc(this.pUser(this.pOwner(r.id)).name)}</span>`, r.n,
-          r.wait ? `<b>${r.wait}</b>` : '0', pBadge(r.st), `<button class="btn sm ${r.wait ? 'primary' : ''}" data-go="post-approve" data-id="${r.id}">${r.wait ? 'พิจารณา' : 'ดู'}</button>`]))}</div>`,
+          r.wait ? `<b>${r.wait}</b>` : '0', pBadgeFor(r.st, this.session.pRole), `<button class="btn sm ${r.wait ? 'primary' : ''}" data-go="post-approve" data-id="${r.id}">${r.wait ? 'พิจารณา' : 'ดู'}</button>`]))}</div>`,
       after() { const x = document.getElementById('q'); if (x) x.focus(); }};
   }
   if (!this.pLot(p.id)) return this.views['post-approve'].call(this, {});
@@ -1021,7 +1022,7 @@ App.views['post-work'] = pNeedLogin(function (p) {
     <h2>รายโรงเรียน</h2>
     ${tbl([{t: '#'}, {t: 'โรงเรียน'}, {t: 'ผู้บันทึก'}, {t: 'บันทึก (ราย)', r: 1}, {t: 'สถานะ'}, {t: 'อัปเดตล่าสุด'}, {t: ''}],
       list.map(([id, b], i) => [i + 1, `<b>${esc(this.pSc(id).name)}</b> <br><span class="small muted">จ.${esc(this.pSc(id).province)} · บันทึก ${this.pLotDate(id)}</span>`,
-        esc(this.pUser(b.by).name), this.pEntriesOf(id).length, pBadge(this.pStatus(id)), b.updated ? thDate(b.updated, true) : '—',
+        esc(this.pUser(b.by).name), this.pEntriesOf(id).length, pBadgeFor(this.pStatus(id), this.session.pRole), b.updated ? thDate(b.updated, true) : '—',
         `<button class="btn sm" data-go="post-cover" data-id="${id}">ใบปะหน้า</button>`]))}`};
 });
 App.on('p-work-sel', function (el) { this.go('post-work', {f: {by: el.value}}); });
