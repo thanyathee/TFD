@@ -895,27 +895,27 @@ App.views['staff-users'] = function (p) {
   const f = p.f || this._usF || {};
   this._usF = f;
   const q = (f.q || '').toLowerCase();
-  const rows = this.staffList().map(u => ({kind: 'staff', username: u.username, name: u.name, role: u.role, school: '', active: u.active !== false, last: u.last_login, position: u.position}))
-    .concat(this.db.teachers.map(t => ({kind: 'teacher', username: t.username, name: t.name, role: 'teacher', school: t.school, active: t.active !== false, last: t.last_login, position: t.position})))
+  /* เฉพาะบัญชีเจ้าหน้าที่มูลนิธิฯ — บัญชีครูจัดการที่หน้าสถานศึกษา/ครู */
+  const rows = this.staffList().map(u => ({username: u.username, name: u.name, role: u.role, active: u.active !== false, last: u.last_login, position: u.position, email: u.email}))
     .filter(u => (!f.role || u.role === f.role) && (!f.state || (f.state === 'on') === u.active)
-      && (!q || (u.username + u.name + (u.school ? this.schoolName(u.school) : '')).toLowerCase().includes(q)));
+      && (!q || (u.username + u.name + (u.email || '')).toLowerCase().includes(q)));
   const roleName = r => (USER_ROLES.find(x => x[0] === r) || [, r])[1];
-  const nStaff = this.staffList().length, nTeacher = this.db.teachers.length;
+  const nStaff = this.staffList().length;
   return {nav: this.staffNav(), html: `${this.roleBar()}
-    <div class="page-head"><div><h1>ผู้ใช้งาน</h1><p class="sub">บัญชีเจ้าหน้าที่ ${nStaff} · บัญชีครู ${nTeacher} (บัญชีครูแก้ที่หน้าสถานศึกษา)</p></div>
+    <div class="page-head"><div><h1>ผู้ใช้งาน</h1><p class="sub">บัญชีเจ้าหน้าที่มูลนิธิฯ ${nStaff} บัญชี · บัญชีครูจัดการที่เมนู “สถานศึกษา/ครู”</p></div>
       <button class="btn primary" data-go="staff-user" data-u="new">+ เพิ่มบัญชีเจ้าหน้าที่</button></div>
     <div class="filters us-filters">
-      ${field('u_q', 'ค้นหา', input('u_q', f.q || '', 'placeholder="Username / ชื่อ / สถานศึกษา" data-oninput="users-search"'))}
-      ${field('u_role', 'บทบาท', select('u_role', USER_ROLES, f.role, 'ทุกบทบาท', 'data-onchange="users-filter"'))}
+      ${field('u_q', 'ค้นหา', input('u_q', f.q || '', 'placeholder="Username / ชื่อ / อีเมล" data-oninput="users-search"'))}
+      ${field('u_role', 'บทบาท', select('u_role', USER_ROLES.filter(r => r[0] !== 'teacher'), f.role, 'ทุกบทบาท', 'data-onchange="users-filter"'))}
       ${field('u_state', 'สถานะ', select('u_state', [['on', 'ใช้งาน'], ['off', 'ปิดใช้งาน']], f.state, 'ทั้งหมด', 'data-onchange="users-filter"'))}
     </div>
     <div class="small muted">พบ <b>${rows.length}</b> บัญชี</div>
     <div class="tlist us-list" role="table" aria-label="ผู้ใช้งาน">
-      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>Username</span><span>ชื่อ</span><span>บทบาท</span><span>สถานศึกษา</span><span>สถานะ</span><span>เข้าใช้ล่าสุด</span></div>
-      ${rows.length ? rows.map((u, i) => `<button class="trow" role="row" ${u.kind === 'teacher' ? `data-go="staff-school" data-id="${u.school}"` : `data-go="staff-user" data-u="${u.username}"`}>
+      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>Username</span><span>ชื่อ</span><span>บทบาท</span><span>อีเมล</span><span>สถานะ</span><span>เข้าใช้ล่าสุด</span></div>
+      ${rows.length ? rows.map((u, i) => `<button class="trow" role="row" data-go="staff-user" data-u="${u.username}">
         <span class="n">${i + 1}</span><span class="num"><b>${esc(u.username)}</b></span><span>${esc(u.name || '-')}<small>${esc(u.position || '')}</small></span>
-        <span><span class="badge ${u.role === 'admin' ? 't-bad' : u.role === 'manager' ? 't-violet' : u.role === 'reviewer' ? 't-info' : 't-idle'}">${roleName(u.role)}</span></span>
-        <span class="small">${u.school ? esc(this.schoolName(u.school)) : '—'}</span>
+        <span><span class="badge ${u.role === 'admin' ? 't-bad' : u.role === 'manager' ? 't-violet' : 't-info'}">${roleName(u.role)}</span></span>
+        <span class="small">${esc(u.email || '—')}</span>
         <span><span class="badge ${u.active ? 't-ok' : 't-bad'}">${u.active ? 'ใช้งาน' : 'ปิดใช้งาน'}</span></span>
         <span class="small muted">${u.last ? thDate(u.last, true) : 'ยังไม่เคยเข้าใช้'}</span></button>`).join('') : '<div class="empty">ไม่พบบัญชีตามเงื่อนไขนี้</div>'}
     </div>
