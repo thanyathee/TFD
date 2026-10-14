@@ -45,6 +45,8 @@ App.on('teacher-login', function (form) {
   if (!v.password) e.password = 'กรุณากรอก Password';
   else if (t && v.password !== (t.password || 'Demo@1234')) e.password = 'Password ไม่ถูกต้อง';
   if (Object.keys(e).length) { this.go('teacher-entry', {values: {username: v.username}, errors: e}); return; }
+  t.last_login = nowIso();
+  this.save();
   this.session = {role: 'teacher', teacher: t.username, school: t.school, who: this.schoolName(t.school)};
   this.go('teacher-home');
 });

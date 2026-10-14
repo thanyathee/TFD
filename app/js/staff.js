@@ -33,7 +33,8 @@ const SCHOOL_TYPES = [['school', 'โรงเรียน'], ['college', 'ว�
 
 App.staffNav = function () {
   return [['staff-dash', 'Dashboard'], ['staff-cycle', 'รอบรับสมัคร'], ['staff-schools', 'สถานศึกษา/ครู', ['staff-school']],
-    ['staff-apps', 'ใบสมัคร', ['staff-app']], ['staff-transfer', 'ย้ายสถานศึกษา'], ['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA']];
+    ['staff-apps', 'ใบสมัคร', ['staff-app']], ['staff-transfer', 'ย้ายสถานศึกษา'], ['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA']]
+    .concat(this.session.staffRole === 'admin' ? [['staff-users', 'ผู้ใช้งาน', ['staff-user']]] : []);
 };
 /* สลับบทบาทสำหรับทดลอง (เหมือนปุ่มบทบาทใน v14) */
 App.roleBar = function () {
@@ -42,8 +43,9 @@ App.roleBar = function () {
     `<button type="button" data-action="staff-role" data-role="${k}" aria-pressed="${k === r}">${t}</button>`).join('')}</div>
     <span class="small muted">กำลังใช้งาน: ${ROLE[r][0]}</span></div>`;
 };
+App.staffList = function () { return this.db.staffUsers || STAFF.map(u => ({...u, active: true})); };
 App.on('staff-role', function (el) {
-  const u = STAFF.find(s => s.role === el.dataset.role);
+  const u = this.staffList().find(s => s.role === el.dataset.role && s.active !== false) || STAFF.find(s => s.role === el.dataset.role);
   Object.assign(this.session, {staff: u.username, staffRole: u.role, name: u.name, who: `${u.name} · ${ROLE[u.role][0]}`});
   this.render();
 });
@@ -61,17 +63,20 @@ App.views['staff-entry'] = function (p) {
         <div class="row end"><button class="btn primary" type="submit">เข้าสู่ระบบ</button></div>
       </form>
       <aside class="card"><h3>บัญชีทดลอง</h3><p class="small muted">Password ทุกบัญชี <b>Demo@1234</b> · สลับบทบาทได้ภายในระบบ</p>
-        ${STAFF.map(s => `<button class="btn" data-action="staff-sample" data-u="${s.username}">${s.username} · ${ROLE[s.role][0]}</button>`).join('')}</aside>
+        ${this.staffList().filter(s => s.active !== false).map(s => `<button class="btn" data-action="staff-sample" data-u="${s.username}">${s.username} · ${ROLE[s.role][0]}</button>`).join('')}</aside>
     </div>`, after: focusFirstError};
 };
 App.on('staff-sample', function (el) { this.go('staff-entry', {values: {username: el.dataset.u, password: 'Demo@1234'}}); });
 App.on('staff-login', function (form) {
   const v = formData(form);
-  const u = STAFF.find(s => s.username === (v.username || '').toLowerCase());
+  const u = this.staffList().find(s => s.username === (v.username || '').toLowerCase());
   const e = {};
   if (!u) e.username = v.username ? 'ไม่พบ Username นี้' : 'กรุณากรอก Username';
-  if (v.password !== 'Demo@1234') e.password = v.password ? 'Password ไม่ถูกต้อง' : 'กรุณากรอก Password';
+  else if (u.active === false) e.username = 'บัญชีนี้ถูกปิดใช้งาน กรุณาติดต่อผู้ดูแลระบบ';
+  if (v.password !== (u && u.password || 'Demo@1234')) e.password = v.password ? 'Password ไม่ถูกต้อง' : 'กรุณากรอก Password';
   if (Object.keys(e).length) { this.go('staff-entry', {values: {username: v.username}, errors: e}); return; }
+  u.last_login = nowIso();
+  this.save();
   this.session = {role: 'staff', staff: u.username, staffRole: u.role, name: u.name, who: `${u.name} · ${ROLE[u.role][0]}`};
   this.go('staff-dash');
 });
@@ -715,7 +720,15 @@ App.on('school-parse', function () {
   this.go('staff-school', {...this.view.params, values: v});
   this.toast('แยกที่อยู่แล้ว กรุณาตรวจสอบก่อนบันทึก');
 });
-App.on('school-pw', function () { this.toast('ต้นแบบ: ระบบจริงจะส่งลิงก์ตั้งรหัสผ่านใหม่ให้ครูผู้ดูแลทุน (รหัสทดลองคือ Demo@1234)'); });
+App.on('school-pw', function () {
+  const t = this.db.teachers.find(x => x.school === this.view.params.id);
+  if (!t) { this.toast('บันทึกสถานศึกษาก่อน จึงจะตั้งรหัสผ่านได้'); return; }
+  const pw = 'Tf' + Math.random().toString(36).slice(2, 8) + '!';
+  t.password = pw;
+  this.auditLog('รีเซ็ตรหัสผ่าน', t.username, 'บัญชีครู');
+  this.save();
+  this.toast(`รีเซ็ตรหัสผ่านของ ${t.username} แล้ว · รหัสผ่านชั่วคราว ${pw}`);
+});
 App.on('school-save', function (form) {
   const v = formData(form);
   const a = this.readArea('sa');
@@ -858,4 +871,120 @@ App.on('pdpa-save', function (form) {
   Object.assign(this.db.pdpa, {version: v.p_ver, effective: v.p_eff, url: v.p_url});
   this.save();
   this.toast('บันทึก Privacy Notice แล้ว');
+});
+
+/* ---------- ผู้ใช้งาน (เฉพาะแอดมินระบบ) ---------- */
+App.auditLog = function (action, target, detail) {
+  (this.db.audit = this.db.audit || []).push({at: nowIso(), by: this.session.name || this.session.staff, action, target, detail: detail || ''});
+};
+const USER_ROLES = [['reviewer', 'จนท.รีวิว'], ['manager', 'ผจก.อนุมัติทุน'], ['admin', 'แอดมินระบบ'], ['teacher', 'ครู / สถานศึกษา']];
+const adminOnly = function () {
+  return this.session.staffRole === 'admin' ? null : {nav: this.staffNav(), html: `${this.roleBar()}<section class="card"><h2>เฉพาะแอดมินระบบ</h2>
+    <p class="muted">หน้านี้ใช้จัดการบัญชีผู้ใช้งาน เข้าได้เฉพาะบทบาท “แอดมินระบบ”</p></section>`};
+};
+App.views['staff-users'] = function (p) {
+  const deny = adminOnly.call(this); if (deny) return deny;
+  const f = p.f || this._usF || {};
+  this._usF = f;
+  const q = (f.q || '').toLowerCase();
+  const rows = this.staffList().map(u => ({kind: 'staff', username: u.username, name: u.name, role: u.role, school: '', active: u.active !== false, last: u.last_login, position: u.position}))
+    .concat(this.db.teachers.map(t => ({kind: 'teacher', username: t.username, name: t.name, role: 'teacher', school: t.school, active: t.active !== false, last: t.last_login, position: t.position})))
+    .filter(u => (!f.role || u.role === f.role) && (!f.state || (f.state === 'on') === u.active)
+      && (!q || (u.username + u.name + (u.school ? this.schoolName(u.school) : '')).toLowerCase().includes(q)));
+  const roleName = r => (USER_ROLES.find(x => x[0] === r) || [, r])[1];
+  const nStaff = this.staffList().length, nTeacher = this.db.teachers.length;
+  return {nav: this.staffNav(), html: `${this.roleBar()}
+    <div class="page-head"><div><h1>ผู้ใช้งาน</h1><p class="sub">บัญชีเจ้าหน้าที่ ${nStaff} · บัญชีครู ${nTeacher} (บัญชีครูแก้ที่หน้าสถานศึกษา)</p></div>
+      <button class="btn primary" data-go="staff-user" data-u="new">+ เพิ่มบัญชีเจ้าหน้าที่</button></div>
+    <div class="filters us-filters">
+      ${field('u_q', 'ค้นหา', input('u_q', f.q || '', 'placeholder="Username / ชื่อ / สถานศึกษา" data-oninput="users-search"'))}
+      ${field('u_role', 'บทบาท', select('u_role', USER_ROLES, f.role, 'ทุกบทบาท', 'data-onchange="users-filter"'))}
+      ${field('u_state', 'สถานะ', select('u_state', [['on', 'ใช้งาน'], ['off', 'ปิดใช้งาน']], f.state, 'ทั้งหมด', 'data-onchange="users-filter"'))}
+    </div>
+    <div class="small muted">พบ <b>${rows.length}</b> บัญชี</div>
+    <div class="tlist us-list" role="table" aria-label="ผู้ใช้งาน">
+      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>Username</span><span>ชื่อ</span><span>บทบาท</span><span>สถานศึกษา</span><span>สถานะ</span><span>เข้าใช้ล่าสุด</span></div>
+      ${rows.length ? rows.map((u, i) => `<button class="trow" role="row" ${u.kind === 'teacher' ? `data-go="staff-school" data-id="${u.school}"` : `data-go="staff-user" data-u="${u.username}"`}>
+        <span class="n">${i + 1}</span><span class="num"><b>${esc(u.username)}</b></span><span>${esc(u.name || '-')}<small>${esc(u.position || '')}</small></span>
+        <span><span class="badge ${u.role === 'admin' ? 't-bad' : u.role === 'manager' ? 't-violet' : u.role === 'reviewer' ? 't-info' : 't-idle'}">${roleName(u.role)}</span></span>
+        <span class="small">${u.school ? esc(this.schoolName(u.school)) : '—'}</span>
+        <span><span class="badge ${u.active ? 't-ok' : 't-bad'}">${u.active ? 'ใช้งาน' : 'ปิดใช้งาน'}</span></span>
+        <span class="small muted">${u.last ? thDate(u.last, true) : 'ยังไม่เคยเข้าใช้'}</span></button>`).join('') : '<div class="empty">ไม่พบบัญชีตามเงื่อนไขนี้</div>'}
+    </div>
+    ${(this.db.audit || []).length ? `<section class="card"><h3>ประวัติการแก้ไขบัญชี (ล่าสุด)</h3><ol class="timeline">${this.db.audit.slice(-10).reverse().map(a =>
+      `<li class="done">${esc(a.action)}: <b>${esc(a.target)}</b>${a.detail ? ' — ' + esc(a.detail) : ''}<small>${thDate(a.at, true)} · ${esc(a.by)}</small></li>`).join('')}</ol></section>` : ''}`,
+    after() { const el = document.getElementById('u_q'); if (p.focusQ && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }};
+};
+const userFilters = q => ({q: q != null ? q : document.getElementById('u_q').value, role: document.getElementById('u_role').value, state: document.getElementById('u_state').value});
+App.on('users-filter', function () { this.go('staff-users', {f: userFilters()}); });
+App.on('users-search', function (el) { clearTimeout(this._uq); this._uq = setTimeout(() => this.go('staff-users', {f: userFilters(el.value), focusQ: 1}), 250); });
+
+App.views['staff-user'] = function (p) {
+  const deny = adminOnly.call(this); if (deny) return deny;
+  const isNew = p.u === 'new';
+  const u = isNew ? {active: true, role: 'reviewer'} : this.staffList().find(x => x.username === p.u);
+  const v = p.values || {username: u.username || '', name: u.name || '', position: u.position || '', email: u.email || '', role: u.role, active: u.active === false ? 'no' : 'yes'};
+  const e = p.errors || {};
+  return {nav: this.staffNav(), html: `${this.roleBar()}
+    <button class="back" data-go="staff-users">${icon('back')} ผู้ใช้งานทั้งหมด</button>
+    <div class="page-head"><div><h1>${isNew ? 'เพิ่มบัญชีเจ้าหน้าที่' : 'แก้ไขบัญชี ' + esc(u.username)}</h1><p class="sub">${isNew ? 'รหัสผ่านเริ่มต้นจะแสดงหลังบันทึก' : `เข้าใช้ล่าสุด: ${u.last_login ? thDate(u.last_login, true) : 'ยังไม่เคยเข้าใช้'}`}</p></div></div>
+    ${errNote(e)}
+    <form class="card stack" data-submit="user-save" data-u="${esc(p.u)}" novalidate>
+      <div class="grid-2">
+        ${field('us_username', 'Username', input('us_username', v.username, `autocapitalize="off" ${isNew ? '' : 'readonly'}`), {req: 1, err: e.username, hint: isNew ? 'ภาษาอังกฤษตัวเล็ก ตัวเลข จุด หรือขีดล่าง' : 'Username เปลี่ยนไม่ได้'})}
+        ${field('us_name', 'ชื่อ–นามสกุล', input('us_name', v.name), {req: 1, err: e.name})}
+        ${field('us_position', 'ตำแหน่ง', input('us_position', v.position))}
+        ${field('us_email', 'อีเมล', input('us_email', v.email, 'type="email"'), {err: e.email})}
+      </div>
+      ${radioField('us_role', 'บทบาท', USER_ROLES.filter(r => r[0] !== 'teacher').map(([k, t]) => [k, t, ROLE[k][1]]), v.role, {req: 1, err: e.role, col: 1})}
+      ${radioField('us_active', 'สถานะบัญชี', [['yes', 'ใช้งาน'], ['no', 'ปิดใช้งาน']], v.active, {err: e.active})}
+      <div class="row between">${isNew ? '<span></span>' : `<button class="btn" type="button" data-action="user-reset" data-u="${esc(u.username)}">รีเซ็ตรหัสผ่าน</button>`}
+        <button class="btn primary" type="submit">บันทึก</button></div>
+    </form>`};
+};
+App.on('user-save', function (form) {
+  const v = formData(form);
+  const isNew = form.dataset.u === 'new';
+  const list = this.db.staffUsers = this.staffList();
+  const u = isNew ? null : list.find(x => x.username === form.dataset.u);
+  const uname = (isNew ? v.us_username || '' : u.username).trim().toLowerCase();
+  const e = {};
+  if (isNew) {
+    if (!uname) e.username = 'กรุณากำหนด Username';
+    else if (!/^[a-z0-9._]{3,}$/.test(uname)) e.username = 'ใช้ภาษาอังกฤษตัวเล็ก ตัวเลข จุด หรือขีดล่าง อย่างน้อย 3 ตัว';
+    else if (list.some(x => x.username === uname) || this.db.teachers.some(t => t.username === uname)) e.username = 'Username นี้ถูกใช้แล้ว';
+  }
+  if (!(v.us_name || '').trim()) e.name = 'กรุณากรอกชื่อ–นามสกุล';
+  if (v.us_email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.us_email)) e.email = 'รูปแบบอีเมลไม่ถูกต้อง';
+  if (!v.us_role) e.role = 'กรุณาเลือกบทบาท';
+  /* กันพลาด: ต้องเหลือแอดมินที่ใช้งานอย่างน้อย 1 บัญชี */
+  const staysAdmin = v.us_role === 'admin' && v.us_active !== 'no';
+  if (u && u.role === 'admin' && u.active !== false && !staysAdmin && list.filter(x => x.role === 'admin' && x.active !== false).length <= 1)
+    e.active = 'ต้องมีแอดมินระบบที่ใช้งานอย่างน้อย 1 บัญชี — เปลี่ยนบทบาทหรือปิดบัญชีนี้ไม่ได้';
+  const values = {username: uname, name: v.us_name, position: v.us_position, email: v.us_email, role: v.us_role, active: v.us_active};
+  if (Object.keys(e).length) { this.go('staff-user', {u: form.dataset.u, values, errors: e}); return; }
+  const rec = {name: v.us_name.trim(), position: v.us_position || '', email: v.us_email || '', role: v.us_role, active: v.us_active !== 'no'};
+  if (isNew) {
+    const pw = 'Tf' + Math.random().toString(36).slice(2, 8) + '!';
+    list.push({username: uname, ...rec, password: pw});
+    this.auditLog('เพิ่มบัญชีเจ้าหน้าที่', uname, ROLE[rec.role][0]);
+    this.save();
+    this.toast(`เพิ่มบัญชี ${uname} แล้ว · รหัสผ่านเริ่มต้น ${pw}`);
+  } else {
+    const changes = [u.role !== rec.role && `บทบาท ${ROLE[u.role][0]} → ${ROLE[rec.role][0]}`, (u.active !== false) !== rec.active && (rec.active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'),
+      u.name !== rec.name && 'แก้ชื่อ'].filter(Boolean);
+    Object.assign(u, rec);
+    this.auditLog('แก้ไขบัญชี', uname, changes.join(', ') || 'แก้ไขข้อมูลติดต่อ');
+    this.save();
+    this.toast('บันทึกบัญชีแล้ว');
+  }
+  this.go('staff-users');
+});
+App.on('user-reset', function (el) {
+  const u = this.staffList().find(x => x.username === el.dataset.u);
+  const pw = 'Tf' + Math.random().toString(36).slice(2, 8) + '!';
+  u.password = pw;
+  this.auditLog('รีเซ็ตรหัสผ่าน', u.username);
+  this.save();
+  this.toast(`รีเซ็ตรหัสผ่านของ ${u.username} แล้ว · รหัสผ่านชั่วคราว ${pw}`);
 });

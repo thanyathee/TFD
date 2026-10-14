@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v17';
+const STORE_KEY = 'tfd-scholarship-demo-v18';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -150,6 +150,13 @@ const App = {
         /* รูปแบบหลักสูตรตัวอย่าง: วิทยาลัย = ปกติ + ทวิภาคี, มหาวิทยาลัย = ปกติ + ภาคพิเศษ, โรงเรียน = ปกติ */
         modes: x.type === 'college' ? ['regular', 'dual'] : x.type === 'university' ? ['regular', 'special'] : ['regular']})),
       teachers: copy(s.teachers),
+      /* บัญชีเจ้าหน้าที่มูลนิธิฯ — แอดมินจัดการได้ที่เมนู "ผู้ใช้งาน" */
+      staffUsers: [
+        {username: 'reviewer01', name: 'จนท. 01', role: 'reviewer', position: 'เจ้าหน้าที่ทุน', email: 'reviewer01@example.com', active: true},
+        {username: 'reviewer02', name: 'จนท. 02', role: 'reviewer', position: 'เจ้าหน้าที่ทุน', email: 'reviewer02@example.com', active: true},
+        {username: 'manager01', name: 'ผู้จัดการทุน', role: 'manager', position: 'ผู้จัดการ', email: 'manager01@example.com', active: true},
+        {username: 'admin01', name: 'ผู้ดูแลระบบ', role: 'admin', position: 'ผู้ดูแลระบบ', email: 'admin01@example.com', active: true}],
+      audit: [],
       /* ข้อมูลตัวอย่าง: นักเรียนที่ติ๊กย้าย ถ้าผ่าน จนท. ไปแล้ว ถือว่าบันทึกการย้ายแล้ว (เรียนที่เดิม) */
       transfers: s.students.filter(x => x.demo_transfer || (x.school_next === 'transfer' && ['need_more_info', 'waiting_manager', 'decided'].includes(x.status)))
         .map(x => { const t = x.demo_transfer || {to: x.school, cls: x.next_class, date: '2027-05-10'};

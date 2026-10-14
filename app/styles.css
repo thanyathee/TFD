@@ -466,3 +466,13 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 /* ตัวเลือก 2 คอลัมน์ (เช่น รูปแบบการเรียน) */
 .two-col .choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media (max-width:600px){.two-col .choices{grid-template-columns:1fr}}
+/* แอดมิน: ผู้ใช้งาน */
+.us-filters{grid-template-columns:2fr 1fr 1fr}
+.us-list .tlist-head,.us-list .trow{grid-template-columns:52px 130px minmax(160px,1.4fr) 140px minmax(160px,1.4fr) 100px 150px}
+.us-list .n{text-align:center;color:var(--muted)}
+.us-list small{display:block;font-size:12.5px;color:var(--muted)}
+@media (max-width:900px){
+  .us-filters{grid-template-columns:1fr 1fr}.us-filters>.field:first-child{grid-column:1/-1}
+  .us-list .trow{display:flex;flex-wrap:wrap;gap:4px 10px}
+  .us-list .trow>span{min-width:0}
+}
