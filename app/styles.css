@@ -893,3 +893,19 @@ main:has(.pa-page){max-width:1440px}
 @media (max-width:1100px){.pa-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:640px){.pa-top{grid-template-columns:1fr;padding:16px}.pa-actions{justify-content:flex-start}.pa-stats{grid-template-columns:1fr 1fr}.pa-title h1{font-size:22px}}
 body:has(.pa-page) .topbar-in,body:has(.pa-page) .tabs{max-width:1440px}
+.pa-by{margin-top:4px;font-size:14px;color:var(--ink-2)}
+@media (max-width:760px){
+  .pf-atbl .tbl td:nth-child(1){font-weight:700;color:var(--ink)}
+  .pf-atbl .tbl td:nth-child(3){margin-left:24px;flex-basis:100%}
+  .pf-atbl .tbl td:nth-child(3)::before{content:"บันทึกโดย ";color:var(--muted)}
+  .pf-atbl .tbl td:nth-child(4)::before{content:"บันทึกแล้ว "}
+  .pf-atbl .tbl td:nth-child(5)::before{content:"รอพิจารณา "}
+  .pf-atbl .tbl td:nth-child(4){margin-left:24px}
+  .pf-atbl .tbl td:nth-child(6){flex-basis:auto;margin-left:0}
+}
+@media (max-width:760px){
+  .pf-atbl .tbl td{margin-left:0!important}
+  .pf-atbl .tbl td:nth-child(2){flex-basis:100%}
+  .pf-atbl .tbl td:nth-child(4),.pf-atbl .tbl td:nth-child(5){font-size:13px;color:var(--ink-2)}
+  .pf-atbl .tbl td:last-child{flex-basis:auto;margin-left:auto!important}
+}

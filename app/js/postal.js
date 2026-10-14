@@ -920,8 +920,8 @@ App.views['post-approve'] = pNeedLogin(function (p) {
         ${field('q', 'เลขที่ใบปะหน้า / ชื่อโรงเรียน', input('q', f.q, 'placeholder="เช่น 70-0006 หรือ 6" autocomplete="off"'), {err: p.err})}
         ${field('st', 'แสดง', select('st', [['wait', 'ยังพิจารณาไม่ครบ'], ['done', 'พิจารณาครบแล้ว']], f.st, 'ทั้งหมด', 'data-onchange="p-approve-st"'))}
         <div class="field"><span class="label">&nbsp;</span><button class="btn primary" type="submit">ค้นหา</button></div></form>
-      <div class="pf-stbl">${tbl([{t: 'เลขที่'}, {t: 'โรงเรียน'}, {t: 'บันทึกแล้ว', r: 1}, {t: 'รอพิจารณา', r: 1}, {t: 'สถานะ'}, {t: ''}],
-        rows.map(r => [`<b class="pf-code">${this.pCode(r.id)}</b>`, `<span class="pf-sname"><b>${esc(this.pSc(r.id).name)}</b><span class="small muted">จ.${esc(this.pSc(r.id).province)} · บันทึก ${this.pLotDate(r.id)}</span></span>`, r.n,
+      <div class="pf-stbl pf-atbl">${tbl([{t: 'เลขที่'}, {t: 'โรงเรียน'}, {t: 'ผู้บันทึก'}, {t: 'บันทึกแล้ว', r: 1}, {t: 'รอพิจารณา', r: 1}, {t: 'สถานะ'}, {t: ''}],
+        rows.map(r => [`<b class="pf-code">${this.pCode(r.id)}</b>`, `<span class="pf-sname"><b>${esc(this.pSc(r.id).name)}</b><span class="small muted">จ.${esc(this.pSc(r.id).province)} · บันทึก ${this.pLotDate(r.id)}</span></span>`, `<span class="nw">${esc(this.pUser(this.pOwner(r.id)).name)}</span>`, r.n,
           r.wait ? `<b>${r.wait}</b>` : '0', pBadge(r.st), `<button class="btn sm ${r.wait ? 'primary' : ''}" data-go="post-approve" data-id="${r.id}">${r.wait ? 'พิจารณา' : 'ดู'}</button>`]))}</div>`,
       after() { const x = document.getElementById('q'); if (x) x.focus(); }};
   }
@@ -967,7 +967,8 @@ App.views['post-approve'] = pNeedLogin(function (p) {
   return {nav: this.pNav(), html: `${this.pRoleBar()}<div class="pa-page">
     <section class="pa-top">
       <div class="pa-title"><span class="pf-code lg">เลขที่ใบปะหน้า ${this.pCode(p.id)}</span><h1>${esc(sc.name)}</h1>
-        <p class="sub">จ.${esc(sc.province)} · ${esc(this.regionName(sc.region))} · ดูข้อมูลในระบบประกอบรูปภาพในใบสมัคร</p></div>
+        <p class="sub">จ.${esc(sc.province)} · ${esc(this.regionName(sc.region))} · ดูข้อมูลในระบบประกอบรูปภาพในใบสมัคร</p>
+        <p class="pa-by">บันทึกโดย <b>${esc(this.pUser(this.pOwner(p.id)).name)}</b> · ${this.pLotDate(p.id)}${b.updated ? ` · แก้ไขล่าสุด ${pShortDate(b.updated)}` : ''}</p></div>
       <div class="pa-actions"><button class="btn" data-go="post-approve">รายชื่อโรงเรียน</button><button class="btn" data-go="post-cover" data-id="${p.id}">${icon('print')} ใบปะหน้า</button></div>
       <div class="pa-stats"><div class="pa-st wait"><span>รอพิจารณา</span><b>${wait}</b></div>${Object.entries(DECISION).map(([k, x]) =>
         `<div class="pa-st ${k}"><span>${x.label}</span><b>${cnt(k)}</b></div>`).join('')}<div class="pa-st money"><span>เงินทุนที่อนุมัติ</span><b>${baht(amt)}</b></div></div>
