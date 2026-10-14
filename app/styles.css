@@ -951,3 +951,9 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
 }
 @media (max-width:760px){.pf-sch2 .tbl td:nth-child(3){flex-basis:100%!important}.pf-sch2 .tbl td:nth-child(4),.pf-sch2 .tbl td:nth-child(5),.pf-sch2 .tbl td:nth-child(6){flex-basis:auto!important}}
 @media (max-width:760px){.pf-sch2 .tbl td:nth-child(8){margin-left:24px!important;flex-basis:100%!important}.pf-sch2 .tbl td:nth-child(7){margin-left:auto!important}}
+/* หน้าแรก: แยกหัวข้อ ออนไลน์ / ไปรษณีย์ */
+.home-sec{display:flex;align-items:center;gap:10px;font-size:20px;margin-top:8px}
+.home-tag{font-size:13px;font-weight:700;padding:3px 12px;border-radius:999px}
+.home-tag.on{background:var(--brand-soft);color:var(--brand)}
+.home-tag.post{background:var(--warn-soft);color:var(--warn)}
+.roles-extra{margin-top:0}

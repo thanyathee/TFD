@@ -441,6 +441,7 @@ App.views.home = function () {
   return {html: `
     <section class="hero"><h1>ระบบทุนการศึกษา<br>ปีการศึกษา ${this.db.cycle.year}</h1>
       <p class="muted">เลือกบทบาทเพื่อทดลองใช้งาน ข้อมูลทั้งหมดเป็นข้อมูลจำลอง</p></section>
+    <h2 class="home-sec"><span class="home-tag on">ออนไลน์</span>สมัครทางออนไลน์</h2>
     <div class="flow" aria-label="ลำดับการทำงาน"><b>นักเรียนกรอกใบสมัคร</b><span>→</span><b>ครูตรวจและส่งมูลนิธิฯ</b><span>→</span><b>เจ้าหน้าที่พิจารณา</b></div>
     <div class="roles">
       <button class="role" data-go="student-entry"><span class="ico">${icon('student')}</span><h2>นักเรียน / นักศึกษา</h2>
@@ -450,8 +451,10 @@ App.views.home = function () {
       <button class="role" data-go="staff-entry"><span class="ico">${icon('staff')}</span><h2>เจ้าหน้าที่มูลนิธิฯ</h2>
         <p>พิจารณาใบสมัคร จัดการสถานศึกษา และรายงาน</p><span class="btn primary go">เข้าสู่ระบบเจ้าหน้าที่</span></button>
     </div>
+    <h2 class="home-sec"><span class="home-tag post">ไปรษณีย์</span>สมัครทางไปรษณีย์</h2>
+    <div class="flow" aria-label="ลำดับการทำงานทางไปรษณีย์"><b>ใบสมัครกระดาษส่งถึงมูลนิธิฯ</b><span>→</span><b>เจ้าหน้าที่บันทึกและพิมพ์ใบปะหน้า</b><span>→</span><b>ผจก. พิจารณา</b></div>
     <div class="roles roles-extra">
-      <button class="role role-postal" data-go="postal-entry"><span class="ico">${icon('mail')}</span><h2>สมัครทางไปรษณีย์</h2>
+      <button class="role role-postal" data-go="postal-entry"><span class="ico">${icon('mail')}</span><h2>เจ้าหน้าที่ / ผจก. (ทางไปรษณีย์)</h2>
         <p>เจ้าหน้าที่บันทึกใบสมัครกระดาษแบบสรุปย่อ พิมพ์ใบปะหน้าโรงเรียน และ ผจก. อนุมัติทุน</p><span class="btn primary go">เข้าสู่ระบบ</span></button>
     </div>
     <div class="note info small row between"><span>ทำในบทบาทหนึ่งแล้วเห็นผลในบทบาทอื่นทันที ข้อมูลทดลองเก็บไว้ในเบราว์เซอร์นี้เท่านั้น</span>
