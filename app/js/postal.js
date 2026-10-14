@@ -2,7 +2,7 @@
    จนท. บันทึกแบบสรุปย่อทีละคน → พิมพ์ใบปะหน้าโรงเรียน → ผจก. อนุมัติทีละคน · แอดมินดูผลงานทุกคน */
 'use strict';
 
-const POSTAL_KEY = 'tfd-postal-demo-v4';
+const POSTAL_KEY = 'tfd-postal-demo-v5';
 const P_ROLE = {
   clerk: ['จนท.บันทึกข้อมูล', 'บันทึกใบสมัครทางไปรษณีย์ พิมพ์ใบปะหน้า และดูผลงานของตัวเอง'],
   manager: ['ผจก.อนุมัติทุน', 'ดูทุกโรงเรียน และอนุมัติทุนทีละคน'],
@@ -96,11 +96,11 @@ App.pFresh = function () {
     'อาศัยกับป้า บิดาถูกจำคุก มารดาขาดการติดต่อ', 'บิดาพิการขาขวา มารดาขายของที่ตลาดนัด รายได้ไม่แน่นอน ต้องดูแลยายที่ป่วยติดเตียง'];
   const USE = ['ค่าเดินทางไปโรงเรียน ค่าอุปกรณ์การเรียน ชุดนักเรียน', 'ค่าบำรุงการศึกษา ค่าหนังสือ ค่าเดินทาง ค่าอาหารกลางวันบางส่วน และค่าอินเทอร์เน็ตสำหรับทำการบ้าน',
     'ค่ารถรับส่ง ค่าชุดพละ รองเท้า กระเป๋า', 'ค่าเทอม ค่าอุปกรณ์ ค่าเดินทาง ซื้อเครื่องคิดเลข'];
-  recOf(s4).slice(0, 26).forEach((r, i) => cont(s4, r, i % 3 ? 'clerk02' : 'clerk01', `2027-06-08T09:${String(i).padStart(2, '0')}`,
+  recOf(s4).slice(0, 26).forEach((r, i) => cont(s4, r, 'clerk02', `2027-06-08T09:${String(i).padStart(2, '0')}`,
     {gpa: (2.5 + (i * 37 % 140) / 100).toFixed(2), use_money: USE[i % USE.length], docs: i % 5 ? ['cert', 'bank', 'expense', 'receipt'] : ['cert', 'bank', 'expense']}));
   for (let i = 0; i < 30; i++) {
     const cls = ['ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5'][i % 5], adult = ['ม.4', 'ม.5'].includes(cls);
-    nw(s4, i % 2 ? 'clerk02' : 'clerk01', `2027-06-08T10:${String(i).padStart(2, '0')}`, {title: i % 2 ? (adult ? 'นางสาว' : 'เด็กหญิง') : (adult ? 'นาย' : 'เด็กชาย'), first: pick(i % 2 ? FIRST_F : FIRST_M), last: pick(LAST),
+    nw(s4, 'clerk02', `2027-06-08T10:${String(i).padStart(2, '0')}`, {title: i % 2 ? (adult ? 'นางสาว' : 'เด็กหญิง') : (adult ? 'นาย' : 'เด็กชาย'), first: pick(i % 2 ? FIRST_F : FIRST_M), last: pick(LAST),
       cls, next_class: nextOptions(cls)[0], gpa: (2.6 + (i * 29 % 130) / 100).toFixed(2), family: FAM[i % FAM.length],
       equipment: [['pickup'], [], ['washer', 'pickup'], ['etan'], ['none']][i % 5], housing: ['own', 'rent', 'other', 'own_other_land'][i % 4], land: ['none', 'rent', 'own'][i % 3]});
   }
@@ -118,7 +118,7 @@ App.pFresh = function () {
         done: true, printed: '2027-06-04T08:30', updated: '2027-06-04T08:30'}),
       batch(s2, 'clerk02', {wait_new: 1, letter: 'ที่ วท 112/2570', done: true, updated: '2027-06-05T10:20'}),
       batch(s3, 'clerk01', {updated: '2027-06-07T13:40'}),
-      batch(s4, 'clerk01', {other_new: 1, wait_new: 2, wait_cont: 1, note: 'อื่น ๆ 1 ราย: นักเรียนการศึกษานอกระบบ (กศน.) ส่งแนบมากับโรงเรียน', letter: 'ที่ ศธ 04297/88 ลงวันที่ 5 มิ.ย. 2570', done: true, updated: '2027-06-08T10:30'})]),
+      batch(s4, 'clerk02', {other_new: 1, wait_new: 2, wait_cont: 1, note: 'อื่น ๆ 1 ราย: นักเรียนการศึกษานอกระบบ (กศน.) ส่งแนบมากับโรงเรียน', letter: 'ที่ ศธ 04297/88 ลงวันที่ 5 มิ.ย. 2570', done: true, updated: '2027-06-08T10:30'})]),
   };
 };
 
@@ -163,6 +163,12 @@ App.pTouch = function (school) {
       teacher_name: t.name || '', teacher_phone: t.phone || '', teacher_email: t.email || '', done: false, printed: ''}; })());
   b.updated = nowIso();
   return b;
+};
+/* 1 โรงเรียน = จนท. 1 คน: คนแรกที่เริ่มบันทึกเป็นเจ้าของ คนอื่นดูได้แต่บันทึกเพิ่มไม่ได้ (แอดมินแก้ได้ทุกโรงเรียน) */
+App.pOwner = function (school) { return (this.P().batches[school] || {}).by || ''; };
+App.pCanEdit = function (school) {
+  const o = this.pOwner(school);
+  return !o || o === this.session.pUser || this.session.pRole === 'admin';
 };
 App.pSchools = function () { return this.db.schools.slice().sort((a, b) => a.province.localeCompare(b.province, 'th') || a.name.localeCompare(b.name, 'th')); };
 
@@ -327,7 +333,10 @@ App.views['post-form'] = pNeedLogin(function (p) {
   return {nav: this.pNav(), html: `${this.pRoleBar()}
     <div class="page-head"><div><h1>บันทึกใบสมัครทางไปรษณีย์</h1><p class="sub">พิมพ์ทีละคน กด Enter เพื่อบันทึกแล้วไปคนต่อไป</p></div></div>
     ${bar}
-    <div class="split pf-split">${edit && edit.decision ? `<div class="card"><div class="note warn">ผจก. พิจารณารายการนี้แล้ว (${DECISION[edit.decision.result].label}) จึงแก้ไขไม่ได้</div>
+    <div class="split pf-split">${!this.pCanEdit(pf.school) ? `<div class="card stack"><div class="note warn"><b>โรงเรียนนี้ ${esc(this.pUser(this.pOwner(pf.school)).name)} เป็นผู้บันทึก</b><br>
+      1 โรงเรียนบันทึกโดย จนท. คนเดียว ดูรายชื่อได้ แต่บันทึกเพิ่ม / แก้ไขไม่ได้ ถ้าต้องโอนงานให้แจ้งแอดมิน</div>
+      <div class="row"><button class="btn" data-action="p-change">เลือกโรงเรียนอื่น</button></div></div>`
+    : edit && edit.decision ? `<div class="card"><div class="note warn">ผจก. พิจารณารายการนี้แล้ว (${DECISION[edit.decision.result].label}) จึงแก้ไขไม่ได้</div>
       <div class="row"><button class="btn" data-go="post-form">กลับ</button></div></div>` : form}
       <aside class="stack">${this.pSchoolPanel(pf.school, edit && edit.id)}</aside></div>`,
     after() {
@@ -359,7 +368,7 @@ App.pSchoolPanel = function (school, editId) {
       ${unused.length ? `<details class="pf-demo"><summary>เลขบัตรทดลอง (ผู้ได้รับทุนปีที่แล้วของโรงเรียนนี้ → จะเป็นทุนต่อเนื่อง)</summary>
         <div class="choices">${unused.map(r => `<button type="button" class="btn sm" data-action="p-fillcid" data-cid="${r.cid}">${r.cid}</button>`).join('')}</div></details>` : ''}
     </section>
-    <form class="card stack" data-pbatch="${school}" data-submit="p-batch-done" novalidate>
+    <form class="card stack" data-pbatch="${school}" data-submit="p-batch-done" novalidate><fieldset class="pf-fs" ${this.pCanEdit(school) ? '' : 'disabled'}>
       <h3>ข้อมูลใบปะหน้า</h3><p class="small muted">ประถม · อื่น ๆ (ระบุในหมายเหตุ) · รอฟังผล (รอหลักฐานการย้ายสถานศึกษา) ใส่แค่จำนวน · บันทึกอัตโนมัติ</p>
       <div class="pf-nums"><span></span><b>ใหม่</b><b>ต่อเนื่อง</b>
         <span>ประถม</span>${num('prim_new', 'ประถม ใหม่')}${num('prim_cont', 'ประถม ต่อเนื่อง')}
@@ -371,7 +380,7 @@ App.pSchoolPanel = function (school, editId) {
       <div class="grid-2">${field('b-tp', 'เบอร์โทร', `<input class="input" id="b-tp" name="teacher_phone" value="${esc(b.teacher_phone != null ? b.teacher_phone : t.phone || '')}" inputmode="tel">`)}
         ${field('b-te', 'อีเมล', `<input class="input" id="b-te" name="teacher_email" value="${esc(b.teacher_email != null ? b.teacher_email : t.email || '')}" inputmode="email">`)}</div>
       <label class="check"><input type="checkbox" name="done" ${b.done ? 'checked' : ''}> <span><b>บันทึกโรงเรียนนี้ครบแล้ว</b></span></label>
-    </form>`;
+    </fieldset></form>`;
 };
 
 /* บันทึกร่างอัตโนมัติ: ฟอร์มคนปัจจุบัน และข้อมูลใบปะหน้า */
@@ -387,6 +396,7 @@ App.pStore = function (f) {
   if (!document.body.contains(f)) return;
   const v = formData(f);
   if (f.hasAttribute('data-pbatch')) {
+    if (!this.pCanEdit(f.dataset.pbatch)) return;
     const b = this.pTouch(f.dataset.pbatch);
     ['prim_new', 'prim_cont', 'other_new', 'other_cont', 'wait_new', 'wait_cont'].forEach(k => (b[k] = Math.max(0, parseInt(v[k], 10) || 0)));
     ['note', 'letter', 'teacher_name', 'teacher_phone', 'teacher_email'].forEach(k => (b[k] = v[k] || ''));
@@ -418,7 +428,7 @@ App.pSchoolResults = function (q) {
   const list = this.pSchools().map(s => [s, score(s)]).filter(x => x[1]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
   if (!list.length) return '<p class="small muted">ไม่พบโรงเรียน — แจ้งแอดมินให้เพิ่มสถานศึกษาในระบบ</p>';
   return list.slice(0, 8).map(s => `<button type="button" data-action="p-pick" data-id="${s.id}"><b>${esc(s.name)}</b>
-    <span>${esc(s.district)} จ.${esc(s.province)}${db.batches[s.id] ? ' · บันทึกแล้ว ' + this.pEntriesOf(s.id).length + ' ราย' : ''}</span></button>`).join('')
+    <span>${esc(s.district)} จ.${esc(s.province)}${db.batches[s.id] ? ` · ${esc(this.pUser(db.batches[s.id].by).name)} บันทึกแล้ว ${this.pEntriesOf(s.id).length} ราย` : ''}</span></button>`).join('')
     + (list.length > 8 ? `<p class="small muted">และอีก ${list.length - 8} แห่ง — พิมพ์เพิ่มเพื่อค้นหาให้แคบลง</p>` : '');
 };
 App.on('p-sq', function (el) { document.getElementById('p-sres').innerHTML = this.pSchoolResults(el.value); });
@@ -498,6 +508,7 @@ App.on('p-clear', function () {
   this.go('post-form');
 });
 App.on('p-save', function (form) {
+  if (!this.pCanEdit(this.pPref().school)) { this.toast('โรงเรียนนี้ จนท. คนอื่นเป็นผู้บันทึก'); return; }
   clearTimeout(pTimer);
   const v = formData(form);
   const db = this.P();
@@ -650,7 +661,7 @@ App.pListHtml = function (id) {
     const pages = [];
     for (let i = 0; i < l.length; i += P_PER_SHEET) pages.push(l.slice(i, i + P_PER_SHEET));
     return pages.map((chunk, pi) => {
-      const by = [...new Set(chunk.map(e => this.pUser(e.by).name))].join(', ');
+      const by = this.pUser(this.pOwner(id)).name;
       return `<div class="paper a4 land cover cv-list ${t === 'CONT' ? 'paper-blue' : ''}">
       ${hd(t, gt, l.length)}
       <table class="cv-ltbl"><colgroup>${P_LIST_COLS[t].map(w => `<col style="width:${w}%">`).join('')}</colgroup>

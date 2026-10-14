@@ -684,3 +684,4 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
   .paper.a4.cv-list{display:block;position:relative;height:184mm;min-height:0!important;break-inside:auto}
   .cv-list .cv-foot{position:absolute;left:0;right:0;bottom:0}
 }
+.pf-fs{border:0;margin:0;padding:0;display:grid;gap:12px;min-width:0}
