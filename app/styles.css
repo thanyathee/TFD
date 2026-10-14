@@ -615,3 +615,19 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .paper .nw{white-space:nowrap}
 @media (max-width:640px){.pf-eq{grid-template-columns:1fr 1fr}.pf-eq .choice{font-size:14px;padding:10px}}
 @media print{.paper.a4.land{width:auto;min-height:0;padding:0}}
+/* ค้นหาโรงเรียน (ไปรษณีย์) */
+.pf-sch{position:relative;min-width:0}
+.pf-picked{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:6px 8px 6px 14px;border-radius:var(--r);background:var(--brand-soft)}
+.pf-picked div{display:grid;min-width:0}.pf-picked span{font-size:13px;color:var(--muted)}
+.pf-sres{display:grid;gap:4px;margin-top:6px;max-height:340px;overflow:auto}
+.pf-sres button{display:grid;text-align:left;border:0;background:var(--fill);border-radius:10px;padding:8px 12px;font:inherit;color:inherit;cursor:pointer}
+.pf-sres button:first-child{box-shadow:inset 0 0 0 2px var(--brand)}
+.pf-sres button:hover{background:var(--brand-soft)}
+.pf-sres button span{font-size:13px;color:var(--muted)}
+.pf-rfilters{grid-template-columns:1.4fr 1.2fr 1fr 1fr auto}
+@media (max-width:900px){.pf-rfilters{grid-template-columns:1fr 1fr}}
+.paper .cv-ltbl .n{width:58px;height:44px}
+.paper .cv-wide{width:30%}
+.paper .cv-home{width:22%}
+.cv-id{font-size:11.5px;color:#444;letter-spacing:.3px}
+.cv-ltbl b{font-weight:600}

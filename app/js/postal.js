@@ -2,7 +2,7 @@
    จนท. บันทึกแบบสรุปย่อทีละคน → พิมพ์ใบปะหน้าโรงเรียน → ผจก. อนุมัติทีละคน · แอดมินดูผลงานทุกคน */
 'use strict';
 
-const POSTAL_KEY = 'tfd-postal-demo-v1';
+const POSTAL_KEY = 'tfd-postal-demo-v2';
 const P_ROLE = {
   clerk: ['จนท.บันทึกข้อมูล', 'บันทึกใบสมัครทางไปรษณีย์ พิมพ์ใบปะหน้า และดูผลงานของตัวเอง'],
   manager: ['ผจก.อนุมัติทุน', 'ดูทุกโรงเรียน และอนุมัติทุนทีละคน'],
@@ -64,7 +64,7 @@ App.pFresh = function () {
       const f = rand() < 0.55, cls = pick(classes), adult = !/^ป\.|^ม\.[1-3]$/.test(cls);
       recipients.push({cid, title: f ? (adult ? 'นางสาว' : 'เด็กหญิง') : (adult ? 'นาย' : 'เด็กชาย'), first: pick(f ? FIRST_F : FIRST_M), last: pick(LAST),
         school: sc.id, cls, faculty: /^ปวช|^ปวส|^ปริญญา/.test(cls) ? pick(['ช่างยนต์', 'การบัญชี', 'ไฟฟ้ากำลัง', 'คอมพิวเตอร์ธุรกิจ', 'การตลาด']) : '',
-        pvs_type: /^ปวส/.test(cls) ? pick(['other', 'industry']) : '', year: this.db.cycle.history_year});
+        pvs_type: /^ปวส/.test(cls) ? pick(['other', 'industry']) : '', gpa: (2.4 + rand() * 1.55).toFixed(2), year: this.db.cycle.history_year});
     }
   });
   const recOf = id => recipients.filter(r => r.school === id);
@@ -74,7 +74,7 @@ App.pFresh = function () {
   const add = (school, by, at, o) => entries.push({id: 'P' + String(++n).padStart(4, '0'), school, by, at, note: '', gpa: '', decision: null, ...o,
     next_class: o.next_class || nextOptions(o.cls)[0]});
   const cont = (school, r, by, at, o = {}) => add(school, by, at, {type: 'CONT', cid: r.cid, title: r.title, first: r.first, last: r.last, cls: r.cls,
-    faculty: r.faculty, pvs_type: r.pvs_type, from_db: true, gpa: '3.12', use_money: 'ค่าเดินทางไปโรงเรียน ค่าอุปกรณ์การเรียน ชุดนักเรียน',
+    faculty: r.faculty, pvs_type: r.pvs_type, from_db: true, gpa_before: r.gpa, gpa: '3.12', use_money: 'ค่าเดินทางไปโรงเรียน ค่าอุปกรณ์การเรียน ชุดนักเรียน',
     docs: ['cert', 'bank', 'expense', 'receipt'], ...o});
   const nw = (school, by, at, o) => { let cid; do { cid = pMakeId(rand); } while (used.has(cid)); used.add(cid);
     add(school, by, at, {type: 'NEW', cid, family: 'อาศัยกับยาย บิดามารดาแยกทางกัน รายได้ครอบครัวไม่แน่นอน', equipment: ['pickup'], housing: 'own', land: 'none', ...o}); };
@@ -154,9 +154,9 @@ App.pNav = function () {
   const r = this.session.pRole;
   const all = {
     form: ['post-form', 'บันทึกข้อมูล'], schools: ['post-schools', 'ใบปะหน้าโรงเรียน', ['post-cover']],
-    approve: ['post-approve', 'อนุมัติทุน'], work: ['post-work', r === 'clerk' ? 'ผลงานของฉัน' : 'ผลงานเจ้าหน้าที่'], users: ['post-users', 'ผู้ใช้งาน'],
+    approve: ['post-approve', 'อนุมัติทุน'], work: ['post-work', r === 'clerk' ? 'ผลงานของฉัน' : 'ผลงานเจ้าหน้าที่'], users: ['post-users', 'ผู้ใช้งาน'], recipients: ['post-recipients', 'ผู้ได้รับทุนปีก่อน'],
   };
-  const keys = r === 'clerk' ? ['form', 'schools', 'work'] : r === 'manager' ? ['schools', 'approve', 'work'] : ['form', 'schools', 'approve', 'work', 'users'];
+  const keys = r === 'clerk' ? ['form', 'schools', 'work'] : r === 'manager' ? ['schools', 'approve', 'work'] : ['form', 'schools', 'approve', 'work', 'recipients', 'users'];
   return keys.map(k => all[k]);
 };
 App.pRoleBar = function () {
@@ -221,6 +221,10 @@ App.pCidNote = function (cid, type, school, editId) {
   if (dup) out.push(`<span class="p-bad">บันทึกไปแล้ว: ${esc(pName(dup))} · ${esc(this.schoolName(dup.school))} · โดย ${esc(this.pUser(dup.by).name)}</span>`);
   const online = this.db.students.find(s => s.citizen_id === cid);
   if (online) out.push(`<span class="p-warn">มีใบสมัครออนไลน์แล้ว (${esc(online.code)} · ${esc(fullName(online))})</span>`);
+  if (type === 'NEW') {
+    const r = this.P().recipients.find(x => x.cid === cid);
+    if (r) out.push(`<span class="p-bad">เคยได้รับทุนปี ${r.year} (${esc(pName(r))} · ${esc(this.schoolName(r.school))}) — ควรบันทึกเป็นทุนต่อเนื่อง</span>`);
+  }
   if (type === 'CONT') {
     const r = this.P().recipients.find(x => x.cid === cid);
     if (r) {
@@ -238,19 +242,16 @@ App.views['post-form'] = pNeedLogin(function (p) {
   const edit = p.edit ? db.entries.find(e => e.id === p.edit) : null;
   if (edit) { pf.school = edit.school; pf.type = edit.type; }
   const sc = this.schoolById[pf.school];
-  const opts = this.pSchools();
-  let provinces = '';
-  const grouped = opts.reduce((a, s) => ((a[s.province] = a[s.province] || []).push(s), a), {});
-  provinces = Object.entries(grouped).map(([pv, list]) => `<optgroup label="${esc(pv)}">${list.map(s =>
-    `<option value="${s.id}" ${s.id === pf.school ? 'selected' : ''}>${esc(s.name)}${db.batches[s.id] ? ' ✓' : ''}</option>`).join('')}</optgroup>`).join('');
   const bar = `<section class="card pf-bar no-print">
-    <div class="field"><label class="label" for="p-school">โรงเรียน</label>
-      <select class="input" id="p-school" data-onchange="p-sel" ${edit ? 'disabled' : ''}><option value="">— เลือกโรงเรียน —</option>${provinces}</select></div>
+    <div class="field pf-sch"><label class="label" for="p-sq">โรงเรียน</label>${sc && !this.session.pSearch ? `<div class="pf-picked"><div><b>${esc(sc.name)}</b>
+        <span>${esc(sc.district)} จ.${esc(sc.province)}</span></div>${edit ? '' : '<button type="button" class="btn sm" data-action="p-change">เปลี่ยนโรงเรียน</button>'}</div>`
+      : `<input class="input" id="p-sq" data-oninput="p-sq" placeholder="พิมพ์ชื่อโรงเรียน อำเภอ หรือจังหวัด" autocomplete="off">
+        <div class="pf-sres" id="p-sres">${this.pSchoolResults('')}</div>`}</div>
     <div class="field"><span class="label">ประเภททุน</span><div class="pf-type" role="group">${Object.entries(TYPE).map(([k, t]) =>
       `<button type="button" data-action="p-type" data-type="${k}" aria-pressed="${pf.type === k}" ${edit ? 'disabled' : ''}>${t}</button>`).join('')}</div></div></section>`;
   if (!sc) return {nav: this.pNav(), html: `${this.pRoleBar()}
     <div class="page-head"><div><h1>บันทึกใบสมัครทางไปรษณีย์</h1><p class="sub">เลือกโรงเรียนและประเภททุนครั้งเดียว แล้วพิมพ์ทีละคน</p></div></div>
-    ${bar}<div class="note info">เลือกโรงเรียนก่อน แล้วเริ่มบันทึกได้เลย</div>`, after() { const s = document.getElementById('p-school'); if (s) s.focus(); }};
+    ${bar}<div class="note info">เลือกโรงเรียนก่อน แล้วเริ่มบันทึกได้เลย</div>`, after() { const s = document.getElementById('p-sq'); if (s) s.focus(); }};
 
   const draft = edit ? null : db.drafts[this.pDraftKey()];
   const v = Object.assign({}, edit || draft || {}, p.values || {});
@@ -272,7 +273,7 @@ App.views['post-form'] = pNeedLogin(function (p) {
     ${field('cid', 'เลขประจำตัวประชาชน 13 หลัก', input('cid', v.cid, 'inputmode="numeric" maxlength="13" data-oninput="p-cid" placeholder="พิมพ์ตัวเลข 13 หลัก"'),
       {req: 1, err: e.cid, hint: `<span id="p-cid-note" class="p-note">${this.pCidNote(v.cid || '', type, pf.school, edit && edit.id)}</span>`})}
     ${lock ? `<div class="note ok small row between"><span>ชื่อและชั้นดึงจากรายชื่อผู้ได้รับทุนปีล่าสุด</span><button class="btn ghost sm" type="button" data-action="p-unlock">แก้ไขเอง</button></div>` : ''}
-    <input type="hidden" name="from_db" value="${v.from_db ? '1' : ''}"><input type="hidden" name="unlocked" value="${v.unlocked ? '1' : ''}">
+    <input type="hidden" name="from_db" value="${v.from_db ? '1' : ''}"><input type="hidden" name="gpa_before" value="${esc(v.gpa_before || '')}"><input type="hidden" name="unlocked" value="${v.unlocked ? '1' : ''}">
     <div class="pf-name">
       ${field('title', 'คำนำหน้า', lock ? input('title', v.title, 'readonly') : select('title', P_TITLES, v.title, '—'), {req: 1, err: e.title})}
       ${field('first', 'ชื่อ', input('first', v.first, ro), {req: 1, err: e.first})}
@@ -286,7 +287,7 @@ App.views['post-form'] = pNeedLogin(function (p) {
     ${nexts.length > 1 && rate ? `<div>${rateBadge(rate)}</div>` : ''}
     ${needFac || isPvs ? `<div class="grid-2">${needFac ? field('faculty', 'สาขา', input('faculty', v.faculty, ro + ' placeholder="เช่น ช่างยนต์ การบัญชี"')) : '<div></div>'}
       ${isPvs ? radioField('pvs_type', 'ประเภทวิชา (ปวส.)', PVS_TYPES, v.pvs_type || 'other', {attrs: 'data-onchange="p-cls"'}) : ''}</div>` : ''}
-    ${field('gpa', 'เกรดเฉลี่ย', input('gpa', v.gpa, 'inputmode="decimal" placeholder="เช่น 3.25"'), {err: e.gpa})}
+    ${field('gpa', type === 'CONT' ? 'เกรดเฉลี่ยปีนี้' : 'เกรดเฉลี่ย', input('gpa', v.gpa, 'inputmode="decimal" placeholder="เช่น 3.25"'), {err: e.gpa, hint: v.gpa_before ? `เกรดตอนได้รับทุนปี ${this.db.cycle.history_year}: <b>${esc(v.gpa_before)}</b>` : ''})}
     ${type === 'NEW' ? `
       ${field('family', 'สรุปสภาพครอบครัว', textarea('family', v.family, 'rows="2" placeholder="เช่น อาศัยกับยาย บิดามารดาแยกทางกัน รายได้ไม่แน่นอน"'))}
       <div class="field"><span class="label">บ้านมีเครื่องใช้อะไรบ้าง</span><div class="choice-grid pf-eq">${EQUIP.map(([k, t]) =>
@@ -385,9 +386,31 @@ App.pKeepForm = function () {
   const b = document.querySelector('form[data-pbatch]');
   if (b) this.pStore(b);
 };
-App.on('p-sel', function (el) {
+/* ค้นหาโรงเรียนจากฐานข้อมูลสถานศึกษาเดียวกับระบบออนไลน์ */
+App.pSchoolResults = function (q) {
+  q = (q || '').trim();
+  const db = this.P();
+  /* ชื่อโรงเรียนที่ขึ้นต้นตรงกันมาก่อน → ชื่อมีคำนี้ → อำเภอ / จังหวัด */
+  const score = s => { const n = s.name.replace(/^โรงเรียน|^วิทยาลัย|^มหาวิทยาลัย/, '');
+    return !q ? 1 : n.startsWith(q) || s.name.startsWith(q) ? 4 : s.name.includes(q) ? 3 : [s.district, s.province].some(x => (x || '').includes(q)) ? 1 : 0; };
+  const list = this.pSchools().map(s => [s, score(s)]).filter(x => x[1]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+  if (!list.length) return '<p class="small muted">ไม่พบโรงเรียน — แจ้งแอดมินให้เพิ่มสถานศึกษาในระบบ</p>';
+  return list.slice(0, 8).map(s => `<button type="button" data-action="p-pick" data-id="${s.id}"><b>${esc(s.name)}</b>
+    <span>${esc(s.district)} จ.${esc(s.province)}${db.batches[s.id] ? ' · บันทึกแล้ว ' + this.pEntriesOf(s.id).length + ' ราย' : ''}</span></button>`).join('')
+    + (list.length > 8 ? `<p class="small muted">และอีก ${list.length - 8} แห่ง — พิมพ์เพิ่มเพื่อค้นหาให้แคบลง</p>` : '');
+};
+App.on('p-sq', function (el) { document.getElementById('p-sres').innerHTML = this.pSchoolResults(el.value); });
+document.addEventListener('keydown', e => {
+  if (e.target.id !== 'p-sq' || e.key !== 'Enter') return;
+  e.preventDefault();
+  const first = document.querySelector('#p-sres [data-action="p-pick"]');
+  if (first) first.click();
+});
+App.on('p-change', function () { this.pKeepForm(); this.session.pSearch = true; this.render(); });
+App.on('p-pick', function (el) {
   this.pKeepForm();
-  this.pPref().school = el.value;
+  this.session.pSearch = false;
+  this.pPref().school = el.dataset.id;
   this.pSave();
   this.go('post-form');
 });
@@ -416,7 +439,7 @@ App.on('p-cid', function (el) {
   if (!r) return;
   const v = formData(el.form);
   if (v.from_db && v.first === r.first && v.last === r.last) return;
-  const merged = {...v, cid, title: r.title, first: r.first, last: r.last, cls: r.cls, faculty: r.faculty, pvs_type: r.pvs_type, from_db: '1', unlocked: '', next_class: ''};
+  const merged = {...v, cid, title: r.title, first: r.first, last: r.last, cls: r.cls, faculty: r.faculty, pvs_type: r.pvs_type, gpa_before: r.gpa, from_db: '1', unlocked: '', next_class: ''};
   if (edit) { this.go('post-form', {edit, values: merged, focus: 'gpa'}); return; }
   clearTimeout(pTimer);
   this.P().drafts[this.pDraftKey()] = merged;
@@ -460,7 +483,7 @@ App.on('p-save', function (form) {
   if (Object.keys(e).length) { this.go('post-form', {edit: editId, values: v, errors: e}); return; }
   const next = nextOptions(v.cls).includes(v.next_class) ? v.next_class : nextOptions(v.cls)[0] || '';
   const data = {type: pf.type, school: pf.school, cid: v.cid, title: v.title, first: v.first, last: v.last, cls: v.cls, next_class: next,
-    faculty: v.faculty || '', pvs_type: /^ปวส/.test(next) ? v.pvs_type || 'other' : '', gpa: v.gpa || '', note: v.note || '', from_db: !!v.from_db && !v.unlocked};
+    faculty: v.faculty || '', pvs_type: /^ปวส/.test(next) ? v.pvs_type || 'other' : '', gpa: v.gpa || '', note: v.note || '', from_db: !!v.from_db && !v.unlocked, gpa_before: v.gpa_before || ''};
   if (pf.type === 'NEW') Object.assign(data, {family: v.family || '', equipment: arr(v.equipment), housing: v.housing || '', land: v.land || ''});
   else Object.assign(data, {use_money: v.use_money || '', docs: arr(v.docs)});
   if (editId) {
@@ -562,23 +585,25 @@ App.pListHtml = function (id) {
   const es = this.pEntriesOf(id);
   const eqName = k => k === 'none' ? 'ไม่มีเลย' : (EQUIP.find(x => x[0] === k) || [, k])[1];
   const lab = (list, k) => (list.find(x => x[0] === k) || [, '—'])[1];
-  const res = e => e.decision ? DECISION[e.decision.result].label : '☐ อนุมัติ<br>☐ ไม่อนุมัติ';
-  const fac = e => esc(e.faculty || '') + (e.pvs_type ? `<br><small>${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]}</small>` : '') || '—';
   const groups = [];
   ['CONT', 'NEW'].forEach(t => P_LEVELS.forEach(([g, gt]) => {
     const l = es.filter(e => e.type === t && groupOfClass(e.next_class) === g).sort((a, b) => P_CLASSES.indexOf(a.next_class) - P_CLASSES.indexOf(b.next_class));
     if (l.length) groups.push([t, gt, l]);
   }));
-  const head = t => t === 'CONT'
-    ? '<th class="n">ลำดับ</th><th>เลขประจำตัวประชาชน</th><th>ชื่อ–นามสกุล</th><th>ชั้นปีนี้</th><th>ชั้นปีหน้า</th><th>สาขา</th><th class="r">เกรด</th><th>นำเงินทุนไปใช้จ่าย</th>' +
-      P_DOCS.map(([, d]) => `<th class="cv-doc">${d}</th>`).join('') + '<th class="r">เงินทุน</th><th>หมายเหตุ</th><th>ผลพิจารณา</th>'
-    : '<th class="n">ลำดับ</th><th>เลขประจำตัวประชาชน</th><th>ชื่อ–นามสกุล</th><th>ชั้นปีนี้</th><th>ชั้นปีหน้า</th><th>สาขา</th><th class="r">เกรด</th><th>สภาพครอบครัว</th><th>เครื่องใช้ในบ้าน</th><th>บ้านที่อยู่อาศัย</th><th>ที่ดินทำกิน</th><th class="r">เงินทุน</th><th>หมายเหตุ</th><th>ผลพิจารณา</th>';
+  /* ช่องลำดับกว้างไว้ให้ ผจก. วงผล · ช่องที่พิมพ์ยาว (สภาพครอบครัว / นำเงินไปใช้) ได้พื้นที่มากที่สุด */
+  const head = t => '<th class="n">ลำดับ</th><th>เลขประจำตัวประชาชน<br>ชื่อ–นามสกุล</th><th>ชั้นปีนี้<br><small>สาขา</small></th><th>ชั้นปีหน้า</th>'
+    + (t === 'CONT' ? '<th class="r">เกรดเฉลี่ย<br><small>ก่อนรับทุน ↓ ปีนี้</small></th><th class="cv-wide">นำเงินทุนไปใช้จ่าย</th>' + P_DOCS.map(([, d]) => `<th class="cv-doc">${d}</th>`).join('')
+      : '<th class="r">เกรดเฉลี่ย</th><th class="cv-wide">สภาพครอบครัว</th><th class="cv-home">เครื่องใช้ในบ้าน · บ้านที่อยู่อาศัย · ที่ดินทำกิน</th>')
+    + '<th>หมายเหตุ</th>';
   const row = (e, i) => {
-    const base = `<td class="n">${i + 1}</td><td class="nw">${esc(e.cid)}</td><td class="nw">${esc(pName(e))}</td><td class="nw">${esc(e.cls)}</td><td class="nw">${esc(e.next_class)}</td><td>${fac(e)}</td><td class="r">${esc(e.gpa || '—')}</td>`;
-    const tail = `<td class="r">${this.pRate(e).amount.toLocaleString('th-TH')}</td><td>${esc(e.note || '')}</td><td class="nw">${res(e)}</td>`;
-    return e.type === 'CONT'
-      ? `<tr>${base}<td>${esc(e.use_money || '—')}</td>${P_DOCS.map(([k]) => `<td class="cv-doc">${arr(e.docs).includes(k) ? '✓' : '✗'}</td>`).join('')}${tail}</tr>`
-      : `<tr>${base}<td>${esc(e.family || '—')}</td><td>${arr(e.equipment).map(eqName).join(', ') || '—'}</td><td>${esc(lab(P_HOUSING, e.housing))}</td><td>${esc(lab(P_LAND, e.land))}</td>${tail}</tr>`;
+    const base = `<td class="n">${i + 1}</td><td class="nw"><span class="cv-id">${esc(e.cid)}</span><br><b>${esc(pName(e))}</b></td>
+      <td class="nw">${esc(e.cls)}${e.faculty ? `<br><small>${esc(e.faculty)}</small>` : ''}</td>
+      <td class="nw">${esc(e.next_class)}${e.pvs_type ? `<br><small>${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]}</small>` : ''}</td>`;
+    const note = `<td>${esc(e.note || '')}</td>`;
+    if (e.type === 'CONT') return `<tr>${base}<td class="r nw">${e.gpa_before ? `${esc(e.gpa_before)}<br>↓ ` : ''}<b>${esc(e.gpa || '—')}</b></td><td>${esc(e.use_money || '—')}</td>
+      ${P_DOCS.map(([k]) => `<td class="cv-doc">${arr(e.docs).includes(k) ? '✓' : '✗'}</td>`).join('')}${note}</tr>`;
+    return `<tr>${base}<td class="r"><b>${esc(e.gpa || '—')}</b></td><td>${esc(e.family || '—')}</td>
+      <td><small>เครื่องใช้:</small> ${arr(e.equipment).map(eqName).join(', ') || '—'}<br><small>บ้าน:</small> ${esc(lab(P_HOUSING, e.housing))}<br><small>ที่ดิน:</small> ${esc(lab(P_LAND, e.land))}</td>${note}</tr>`;
   };
   return `<div class="paper a4 land cover cv-list">
     ${this.pHead(sc, 'รายชื่อ')}
@@ -660,7 +685,7 @@ App.views['post-approve'] = pNeedLogin(function (p) {
       <div class="pa-grid">
         <div><span>ชั้น</span><b>${esc(e.cls)} → ${esc(e.next_class)}</b></div>
         ${e.faculty ? `<div><span>สาขา</span><b>${esc(e.faculty)}${e.pvs_type ? ` (${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]})` : ''}</b></div>` : ''}
-        <div><span>เกรดเฉลี่ย</span><b>${esc(e.gpa || '—')}</b></div>
+        <div><span>เกรดเฉลี่ย</span><b>${e.gpa_before ? `${esc(e.gpa_before)} → ` : ''}${esc(e.gpa || '—')}</b>${e.gpa_before ? '<small class="muted">ก่อนรับทุน → ปีนี้</small>' : ''}</div>
         <div><span>เงินทุน</span><b>${rateBadge(r)}</b></div>
         ${e.type === 'NEW' ? `<div class="wide"><span>สภาพครอบครัว</span><b>${esc(e.family || '—')}</b></div>
           <div class="wide"><span>เครื่องใช้ในบ้าน</span><b>${arr(e.equipment).map(eqName).join(' · ') || '—'}</b></div>
@@ -726,6 +751,51 @@ App.views['post-work'] = pNeedLogin(function (p) {
 });
 App.on('p-work-sel', function (el) { this.go('post-work', {f: {by: el.value}}); });
 App.on('p-work-filter', function (form) { this.go('post-work', {f: formData(form)}); });
+
+/* ---------- แอดมิน: รายชื่อผู้ได้รับทุนปีล่าสุด (ใช้เทียบทุนใหม่ / ต่อเนื่อง) ---------- */
+App.views['post-recipients'] = pNeedLogin(function (p) {
+  if (this.session.pRole !== 'admin') return this.views['post-work'].call(this, {});
+  const db = this.P();
+  const f = p.f || {};
+  const year = this.db.cycle.history_year;
+  const stateOf = r => {
+    const e = db.entries.find(x => x.cid === r.cid);
+    if (e) return e.type === 'CONT' ? ['postal', 'ส่งทางไปรษณีย์แล้ว', 'ok'] : ['wrong', 'บันทึกเป็นทุนใหม่ (ควรเป็นต่อเนื่อง)', 'bad'];
+    const o = this.db.students.find(x => x.citizen_id === r.cid);
+    if (o) return ['online', 'สมัครออนไลน์แล้ว', 'info'];
+    return ['none', 'ยังไม่ส่ง', 'idle'];
+  };
+  let rows = db.recipients.map(r => ({r, sc: this.schoolById[r.school] || {}, st: stateOf(r)}));
+  const all = rows.length;
+  const q = (f.q || '').replace(/\s+/g, ' ').trim();
+  if (q) rows = rows.filter(x => x.r.cid.includes(q.replace(/\D/g, '') || '#') || pName(x.r).includes(q) || (x.r.first + ' ' + x.r.last).includes(q));
+  if (f.school) rows = rows.filter(x => (x.sc.name || '').includes(f.school) || (x.sc.province || '').includes(f.school));
+  if (f.g) rows = rows.filter(x => groupOfClass(x.r.cls) === f.g);
+  if (f.st) rows = rows.filter(x => x.st[0] === f.st);
+  const cnt = k => db.recipients.filter(r => stateOf(r)[0] === k).length;
+  const shown = rows.slice(0, 100);
+  return {nav: this.pNav(), html: `${this.pRoleBar()}
+    <div class="page-head"><div><h1>ผู้ได้รับทุนปี ${year}</h1><p class="sub">ใช้เทียบว่าเป็นทุนใหม่หรือทุนต่อเนื่อง · ทุนต่อเนื่องพิมพ์เลข 13 หลักแล้วดึงชื่อจากรายชื่อนี้</p></div>
+      <button class="btn" data-action="p-rec-import">นำเข้าจาก Excel</button></div>
+    <div class="stats"><div class="stat"><span>ผู้ได้รับทุนปี ${year}</span><b>${all}</b><small>คน</small></div>
+      <div class="stat"><span>ส่งทางไปรษณีย์แล้ว</span><b>${cnt('postal')}</b></div><div class="stat"><span>สมัครออนไลน์แล้ว</span><b>${cnt('online')}</b></div>
+      <div class="stat"><span>ยังไม่ส่ง</span><b>${cnt('none')}</b></div></div>
+    <form class="card filters pf-rfilters" data-submit="p-rec-filter">
+      ${field('q', 'เลข 13 หลัก / ชื่อ–นามสกุล', input('q', f.q, 'placeholder="พิมพ์บางส่วนก็ได้"'))}
+      ${field('school', 'โรงเรียน / จังหวัด', input('school', f.school))}
+      ${field('g', 'ระดับ (ชั้นที่ได้รับทุน)', select('g', EDU_GROUPS.map(([k, t]) => [k, GROUP_SHORT[k]]), f.g, 'ทุกระดับ'))}
+      ${field('st', 'ปีนี้', select('st', [['postal', 'ส่งทางไปรษณีย์แล้ว'], ['online', 'สมัครออนไลน์แล้ว'], ['wrong', 'บันทึกเป็นทุนใหม่'], ['none', 'ยังไม่ส่ง']], f.st, 'ทั้งหมด'))}
+      <div class="field"><span class="label">&nbsp;</span><button class="btn primary" type="submit">ค้นหา</button></div></form>
+    <p class="small muted">พบ ${rows.length} คน${rows.length > shown.length ? ` · แสดง ${shown.length} คนแรก` : ''}</p>
+    ${tbl([{t: '#'}, {t: 'เลขประจำตัวประชาชน / ชื่อ'}, {t: 'โรงเรียน'}, {t: 'ชั้นที่ได้รับทุน'}, {t: 'เกรดตอนได้รับทุน', r: 1}, {t: 'ปีนี้'}],
+      shown.map((x, i) => [i + 1, `<span class="small muted">${esc(x.r.cid)}</span><br><b>${esc(pName(x.r))}</b>`,
+        `${esc(x.sc.name || '—')}<br><span class="small muted">จ.${esc(x.sc.province || '')}</span>`,
+        `${esc(x.r.cls)}${x.r.faculty ? `<br><span class="small muted">${esc(x.r.faculty)}</span>` : ''}`, esc(x.r.gpa || '—'),
+        `<span class="badge t-${x.st[2]}">${x.st[1]}</span>`]))}`,
+    after() { const q = document.getElementById('q'); if (q && f.q != null) q.focus(); }};
+});
+App.on('p-rec-filter', function (form) { this.go('post-recipients', {f: formData(form)}); });
+App.on('p-rec-import', function () { this.toast('ต้นแบบ: ระบบจริงนำเข้าไฟล์ Excel (เลข 13 หลัก · ชื่อ · โรงเรียน · ชั้น · สาขา · เกรด) ได้ที่นี่'); });
 
 /* ---------- แอดมิน: ผู้ใช้งาน ---------- */
 App.views['post-users'] = pNeedLogin(function (p) {
