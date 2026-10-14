@@ -1086,9 +1086,9 @@ App.views['post-people'] = pNeedLogin(function (p) {
   const amt = rows.filter(x => x.res === 'approved').reduce((a, x) => a + this.pRate(x.e).amount, 0);
   const MAX = 200, shown = rows.slice(0, MAX);
   const resBadge = x => x.res === 'wait' ? '<span class="badge t-violet">รอพิจารณา</span>' : `<span class="badge t-${DECISION[x.res].tone}">${DECISION[x.res].label}</span>`;
-  this._peopleCsv = [['ลำดับ', 'เลขประจำตัวประชาชน', 'ชื่อ-นามสกุล', 'โรงเรียน', 'จังหวัด', 'ทุน', 'ชั้นปีนี้', 'ชั้นปีหน้า', 'สาขา', 'เกรด', 'เงินทุน', 'ผลพิจารณา', 'ผู้บันทึก', 'วันที่บันทึก']]
+  this._peopleCsv = [['ลำดับ', 'เลขประจำตัวประชาชน', 'ชื่อ-นามสกุล', 'โรงเรียน', 'จังหวัด', 'ทุน', 'ชั้นปีนี้', 'ชั้นปีหน้า', 'สาขา', 'เกรด', 'เงินทุน', 'ผลพิจารณา', 'ผู้บันทึก', 'วันที่บันทึก', 'ผู้พิจารณา', 'วันที่พิจารณา']]
     .concat(rows.map((x, i) => [i + 1, x.e.cid, pName(x.e), x.sc.name, x.sc.province, TYPE[x.e.type], x.e.cls, x.e.next_class, pFac(x.e), x.e.gpa || '',
-      this.pRate(x.e).amount, P_RESULT.find(r => r[0] === x.res)[1], this.pUser(x.e.by).name, (x.e.at || '').slice(0, 10)]));
+      this.pRate(x.e).amount, P_RESULT.find(r => r[0] === x.res)[1], this.pUser(x.e.by).name, (x.e.at || '').slice(0, 10), x.e.decision ? this.pUser(x.e.decision.by).name : '', x.e.decision ? x.e.decision.at.slice(0, 10) : '']));
   return {nav: this.pNav(), html: `${this.pRoleBar()}
     <div class="page-head"><div><h1>รายชื่อผู้สมัคร (ทางไปรษณีย์)</h1><p class="sub">ดูรายคน ค้นหาด้วยเลข 13 หลักหรือชื่อ · กดชื่อเพื่อดูข้อมูลเต็ม</p></div>
       <button class="btn" data-action="p-people-export">Export Excel</button></div>
@@ -1105,13 +1105,14 @@ App.views['post-people'] = pNeedLogin(function (p) {
       ${field('by', 'ผู้บันทึก', select('by', db.users.filter(u => u.role !== 'manager').map(u => [u.username, u.name]), f.by, 'ทุกคน', 'data-onchange="p-people-sel"'))}
       <div class="field"><span class="label">&nbsp;</span><div class="row nowrap"><button class="btn primary" type="submit">ค้นหา</button><button class="btn ghost" type="button" data-action="p-people-clear">ล้างค่า</button></div></div></form>
     <p class="small muted">พบ ${rows.length} คน${rows.length > shown.length ? ` · แสดง ${shown.length} คนแรก` : ''}</p>
-    <div class="pf-ptbl">${tbl([{t: '#'}, {t: 'เลขบัตร / ชื่อ'}, {t: 'โรงเรียน'}, {t: 'ทุน · ชั้น'}, {t: 'เกรด', r: 1}, {t: 'เงินทุน', r: 1}, {t: 'ผล'}, {t: 'ผู้บันทึก'}],
+    <div class="pf-ptbl pf-widepage">${tbl([{t: '#'}, {t: 'เลขบัตร / ชื่อ'}, {t: 'โรงเรียน'}, {t: 'ทุน · ชั้น'}, {t: 'เกรด', r: 1}, {t: 'เงินทุน', r: 1}, {t: 'ผล'}, {t: 'ผู้บันทึก'}, {t: 'ผู้พิจารณา'}],
       shown.map((x, i) => [i + 1,
         `<span class="small muted">${esc(x.e.cid)}</span><br><button type="button" class="linkbtn pf-pname" data-go="post-approve" data-id="${x.e.lot}" data-focus="${x.e.id}">${esc(pName(x.e))}</button>`,
         `${esc(x.sc.name)}<br><span class="small muted">จ.${esc(x.sc.province)}</span>`,
         `${TYPE[x.e.type]}<br><span class="small muted">${esc(x.e.cls)} → ${esc(x.e.next_class)}${pFac(x.e) ? ' · ' + esc(pFac(x.e)) : ''}</span>`,
         esc(x.e.gpa || '—'), this.pRate(x.e).amount ? this.pRate(x.e).amount.toLocaleString('th-TH') : '—', resBadge(x),
-        `${esc(this.pUser(x.e.by).name)}<br><span class="small muted">${x.e.at ? pShortDate(x.e.at) : ''}</span>`]))}</div>`,
+        `${esc(this.pUser(x.e.by).name)}<br><span class="small muted">${x.e.at ? pShortDate(x.e.at) : ''}</span>`,
+        x.e.decision ? `${esc(this.pUser(x.e.decision.by).name)}<br><span class="small muted">${pShortDate(x.e.decision.at)}</span>` : '<span class="muted">—</span>']))}</div>`,
     after() { if (f.q != null) { const q = document.getElementById('q'); if (q && p.f) q.focus(); } }};
 });
 App.on('p-people-filter', function (form) { this.go('post-people', {f: formData(form)}); });
