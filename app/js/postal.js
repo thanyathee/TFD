@@ -670,7 +670,7 @@ App.pListHtml = function (id) {
     for (let i = 0; i < l.length; i += P_PER_SHEET) pages.push(l.slice(i, i + P_PER_SHEET));
     return pages.map((chunk, pi) => {
       const by = this.pUser(this.pOwner(id)).name;
-      return `<div class="paper a4 land cover cv-list ${t === 'CONT' ? 'paper-blue' : ''}">
+      return `<div class="paper a4 land cover cv-list">
       ${hd(t, gt, l.length)}
       <table class="cv-ltbl"><colgroup>${P_LIST_COLS[t].map(w => `<col style="width:${w}%">`).join('')}</colgroup>
         <thead><tr>${head(t)}</tr></thead><tbody>${chunk.map((e, i) => row(e, pi * P_PER_SHEET + i)).join('')}</tbody></table>
@@ -697,7 +697,6 @@ App.views['post-cover'] = pNeedLogin(function (p) {
     <div class="row no-print"><span class="small muted">พิมพ์ (A4 แนวนอน):</span>
       <label class="check"><input type="checkbox" data-onchange="p-printpart" data-k="sum" ${pr.sum ? 'checked' : ''}> <span>ใบสรุปใบสมัครของสถานศึกษา</span></label>
       <label class="check"><input type="checkbox" data-onchange="p-printpart" data-k="list" ${pr.list ? 'checked' : ''}> <span>รายชื่อที่บันทึกในระบบ</span></label></div>
-    <div class="note info small no-print">ตัวอย่างสีกระดาษ: ใบสรุป และทุนใหม่ = <b>กระดาษขาว</b> · ทุนต่อเนื่อง = <b>กระดาษสีฟ้าอ่อน</b> (สีฟ้าแสดงบนจอเท่านั้น ตอนพิมพ์ไม่มีสี)</div>
     <div class="a4-wrap cover-wrap">${ids.map(id => (pr.sum ? this.pCoverHtml(id) : '') + (pr.list ? this.pListHtml(id) : '')).join('') || '<div class="empty">เลือกอย่างน้อย 1 ใบ</div>'}</div>`, after: pFitA4};
 });
 function pFitA4() {
