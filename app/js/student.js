@@ -160,7 +160,7 @@ function classFields(v, e = {}) {
     </div>
     ${higher ? `<div class="grid-2">
       ${field('faculty', 'คณะ / สาขา', input('faculty', v.faculty, 'placeholder="เช่น ช่างยนต์ / การบัญชี / พยาบาลศาสตร์"'), {req: 1, err: e.faculty})}
-      ${g === 'highvoc' ? radioField('pvs_type', 'เป็นประเภทวิชาอุตสาหกรรมหรือไม่', PVS_TYPES, v.pvs_type, {req: 1, err: e.pvs_type, hint: 'เช่น ช่างยนต์ ช่างไฟฟ้า อิเล็กทรอนิกส์ ช่างกลโรงงาน ก่อสร้าง · สายบัญชี การตลาด ท่องเที่ยว คหกรรม ฯลฯ ให้เลือก “ไม่ใช่”'}) : ''}
+      ${g === 'highvoc' ? radioField('pvs_type', 'ประเภทวิชา', PVS_TYPES, v.pvs_type, {req: 1, err: e.pvs_type, hint: 'อุตสาหกรรม เช่น ช่างยนต์ ช่างไฟฟ้า อิเล็กทรอนิกส์ ช่างกลโรงงาน ก่อสร้าง · สายบัญชี การตลาด ท่องเที่ยว คหกรรม ฯลฯ เลือก “ทั่วไป”'}) : ''}
     </div>
     ${radioField('study_mode', 'รูปแบบการเรียน', STUDY_MODES_PAPER, v.study_mode, {req: 1, err: e.study_mode, col: 1})}
     <div data-when="study_mode=other">${field('study_mode_other', 'ระบุรูปแบบการเรียน', input('study_mode_other', v.study_mode_other), {err: e.study_mode_other})}</div>` : ''}`;
@@ -175,7 +175,7 @@ function nextFields(v, e = {}) {
         {req: 1, err: e.next_class, hint: 'ระบบคำนวณให้ในกรณีทั่วไป ส่วน ม.3 / ม.6 / ปวช.3 / ปวส.2 ให้เลือกเอง'})}
       ${nextHigher ? field('next_faculty', 'คณะ / สาขา (ปีหน้า)', input('next_faculty', v.next_faculty, 'placeholder="ถ้าทราบแล้ว"')) : ''}
     </div>
-    ${/^ปวส/.test(next) && v.group !== 'highvoc' ? radioField('next_pvs_type', 'ปวส. ที่จะเรียนเป็นประเภทวิชาอุตสาหกรรมหรือไม่', PVS_TYPES, v.next_pvs_type, {req: 1, err: e.next_pvs_type, hint: 'เช่น ช่างยนต์ ช่างไฟฟ้า อิเล็กทรอนิกส์ ช่างกลโรงงาน ก่อสร้าง · สายบัญชี การตลาด ท่องเที่ยว คหกรรม ฯลฯ ให้เลือก “ไม่ใช่”', attrs: 'data-onchange="student-next"'}) : ''}
+    ${/^ปวส/.test(next) && v.group !== 'highvoc' ? radioField('next_pvs_type', 'ประเภทวิชา (ปวส. ที่จะเรียน)', PVS_TYPES, v.next_pvs_type, {req: 1, err: e.next_pvs_type, hint: 'อุตสาหกรรม เช่น ช่างยนต์ ช่างไฟฟ้า อิเล็กทรอนิกส์ ช่างกลโรงงาน ก่อสร้าง · สายบัญชี การตลาด ท่องเที่ยว คหกรรม ฯลฯ เลือก “ทั่วไป”', attrs: 'data-onchange="student-next"'}) : ''}
 `;
 }
 App.on('student-class', function (el) {
@@ -589,10 +589,10 @@ App.on('student-step', function (form, ev) {
     need('group', 'กรุณาเลือกช่วงชั้น');
     need('class', 'กรุณาเลือกระดับชั้น');
     if (higher) { need('faculty'); need('program_years', 'กรุณาเลือก'); need('study_mode', 'กรุณาเลือกรูปแบบการเรียน'); }
-    if (g === 'highvoc') need('pvs_type', 'กรุณาเลือกว่าเป็นประเภทวิชาอุตสาหกรรมหรือไม่');
+    if (g === 'highvoc') need('pvs_type', 'กรุณาเลือกประเภทวิชา');
     if (v.study_mode === 'other') need('study_mode_other', 'กรุณาระบุรูปแบบการเรียน');
     need('next_class', 'กรุณาเลือกระดับชั้นปีหน้า');
-    if (/^ปวส/.test(v.next_class) && g !== 'highvoc') need('next_pvs_type', 'กรุณาเลือกว่าเป็นประเภทวิชาอุตสาหกรรมหรือไม่');
+    if (/^ปวส/.test(v.next_class) && g !== 'highvoc') need('next_pvs_type', 'กรุณาเลือกประเภทวิชา');
     need('school_next', 'กรุณาเลือกคำตอบ');
     if (v.school_next === 'transfer' && !v.transfer_ack) e.transfer_ack = 'กรุณารับทราบเงื่อนไขการส่งหลักฐานการย้ายสถานศึกษา';
     if (s.type === 'CONT') { need('cont_since'); need('cont_years'); }
