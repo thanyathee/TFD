@@ -39,7 +39,7 @@ const NEXT_BRANCH = {'ม.3': ['ม.4', 'ปวช.1'], 'ม.6': ['ปวส.1',
 const nextOptions = c => NEXT_BRANCH[c] || (NEXT_NORMAL[c] ? [NEXT_NORMAL[c]] : []);
 const groupOfClass = c => (Object.entries(CLASS_GROUPS).find(([, l]) => l.includes(c)) || [''])[0];
 /* ปวส.: ถามแค่ว่าเป็นประเภทวิชาอุตสาหกรรมหรือไม่ (อุตสาหกรรมใช้อัตราทุนต่างจาก ปวส. ทั่วไป) */
-const PVS_TYPES = [['industry', 'ใช่ — ประเภทวิชาอุตสาหกรรม'], ['other', 'ไม่ใช่ — ประเภทวิชาอื่น']];
+const PVS_TYPES = [['industry', 'ใช่ อุตสาหกรรม'], ['other', 'ไม่ใช่']];
 const STUDY_MODES = [['regular', 'ภาคปกติ'], ['special', 'ภาคพิเศษ (เรียนวันเสาร์–อาทิตย์ / ภาคค่ำ)'],
   ['dual', 'ทวิภาคี (เรียนและฝึกงานตามหลักสูตร)'], ['other', 'อื่น ๆ']];
 /* อัตราทุนอ้างอิงระดับชั้นปีที่ได้รับทุน (ปีถัดไป) — v14 */
