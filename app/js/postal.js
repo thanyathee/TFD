@@ -593,6 +593,9 @@ App.pCoverHtml = function (id) {
   </div>`;
 };
 /* ใบที่ 2: รายชื่อที่บันทึกในระบบ — ต่อเนื่องก่อน แล้วทุนใหม่ แยกตามระดับชั้นปีหน้า แสดงข้อมูลที่บันทึกทุกช่อง */
+/* ใบที่ 2: รายชื่อที่บันทึกในระบบ — 1 ตาราง / 1 แผ่น · ต่อเนื่องก่อน แล้วทุนใหม่ แยกตามระดับชั้นปีหน้า
+   ทุกตารางใช้ช่องและความกว้างเดียวกัน (ความสูงตามข้อมูล) · หัวกระดาษบอกโรงเรียน / กลุ่ม เพื่อให้ตารางได้พื้นที่มากที่สุด */
+const P_LIST_COLS = [6, 17, 9, 8, 7, 28, 15, 10];
 App.pListHtml = function (id) {
   const sc = this.schoolById[id];
   const es = this.pEntriesOf(id);
@@ -603,29 +606,28 @@ App.pListHtml = function (id) {
     const l = es.filter(e => e.type === t && groupOfClass(e.next_class) === g).sort((a, b) => P_CLASSES.indexOf(a.next_class) - P_CLASSES.indexOf(b.next_class));
     if (l.length) groups.push([t, gt, l]);
   }));
-  /* ช่องลำดับกว้างไว้ให้ ผจก. วงผล · ช่องที่พิมพ์ยาว (สภาพครอบครัว / นำเงินไปใช้) ได้พื้นที่มากที่สุด */
   const head = t => '<th class="n">ลำดับ</th><th>เลขประจำตัวประชาชน<br>ชื่อ–นามสกุล</th><th>ชั้นปีนี้<br><small>สาขา</small></th><th>ชั้นปีหน้า</th>'
-    + (t === 'CONT' ? '<th class="r">เกรดเฉลี่ย<br><small>ก่อนรับทุน ↓ ปีนี้</small></th><th class="cv-wide">นำเงินทุนไปใช้จ่าย</th>' + P_DOCS.map(([, d]) => `<th class="cv-doc">${d}</th>`).join('')
-      : '<th class="r">เกรดเฉลี่ย</th><th class="cv-wide">สภาพครอบครัว</th><th class="cv-home">เครื่องใช้ในบ้าน · บ้านที่อยู่อาศัย · ที่ดินทำกิน</th>')
+    + (t === 'CONT' ? '<th class="r">เกรดเฉลี่ย<br><small>ก่อนรับทุน ↓ ปีนี้</small></th><th>นำเงินทุนไปใช้จ่าย</th><th>เอกสารแนบ</th>'
+      : '<th class="r">เกรดเฉลี่ย</th><th>สภาพครอบครัว</th><th>เครื่องใช้ในบ้าน · บ้าน · ที่ดินทำกิน</th>')
     + '<th>หมายเหตุ</th>';
   const row = (e, i) => {
-    const base = `<td class="n">${i + 1}</td><td class="nw"><span class="cv-id">${esc(e.cid)}</span><br><b>${esc(pName(e))}</b></td>
-      <td class="nw">${esc(e.cls)}${e.faculty ? `<br><small>${esc(e.faculty)}</small>` : ''}</td>
-      <td class="nw">${esc(e.next_class)}${e.pvs_type ? `<br><small>${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]}</small>` : ''}</td>`;
+    const base = `<td class="n">${i + 1}</td><td><span class="cv-id">${esc(e.cid)}</span><br><b>${esc(pName(e))}</b></td>
+      <td>${esc(e.cls)}${e.faculty ? `<br><small>${esc(e.faculty)}</small>` : ''}</td>
+      <td>${esc(e.next_class)}${e.pvs_type ? `<br><small>${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]}</small>` : ''}</td>`;
     const note = `<td>${esc(e.note || '')}</td>`;
-    if (e.type === 'CONT') return `<tr>${base}<td class="r nw">${e.gpa_before ? `${esc(e.gpa_before)}<br>↓ ` : ''}<b>${esc(e.gpa || '—')}</b></td><td>${esc(e.use_money || '—')}</td>
-      ${P_DOCS.map(([k]) => `<td class="cv-doc">${arr(e.docs).includes(k) ? '✓' : '✗'}</td>`).join('')}${note}</tr>`;
+    if (e.type === 'CONT') return `<tr>${base}<td class="r">${e.gpa_before ? `${esc(e.gpa_before)}<br>↓ ` : ''}<b>${esc(e.gpa || '—')}</b></td><td>${esc(e.use_money || '—')}</td>
+      <td class="cv-docs">${P_DOCS.map(([k, d]) => `<span class="${arr(e.docs).includes(k) ? '' : 'no'}">${arr(e.docs).includes(k) ? '✓' : '✗'} ${d}</span>`).join('')}</td>${note}</tr>`;
     return `<tr>${base}<td class="r"><b>${esc(e.gpa || '—')}</b></td><td>${esc(e.family || '—')}</td>
       <td><small>เครื่องใช้:</small> ${arr(e.equipment).map(eqName).join(', ') || '—'}<br><small>บ้าน:</small> ${esc(lab(P_HOUSING, e.housing))}<br><small>ที่ดิน:</small> ${esc(lab(P_LAND, e.land))}</td>${note}</tr>`;
   };
-  return `<div class="paper a4 land cover cv-list">
-    ${this.pHead(sc, 'รายชื่อ')}
-    <h3>รายชื่อที่บันทึกในระบบ <span>(${es.length} ราย)</span></h3>
-    <div class="c">${esc(sc.name)} · จังหวัด${esc(sc.province)} · ระดับชั้นนับตามชั้นปีหน้า</div>
-    ${groups.length ? groups.map(([t, gt, l]) => `<h4 class="a4-sub">${TYPE[t]} ${gt} <span>(${l.length} ราย)</span></h4>
-      <table class="cv-ltbl"><thead><tr>${head(t)}</tr></thead><tbody>${l.map(row).join('')}</tbody></table>`).join('')
-      : '<p class="c">— ยังไม่มีรายชื่อที่บันทึก —</p>'}
-  </div>`;
+  const hd = (title, page) => `<div class="a4-head cv-lhead"><span class="a4-logo">TF</span>
+    <div><b>${esc(sc.name)} · จังหวัด${esc(sc.province)}</b><span>รายชื่อที่บันทึกในระบบ (${es.length} ราย) · ใบสมัครทางไปรษณีย์ ปีการศึกษา ${this.db.cycle.year} · ระดับชั้นนับตามชั้นปีหน้า</span></div>
+    <div class="cv-hs"><b class="cv-grp">${title}</b><span>${page}</span></div></div>`;
+  if (!groups.length) return `<div class="paper a4 land cover cv-list">${hd('ไม่มีรายชื่อ', '')}<p class="c">— ยังไม่มีรายชื่อที่บันทึก —</p></div>`;
+  return groups.map(([t, gt, l], gi) => `<div class="paper a4 land cover cv-list">
+    ${hd(`${TYPE[t]} ${gt} <span>(${l.length} ราย)</span>`, `แผ่นที่ ${gi + 1} / ${groups.length}`)}
+    <table class="cv-ltbl"><colgroup>${P_LIST_COLS.map(w => `<col style="width:${w}%">`).join('')}</colgroup>
+      <thead><tr>${head(t)}</tr></thead><tbody>${l.map(row).join('')}</tbody></table></div>`).join('');
 };
 App.views['post-cover'] = pNeedLogin(function (p) {
   const db = this.P();

@@ -631,3 +631,13 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .paper .cv-home{width:22%}
 .cv-id{font-size:11.5px;color:#444;letter-spacing:.3px}
 .cv-ltbl b{font-weight:600}
+/* ใบรายชื่อ: ตารางละแผ่น ความกว้างช่องเท่ากันทุกตาราง */
+.paper .cv-ltbl{table-layout:fixed;width:100%;margin-top:8px}
+.paper .cv-ltbl td,.paper .cv-ltbl th{overflow-wrap:anywhere}
+.paper .cv-ltbl .n{width:auto;height:46px;font-size:14px}
+.cv-lhead{margin-bottom:4px}
+.cv-lhead>div:nth-child(2) b{font-size:15px}
+.cv-grp{font-size:17px!important;color:#0055b8}
+.cv-grp span{font-size:13px;color:#555;font-weight:500}
+.cv-docs span{display:block;white-space:nowrap}
+.cv-docs span.no{color:#b3261e}
