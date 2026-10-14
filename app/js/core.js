@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v16';
+const STORE_KEY = 'tfd-scholarship-demo-v17';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -123,9 +123,18 @@ const App = {
     const copy = o => JSON.parse(JSON.stringify(o));
     const sent = ['waiting_transfer_proof', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'];
     return {
-      students: s.students.map(x => x.school_next === 'transfer' && x.status === 'waiting_staff' ? {...x, status: 'waiting_transfer_proof'} : x)
-        .map(x => x.school_next === 'transfer' && ['need_more_info', 'waiting_manager', 'decided'].includes(x.status)
-          ? {...x, history: (x.history || []).concat({at: '2027-05-10T10:00', text: `จนท. 01 บันทึกการย้าย: เรียนที่เดิม ชั้น ${x.next_class}`, kind: 'transfer'})} : x).map(x => {
+      students: s.students.map(x => x.school_next === 'transfer' && x.status === 'waiting_staff' && !x.demo_transfer ? {...x, status: 'waiting_transfer_proof'} : x)
+        .map(x => {
+          /* ข้อมูลตัวอย่างที่ จนท. บันทึกการย้ายแล้ว: ย้ายโรงเรียน / ชั้นตามที่บันทึก และเขียนประวัติแบบเดียวกับระบบจริง */
+          const t = x.demo_transfer || (x.school_next === 'transfer' && ['need_more_info', 'waiting_manager', 'decided'].includes(x.status)
+            ? {to: x.school, cls: x.next_class, date: '2027-05-10'} : null);
+          if (!t) return x;
+          const name = id => (s.schools.find(c => c.id === id) || {}).name || id;
+          const where = t.to === x.school ? `เรียนที่เดิม ${name(x.school)}` : `${name(x.school)} → ${name(t.to)}`;
+          return {...x, school: t.to, next_class: t.cls, rate: rateOf(t.cls, /^ปวส/.test(t.cls) ? (x.next_pvs_type || x.pvs_type) : '') || x.rate,
+            history: (x.history || []).concat({at: t.date + 'T10:00', text: `จนท. 01 บันทึกการย้าย: ${where} ชั้น ${t.cls}${t.cls !== x.next_class ? ` (เดิมแจ้งไว้: ${x.next_class})` : ''}`, kind: 'transfer'},
+              {at: t.date + 'T10:00', text: 'ได้รับหลักฐานการย้ายสถานศึกษาแล้ว — รอเจ้าหน้าที่ดำเนินการ', kind: 'transfer_proof'})};
+        }).map(x => {
         /* เอกสารตัวอย่าง: ส่งแล้ว = ครบ, รอครู = ตาม demo_docs (none / partial / full) */
         const docs = docsFor(x).filter(d => !d[3]);
         const n = sent.includes(x.status) || x.demo_docs === 'full' ? docs.length : x.demo_docs === 'partial' ? Math.ceil(docs.length / 2) : 0;
@@ -137,8 +146,9 @@ const App = {
         modes: x.type === 'college' ? ['regular', 'dual'] : x.type === 'university' ? ['regular', 'special'] : ['regular']})),
       teachers: copy(s.teachers),
       /* ข้อมูลตัวอย่าง: นักเรียนที่ติ๊กย้าย ถ้าผ่าน จนท. ไปแล้ว ถือว่าบันทึกการย้ายแล้ว (เรียนที่เดิม) */
-      transfers: s.students.filter(x => x.school_next === 'transfer' && ['need_more_info', 'waiting_manager', 'decided'].includes(x.status))
-        .map(x => ({code: x.code, from: x.school, to: x.school, cls: x.next_class, date: '2027-05-10', note: 'ข้อมูลตัวอย่าง', by: 'จนท. 01', at: '2027-05-10T10:00'})),
+      transfers: s.students.filter(x => x.demo_transfer || (x.school_next === 'transfer' && ['need_more_info', 'waiting_manager', 'decided'].includes(x.status)))
+        .map(x => { const t = x.demo_transfer || {to: x.school, cls: x.next_class, date: '2027-05-10'};
+          return {code: x.code, from: x.school, to: t.to, cls: t.cls, date: t.date, note: 'ข้อมูลตัวอย่าง', by: 'จนท. 01', at: t.date + 'T10:00'}; }),
       cycle: {year: 2570, history_year: 2569, status: 'open', open: '2026-11-01', close: '2027-01-31',
         transfer_open: '2027-03-01', first_cutoff: '2027-05-15', transfer_close: '2027-07-31'},
       pdpa: {version: '2026-08', effective: '2026-08-01', url: 'https://tiscofoundation.org/wp-content/uploads/pdpa_privacy_notice_tiscof.pdf'},

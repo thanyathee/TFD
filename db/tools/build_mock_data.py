@@ -118,6 +118,13 @@ DEMO_CASES = [
     {'status': 'waiting_teacher', 'class': 'ป.5', 'type': 'NEW', 'docs': 'partial', 'note': 'ป.5 แนบบางส่วน (มูลนิธิฯ พิจารณาจากความเห็นครู)'},
     {'status': 'waiting_staff', 'class': 'ม.2', 'type': 'NEW', 'note': 'ส่งมูลนิธิฯ แล้ว รอเจ้าหน้าที่'},
     {'status': 'waiting_staff', 'class': 'ม.3', 'type': 'NEW', 'transfer': True, 'note': 'ส่งมูลนิธิฯ แล้ว รอหลักฐานการย้ายสถานศึกษา'},
+    # ติ๊กย้าย และ จนท. บันทึกการย้ายแล้ว (tr: ไปที่ไหน ชั้นอะไร วันที่แจ้ง) — to = None คือเรียนที่เดิม
+    {'status': 'waiting_staff', 'class': 'ม.3', 'next': 'ปวช.1', 'type': 'NEW', 'transfer': True,
+     'tr': {'to': None, 'cls': 'ม.4', 'date': '2027-05-12'}, 'note': 'แจ้งย้ายไป ปวช. สุดท้ายเรียนที่เดิม ม.4'},
+    {'status': 'waiting_manager', 'class': 'ป.6', 'type': 'NEW', 'transfer': True,
+     'tr': {'to': 2, 'cls': 'ม.1', 'date': '2027-05-08'}, 'note': 'ป.6 ย้ายไปโรงเรียนอื่น ส่งหลักฐานทันรอบ 1'},
+    {'status': 'waiting_staff', 'class': 'ม.3', 'next': 'ปวช.1', 'type': 'CONT', 'transfer': True,
+     'tr': {'to': 10, 'cls': 'ปวช.1', 'date': '2027-06-20'}, 'note': 'ม.3 ย้ายไปวิทยาลัย ส่งหลักฐานหลัง 15 พ.ค. (รอบ 2)'},
     {'status': 'need_more_info', 'class': 'ม.5', 'type': 'CONT', 'note': 'เจ้าหน้าที่ขอข้อมูลเพิ่มเติม'},
     {'status': 'waiting_manager', 'class': 'ม.3', 'type': 'NEW', 'note': 'รอผู้จัดการพิจารณา'},
     {'status': 'decided', 'result': 'approved', 'class': 'ป.6', 'type': 'NEW', 'transfer': True, 'note': 'อนุมัติ (ย้ายไป ม.1 ที่อื่น)'},
@@ -296,6 +303,7 @@ def main():
     rng.shuffle(statuses)
     statuses = [c['status'] for c in DEMO_CASES] + statuses
     students, apps, fams, persons, occs, sibs, funding, treviews, sreviews, decisions, history = [], [], [], [], [], [], [], [], [], [], []
+    transfers = []
     app_people = {}
     used_ids = set()
     base = datetime(2026, 11, 1, 8, 0)
@@ -341,7 +349,7 @@ def main():
         part = rng.random() < 0.3
         n_sib = rng.randint(0, 4)
         transfer = case.get('transfer', False) if case else rng.random() < (0.6 if cur in ('ม.3', 'ม.6', 'ปวช.3', 'ปวส.2') else 0.15)
-        if transfer and status == 'waiting_staff':
+        if transfer and status == 'waiting_staff' and not case.get('tr'):
             status = 'waiting_transfer_proof'   # ติ๊กย้าย: รอหลักฐานการย้ายก่อน จนท. ดำเนินการ
         apps.append({
             'id': aid, 'app_code': f'TF2570-{n:06d}', 'cycle_id': 1, 'student_id': sid, 'school_id': sc['id'],
@@ -379,6 +387,10 @@ def main():
             'submitted_at': submitted.isoformat() if submitted else None,
             'locked': status not in ('draft', 'returned_to_student'),
         })
+        if case.get('tr'):
+            tr = case['tr']
+            transfers.append({'application_id': aid, 'from_school_id': sc['id'], 'to_school_id': tr['to'] or sc['id'], 'new_class': tr['cls'],
+                              'notified_date': tr['date'], 'recorded_by': uid('staff', 1), 'note': 'ข้อมูลตัวอย่าง'})
         if cont:
             order = [c for l in CLASS_GROUPS.values() for c in l]
             back = rng.randint(1, min(3, order.index(cur)))  if order.index(cur) else 0
@@ -514,7 +526,7 @@ def main():
     out += [insert('students', students), insert('applications', apps), insert('application_family', fams),
             insert('application_persons', persons), "SELECT setval(pg_get_serial_sequence('application_persons','id'), (SELECT max(id) FROM application_persons));\n",
             insert('person_occupations', occs), insert('application_siblings', sibs), insert('application_other_funding', funding),
-            insert('teacher_reviews', treviews), insert('staff_reviews', sreviews), insert('decisions', decisions), 'COMMIT;', '']
+            insert('teacher_reviews', treviews), insert('staff_reviews', sreviews), insert('decisions', decisions), insert('school_transfers', transfers), 'COMMIT;', '']
     (ROOT / 'seed_mock.sql').write_text('\n'.join(out), 'utf-8')
 
     # ---------------- JSON สำหรับหน้า HTML (รูปแบบเดียวกับที่แอปบันทึก)
@@ -551,6 +563,8 @@ def main():
         other = next((x for x in fund_by.get(a['id'], []) if x['kind'] == 'scholarship'), None)
         mock['students'].append({
             'demo_docs': (DEMO_CASES[int(a['app_code'][-6:]) - 1].get('docs', '') if int(a['app_code'][-6:]) <= len(DEMO_CASES) else ''),
+            'demo_transfer': next(({'to': by_id[t['to_school_id']]['institution_code'], 'cls': t['new_class'], 'date': t['notified_date']}
+                                   for t in transfers if t['application_id'] == a['id']), None),
             'demo_note': (DEMO_CASES[int(a['app_code'][-6:]) - 1].get('note', '') if int(a['app_code'][-6:]) <= len(DEMO_CASES) else ''),
             'return_reason': 'กรุณาแก้ไขข้อมูลรายได้ของบิดาให้ตรงกับความเป็นจริง และเพิ่มรายละเอียดในส่วนเขียนเล่า' if a['status'] == 'returned_to_student' else '',
             'code': a['app_code'], 'citizen_id': st['citizen_id'], 'title': st['title'], 'first_name': st['first_name'],
