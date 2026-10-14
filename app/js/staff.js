@@ -280,28 +280,34 @@ App.views['staff-apps'] = function (p) {
   this._appF = f;
   const rows = this.appFilter(f);
   const role = this.session.staffRole;
+  const nAdv = ['round', 'loan', 'type', 'rate', 'move', 'region', 'school'].filter(k => f[k]).length + ((f.classes || []).length ? 1 : 0);
   return {nav: this.staffNav(), html: `${this.roleBar()}
     <div class="page-head"><div><h1>งานพิจารณาใบสมัคร</h1><p class="sub">${ROLE[role][0]} — ${ROLE[role][1]}</p></div></div>
-    <form class="card no-print" data-submit="apps-filter" novalidate>
-      <div class="grid-3">
+    <form class="card no-print af" data-submit="apps-filter" novalidate>
+      <div class="af-main">
+        ${field('f_q', 'ค้นหา', input('f_q', f.q, 'placeholder="รหัสผู้สมัคร / ชื่อ–นามสกุล"'))}
         ${field('f_work', 'สถานะการดำเนินงาน', select('f_work', WORK, f.work || 'all'))}
         ${field('f_result', 'ผลการพิจารณา', select('f_result', Object.entries(DECISION).map(([k, d]) => [k, d.label === 'อนุมัติทุน' ? 'ผ่าน' : d.label]), f.result, 'ทั้งหมด'))}
+        <button class="btn primary" type="submit">ค้นหา</button>
+      </div>
+      <details class="af-more" ${nAdv ? 'open' : ''}><summary>ตัวกรองเพิ่มเติม${nAdv ? ` <span class="badge t-info">${nAdv}</span>` : ''}</summary>
+      <div class="af-grid">
         ${field('f_round', 'รอบพิจารณา', select('f_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], f.round, 'ทั้งหมด'))}
         ${field('f_loan', 'กยศ./กรอ.', select('f_loan', [['no', 'ไม่กู้'], ['yes', 'กู้ / ไม่เข้าเกณฑ์']], f.loan, 'ทั้งหมด'))}
         ${field('f_type', 'ประเภททุน', select('f_type', [['NEW', 'ทุนใหม่'], ['CONT', 'ทุนต่อเนื่อง']], f.type, 'ทั้งหมด'))}
         ${field('f_rate', 'อัตราทุน', select('f_rate', [['normal', 'อัตราปกติ'], ['special', 'อัตราพิเศษ']], f.rate, 'ทั้งหมด'))}
         ${field('f_move', 'สถานศึกษาปีหน้า', select('f_move', [['transfer', 'ย้ายสถานศึกษา'], ['same', 'เรียนต่อที่เดิม']], f.move, 'ทั้งหมด'))}
-        ${field('f_q', 'ค้นหาเพิ่มเติม', input('f_q', f.q, 'placeholder="รหัสผู้สมัคร / ชื่อ–นามสกุล"'))}
       </div>
       <div class="field"><span class="label">เลือกโรงเรียนที่ต้องการรีวิว</span>
         <div class="grid-4" data-area='{"any":true,"school":true}'>${this.areaPicker('fa', f, {any: true, school: true})}</div>
-        <div class="hint">ช่อง “โรงเรียน” จะแสดงเฉพาะสถานศึกษาที่ถูกเพิ่มไว้ในระบบของมูลนิธิฯ เท่านั้น</div></div>
+</div>
       <div class="field"><span class="label">ระดับชั้น (เลือกทั้งช่วงชั้น หรือเลือกเป็นรายชั้นก็ได้)</span>
         <div class="lv-grid">${EDU_GROUPS.map(([k]) => { const cls = CLASS_GROUPS[k] || []; const on = cls.filter(c => (f.classes || []).includes(c));
           return `<div class="lv-row"><label class="choice lv-group"><input type="checkbox" data-group="${k}" data-onchange="lv-group" ${on.length === cls.length ? 'checked' : ''}> <b>${k === 'primary' ? 'ประถม' : GROUP_SHORT[k]}</b></label>
             <div class="lv-classes">${cls.map(c => `<label class="choice"><input type="checkbox" name="f_classes" value="${c}" data-g="${k}" data-onchange="lv-class" ${(f.classes || []).includes(c) ? 'checked' : ''}> ${c.replace('ปริญญาตรี ', 'ป.ตรี ')}</label>`).join('')}</div></div>`; }).join('')}</div></div>
-      <div class="row between"><button class="btn" type="button" data-action="print">${icon('print')} พิมพ์ผลการค้นหา</button>
-        <div class="row"><button class="btn" type="button" data-go="staff-apps" data-reset="1">ล้างตัวกรอง</button><button class="btn primary" type="submit">ค้นหา / แสดงผล</button></div></div>
+      </details>
+      <div class="row between"><button class="btn sm" type="button" data-action="print">${icon('print')} พิมพ์ผลการค้นหา</button>
+        <button class="btn sm" type="button" data-go="staff-apps" data-reset="1">ล้างตัวกรอง</button></div>
     </form>
     <p class="small muted">พบ ${rows.length} รายการ — เลือกสถานะการดำเนินงานและผลการพิจารณาแยกกันได้</p>
     <div class="tlist app-list" role="table" aria-label="รายชื่อใบสมัคร">

@@ -483,3 +483,18 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .lv-classes .choice{min-height:40px;padding:6px 12px}
 .lv-group{min-height:40px;padding:6px 12px}
 @media (max-width:600px){.lv-row{grid-template-columns:1fr}}
+/* ตัวกรองใบสมัคร: แถวหลัก + ตัวกรองเพิ่มเติมแบบพับได้ */
+.af{gap:10px}
+.af-main{display:grid;grid-template-columns:2fr 1.3fr 1fr auto;gap:10px;align-items:end}
+.af-main>.btn{min-height:48px}
+.af-more>summary{cursor:pointer;font-weight:600;color:var(--brand);padding:6px 0;list-style:none;display:flex;align-items:center;gap:8px}
+.af-more>summary::before{content:"▸";transition:transform .15s}
+.af-more[open]>summary::before{transform:rotate(90deg)}
+.af-more>summary::-webkit-details-marker{display:none}
+.af-more[open]{display:grid;gap:10px}
+.af-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.af .lv-classes .choice,.af .lv-group{min-height:34px;padding:4px 10px;font-size:14px}
+.af .lv-grid{gap:6px}
+.af .lv-row{grid-template-columns:120px 1fr}
+@media (max-width:900px){.af-main{grid-template-columns:1fr 1fr}.af-main>.field:first-child{grid-column:1/-1}.af-main>.btn{grid-column:1/-1}.af-grid{grid-template-columns:1fr 1fr}}
+@media (min-width:901px){.af .lv-grid{grid-template-columns:1fr 1fr;column-gap:16px}}
