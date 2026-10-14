@@ -80,6 +80,8 @@ CREATE TABLE schools (
   institution_code text UNIQUE,                 -- InstitutionID
   name           text NOT NULL,
   school_type    text NOT NULL CHECK (school_type IN ('school','college','university','other')),
+  study_modes    text[] NOT NULL DEFAULT '{}',  -- รูปแบบหลักสูตรที่เปิดสอน: regular / special / dual / other (เลือกได้หลายแบบ)
+  study_mode_other text,                       -- ระบุเมื่อมี other
   special_rate   boolean NOT NULL DEFAULT false,  -- อัตราพิเศษ ม.ต้น (เช่น พระปริยัติธรรม ราชประชานุเคราะห์ ศึกษาสงเคราะห์ มีหอพักให้ฟรี)
   subdistrict_id integer REFERENCES subdistricts(id),
   district_id    integer NOT NULL REFERENCES districts(id),

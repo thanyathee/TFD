@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v11';
+const STORE_KEY = 'tfd-scholarship-demo-v12';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -128,7 +128,9 @@ const App = {
         return {...copy(x), docFiles: Object.fromEntries(docs.slice(0, n).map(d => [d[0], [`${x.code}_${d[0]}.pdf`]]))};
       }),
       /* โรงเรียนตัวอย่างที่ได้อัตราพิเศษ ม.ต้น (ใช้ทดลอง) */
-      schools: copy(s.schools).map(x => ({...x, special_rate: ['SCH-003', 'SCH-004', 'SCH-018', 'SCH-020'].includes(x.id)})),
+      schools: copy(s.schools).map(x => ({...x, special_rate: ['SCH-003', 'SCH-004', 'SCH-018', 'SCH-020'].includes(x.id),
+        /* รูปแบบหลักสูตรตัวอย่าง: วิทยาลัย = ปกติ + ทวิภาคี, มหาวิทยาลัย = ปกติ + ภาคพิเศษ, โรงเรียน = ปกติ */
+        modes: x.type === 'college' ? ['regular', 'dual'] : x.type === 'university' ? ['regular', 'special'] : ['regular']})),
       teachers: copy(s.teachers),
       transfers: [],
       cycle: {year: 2570, history_year: 2569, status: 'open', open: '2026-11-01', close: '2027-01-31',

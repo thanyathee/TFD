@@ -589,7 +589,7 @@ App.views['staff-schools'] = function (p) {
       ${list.length ? list.map((s, i) => { const t = this.teacherOf(s.id);
         return `<button class="trow" role="row" data-go="staff-school" data-id="${s.id}">
           <span class="n">${i + 1}</span>
-          <span class="c-name">${esc(s.name)}<small>${s.id} · ${(s.levels || []).map(l => GROUP_SHORT[l]).join(', ')}</small>${s.special_rate ? '<span class="badge t-warn sm">อัตราพิเศษ ม.ต้น</span>' : ''}</span>
+          <span class="c-name">${esc(s.name)}<small>${s.id} · ${(s.levels || []).map(l => GROUP_SHORT[l]).join(', ')}${(s.modes || []).length ? ' · ' + s.modes.map(m => m === 'other' ? (s.modes_other || 'อื่น ๆ') : ((STUDY_MODES.find(x => x[0] === m) || [, m])[1]).replace(/ \(.*\)$/, '')).join(', ') : ''}</small>${s.special_rate ? '<span class="badge t-warn sm">อัตราพิเศษ ม.ต้น</span>' : ''}</span>
           <span class="c-area">จ.${esc(s.province)}<small>${esc(s.district)} · ${esc(this.regionName(s.region))}</small></span>
           <span class="c-acc">${t ? `${esc(t.username)}<small>${esc(t.name)}</small>` : '<span class="muted">ยังไม่มีบัญชีครู</span>'}</span>
           <span class="c-status">${t ? `<span class="badge ${t.active === false ? 't-bad' : 't-ok'}">${t.active === false ? 'ปิดใช้งาน' : 'ใช้งาน'}</span>` : ''}</span></button>`; }).join('')
@@ -612,7 +612,7 @@ App.views['staff-school'] = function (p) {
   const sc = isNew ? {id: 'SCH-' + String(this.db.schools.length + 1).padStart(3, '0'), type: 'school', levels: [],
     region: p.region || '', province: p.province || '', district: p.district || ''} : this.schoolById[p.id];
   const t = (isNew ? null : this.teacherOf(sc.id)) || {};
-  const v = p.values || {name: sc.name, type: sc.type, special_rate: !!sc.special_rate, address: sc.address, postcode: sc.postcode, levels: sc.levels, username: t.username || '',
+  const v = p.values || {name: sc.name, type: sc.type, special_rate: !!sc.special_rate, modes: sc.modes || [], modes_other: sc.modes_other || '', address: sc.address, postcode: sc.postcode, levels: sc.levels, username: t.username || '',
     active: t.active === false ? 'no' : 'yes', t_name: t.name, t_position: t.position, t_dept: t.department, t_phone: t.phone, t_email: t.email,
     region: sc.region, province: sc.province, district: sc.district, sub: sc.subdistrict};
   const e = p.errors || {};
@@ -635,6 +635,9 @@ App.views['staff-school'] = function (p) {
       <section class="card"><h3>ช่วงชั้นที่เปิดสอน</h3>
         <div class="choices">${EDU_GROUPS.map(([k, t]) => `<label class="choice"><input type="checkbox" name="levels" value="${k}" ${(v.levels || []).includes(k) ? 'checked' : ''}> ${t}</label>`).join('')}</div>
         <div class="hint">เลือกได้มากกว่า 1 ช่วงชั้น ใช้เป็นตัวช่วยกรองสถานศึกษาในหน้าสมัครของนักเรียนและหน้ารีวิวของเจ้าหน้าที่</div></section>
+      <section class="card"><h3>รูปแบบหลักสูตรที่เปิดสอน</h3>
+        <div class="choices col">${STUDY_MODES_PAPER.map(([k, t]) => `<label class="choice"><input type="checkbox" name="modes" value="${k}" ${(v.modes || []).includes(k) ? 'checked' : ''}> ${t}</label>`).join('')}</div>
+        ${field('modes_other', 'อื่น ๆ (ระบุ)', input('modes_other', v.modes_other, 'placeholder="เช่น หลักสูตรเทียบโอน / ออนไลน์"'), {err: e.modes_other, hint: 'กรอกเมื่อเลือก “อื่น ๆ” · เลือกได้มากกว่า 1 แบบ ใช้ตรวจกับรูปแบบการเรียนที่นักเรียนกรอกในใบสมัคร'})}</section>
       <section class="card"><h3>บัญชีครู / ผู้ประสานงานทุน</h3>
         <div class="grid-3">
           ${field('username', 'Username', input('username', v.username, 'autocapitalize="off"'), {req: 1, err: e.username})}
@@ -671,7 +674,7 @@ App.on('school-parse', function () {
   const line = raw.split(/\s(?:ตำบล|ต\.|แขวง|อำเภอ|อ\.|เขต|จังหวัด|จ\.)/)[0];
   const zip = (/\b(\d{5})\b/.exec(raw) || [])[1] || (sub ? sub.zip : '');
   const form = document.querySelector('form[data-submit=school-save]');
-  const v = {...formData(form), name: document.getElementById('sname').value, type: document.getElementById('stype').value, special_rate: (document.querySelector('[name=srate]:checked') || {}).value === 'special', levels: arr(formData(form).levels),
+  const v = {...formData(form), name: document.getElementById('sname').value, type: document.getElementById('stype').value, special_rate: (document.querySelector('[name=srate]:checked') || {}).value === 'special', modes: arr(formData(form).modes), modes_other: document.getElementById('modes_other').value, levels: arr(formData(form).levels),
     username: document.getElementById('username').value, active: document.getElementById('active').value,
     region, province: pv, district: dist, sub: sub ? sub.th : '', address: line, postcode: zip};
   this.go('staff-school', {...this.view.params, values: v});
@@ -687,13 +690,14 @@ App.on('school-save', function (form) {
   if (!v.sname) e.sname = 'กรุณากรอกชื่อสถานศึกษา';
   else if (this.db.schools.some(s => s.id !== id && s.name === v.sname && s.district === a.district)) e.sname = 'มีสถานศึกษาชื่อนี้ในอำเภอนี้แล้ว';
   if (!a.district) e.area = 'กรุณาเลือกภาค จังหวัด และอำเภอ / เขต';
+  if (arr(v.modes).includes('other') && !(v.modes_other || '').trim()) e.modes_other = 'กรุณาระบุรูปแบบหลักสูตรอื่น ๆ';
   const uname = (v.username || '').toLowerCase();
   if (!uname) e.username = 'กรุณากำหนด Username';
   else if (this.db.teachers.some(t => t.username === uname && t.school !== id)) e.username = 'Username นี้ถูกใช้แล้ว (1 โรงเรียน = 1 Username)';
-  const values = {name: v.sname, type: v.stype, special_rate: v.srate === 'special', address: v.saddr, postcode: v.szip, levels: arr(v.levels), username: v.username, active: v.active,
+  const values = {name: v.sname, type: v.stype, special_rate: v.srate === 'special', modes: arr(v.modes), modes_other: v.modes_other, address: v.saddr, postcode: v.szip, levels: arr(v.levels), username: v.username, active: v.active,
     t_name: v.t_name, t_position: v.t_position, t_dept: v.t_dept, t_phone: v.t_phone, t_email: v.t_email, ...a};
   if (Object.keys(e).length) { this.go('staff-school', {...this.view.params, values, errors: e}); return; }
-  const rec = {id, name: v.sname, type: v.stype, special_rate: v.srate === 'special', region: a.region, province: a.province, district: a.district, subdistrict: a.sub,
+  const rec = {id, name: v.sname, type: v.stype, special_rate: v.srate === 'special', modes: arr(v.modes), modes_other: arr(v.modes).includes('other') ? (v.modes_other || '').trim() : '', region: a.region, province: a.province, district: a.district, subdistrict: a.sub,
     address: v.saddr, postcode: v.szip, levels: arr(v.levels)};
   if (isNew) this.db.schools.push(rec); else Object.assign(this.schoolById[id], rec);
   const t = this.db.teachers.find(x => x.school === id);
