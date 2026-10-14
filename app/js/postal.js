@@ -363,7 +363,8 @@ App.views['post-form'] = pNeedLogin(function (p) {
   const e = p.errors || {};
   const type = v.type === 'CONT' ? 'CONT' : 'NEW';
   const nexts = nextOptions(v.cls);
-  if (!v.next_class && v.next_sel !== '__other') v.next_class = nexts[0] || '';
+  /* เหมือนสมัครออนไลน์: ชั้นที่ต่อได้หลายทาง (ม.3 · ม.6 · ปวช.3 · ปวส.2) ให้ จนท. เลือกเอง ไม่เติมให้ */
+  if (!v.next_class && v.next_sel !== '__other' && nexts.length === 1) v.next_class = nexts[0];
   const clsOther = v.cls_sel === '__other' || (!!v.cls && !P_CLASSES.includes(v.cls));
   const nextOther = v.next_sel === '__other' || (!!v.next_class && !P_CLASSES.includes(v.next_class));
   const OTHER = ['__other', 'อื่น ๆ (พิมพ์เอง)'];
@@ -396,7 +397,8 @@ App.views['post-form'] = pNeedLogin(function (p) {
           : select('cls_sel', P_CLASSES.map(x => [x, x]).concat([OTHER]), clsOther ? '__other' : v.cls, 'เลือกชั้น', 'data-onchange="p-cls"'), {req: 1, err: e.cls})}
         ${!lock && clsOther ? field('cls_text', 'พิมพ์ชั้นเอง', input('cls_text', clsOther ? v.cls : '', 'placeholder="เช่น ปวส.1 (ต่อเนื่อง 2 ปี)"')) : ''}</div>
       <div class="stack">${field('next_sel', 'ชั้นปีหน้า',
-          select('next_sel', nextItems, nextOther ? '__other' : v.next_class, 'เลือกชั้น', 'data-onchange="p-cls"'), {req: 1, err: e.next_class})}
+          select('next_sel', nextItems, nextOther ? '__other' : v.next_class, 'เลือกชั้น', 'data-onchange="p-cls"'), {req: 1, err: e.next_class,
+          hint: nexts.length > 1 && !v.next_class ? `${esc(v.cls)} ต่อได้ ${nexts.join(' หรือ ')} — กรุณาเลือก` : ''})}
         ${nextOther ? `<div class="grid-2">${field('next_text', 'พิมพ์ชั้นปีหน้าเอง', input('next_text', nextOther ? v.next_class : '', 'placeholder="เช่น ปริญญาตรี ปี 1 (เทียบโอน)"'))}
           ${field('next_group', 'นับเป็นระดับ', select('next_group', P_LEVELS_ALL, v.next_group || 'other'))}</div>` : ''}</div></div>
     ${rate && rate.amount ? `<div>${rateBadge(rate)}</div>` : ''}
@@ -667,10 +669,10 @@ App.on('p-save', function (form) {
   if (!v.last) e.last = 'กรุณากรอกนามสกุล';
   pNorm(v);
   if (!v.cls) e.cls = 'กรุณาเลือกหรือพิมพ์ชั้น';
-  if (!v.next_class && !nextOptions(v.cls).length) e.next_class = 'กรุณาเลือกหรือพิมพ์ชั้นปีหน้า';
+  if (!v.next_class && nextOptions(v.cls).length !== 1) e.next_class = 'กรุณาเลือกหรือพิมพ์ชั้นปีหน้า';
   if (v.gpa && !(/^\d(\.\d{1,2})?$/.test(v.gpa) && Number(v.gpa) <= 4)) e.gpa = 'เกรดเฉลี่ยต้องอยู่ระหว่าง 0.00–4.00';
   if (Object.keys(e).length) { this.go('post-form', {edit: editId, values: v, errors: e}); return; }
-  const next = v.next_class || nextOptions(v.cls)[0] || '';
+  const next = v.next_class || (nextOptions(v.cls).length === 1 ? nextOptions(v.cls)[0] : '');
   const type = v.type === 'CONT' ? 'CONT' : 'NEW';
   const data = {type, school: this.pLot(pf.lot).school, cid: v.cid, title: v.title, first: v.first, last: v.last, cls: v.cls, next_class: next, next_group: groupOfClass(next) ? '' : v.next_group || 'other',
     faculty: v.faculty || '', pvs_type: /^ปวส/.test(next) ? v.pvs_type || 'other' : '', gpa: v.gpa || '', note: v.note || '', from_db: !!v.from_db && !v.unlocked, gpa_before: v.gpa_before || ''};
