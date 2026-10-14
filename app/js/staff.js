@@ -32,10 +32,10 @@ const ACTIVITY = [
 const SCHOOL_TYPES = [['school', 'โรงเรียน'], ['college', 'วิทยาลัย'], ['university', 'มหาวิทยาลัย'], ['other', 'อื่น ๆ']];
 
 App.staffNav = function () {
-  return [['staff-dash', 'Dashboard'], ['staff-schools', 'สถานศึกษา/ครู', ['staff-school']],
+  return [['staff-dash', 'Dashboard'],
     ['staff-apps', 'ใบสมัคร', ['staff-app']], ['staff-transfer', 'ย้ายสถานศึกษา']]
-    /* รอบรับสมัคร, รายงาน/Export, PDPA และผู้ใช้งาน: เฉพาะแอดมินระบบ */
-    .concat(this.session.staffRole === 'admin' ? [['staff-cycle', 'รอบรับสมัคร'], ['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA'], ['staff-users', 'ผู้ใช้งาน', ['staff-user']]] : []);
+    /* สถานศึกษา/ครู, รอบรับสมัคร, รายงาน/Export, PDPA และผู้ใช้งาน: เฉพาะแอดมินระบบ */
+    .concat(this.session.staffRole === 'admin' ? [['staff-schools', 'สถานศึกษา/ครู', ['staff-school']], ['staff-cycle', 'รอบรับสมัคร'], ['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA'], ['staff-users', 'ผู้ใช้งาน', ['staff-user']]] : []);
 };
 /* สลับบทบาทสำหรับทดลอง (เหมือนปุ่มบทบาทใน v14) */
 App.roleBar = function () {
@@ -48,7 +48,7 @@ App.staffList = function () { return this.db.staffUsers || STAFF.map(u => ({...u
 App.on('staff-role', function (el) {
   const u = this.staffList().find(s => s.role === el.dataset.role && s.active !== false) || STAFF.find(s => s.role === el.dataset.role);
   Object.assign(this.session, {staff: u.username, staffRole: u.role, name: u.name, who: `${u.name} · ${ROLE[u.role][0]}`});
-  if (u.role !== 'admin' && ['staff-cycle', 'staff-reports', 'staff-pdpa', 'staff-users', 'staff-user'].includes(this.view.name)) { this.go('staff-dash'); return; }
+  if (u.role !== 'admin' && (['staff-schools', 'staff-cycle', 'staff-reports', 'staff-pdpa', 'staff-users', 'staff-user'].includes(this.view.name) || (this.view.name === 'staff-school' && !this.view.params.back))) { this.go('staff-dash'); return; }
   this.render();
 });
 
@@ -601,6 +601,7 @@ App.on('transfer-save', function (form) {
 
 /* ---------- สถานศึกษาและบัญชีครู ---------- */
 App.views['staff-schools'] = function (p) {
+  { const deny = adminOnly.call(this); if (deny) return deny; }
   const rg = p.region || '', pv = p.province || '', ds = p.district || '';
   const q = (p.q || '').toLowerCase();
   const all = this.db.schools;
@@ -651,6 +652,8 @@ App.on('schools-search', function (el) {
   this._sq = setTimeout(() => this.go('staff-schools', {...schoolFilters('ds'), focusQ: 1}), 250);
 });
 App.views['staff-school'] = function (p) {
+  /* จนท. ที่บันทึกการย้ายเพิ่มสถานศึกษาใหม่ได้ (ไม่พบในระบบ) ส่วนแก้ไขสถานศึกษาเดิมเฉพาะแอดมิน */
+  if (!(p.id === 'new' && p.back)) { const deny = adminOnly.call(this); if (deny) return deny; }
   const isNew = p.id === 'new';
   const sc = isNew ? {id: 'SCH-' + String(this.db.schools.length + 1).padStart(3, '0'), type: 'school', levels: [],
     region: p.region || '', province: p.province || '', district: p.district || ''} : this.schoolById[p.id];
