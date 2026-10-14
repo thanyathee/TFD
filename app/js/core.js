@@ -454,7 +454,7 @@ App.views.home = function () {
     <h2 class="home-sec"><span class="home-tag post">ไปรษณีย์</span>สมัครทางไปรษณีย์</h2>
     <div class="flow" aria-label="ลำดับการทำงานทางไปรษณีย์"><b>ใบสมัครกระดาษส่งถึงมูลนิธิฯ</b><span>→</span><b>เจ้าหน้าที่บันทึกและพิมพ์ใบปะหน้า</b><span>→</span><b>ผจก. พิจารณา</b></div>
     <div class="roles roles-extra">
-      <button class="role role-postal" data-go="postal-entry"><span class="ico">${icon('mail')}</span><h2>เจ้าหน้าที่ / ผจก. (ทางไปรษณีย์)</h2>
+      <button class="role role-postal" data-go="postal-entry"><span class="ico">${icon('mail')}</span><h2>บันทึกข้อมูล / อนุมัติทุน</h2>
         <p>เจ้าหน้าที่บันทึกใบสมัครกระดาษแบบสรุปย่อ พิมพ์ใบปะหน้าโรงเรียน และ ผจก. อนุมัติทุน</p><span class="btn primary go">เข้าสู่ระบบ</span></button>
     </div>
     <div class="note info small row between"><span>ทำในบทบาทหนึ่งแล้วเห็นผลในบทบาทอื่นทันที ข้อมูลทดลองเก็บไว้ในเบราว์เซอร์นี้เท่านั้น</span>
