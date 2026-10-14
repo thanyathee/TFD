@@ -515,3 +515,91 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .ann-tbl td:nth-child(3),.ann-tbl th:nth-child(3){width:120px}.ann-tbl td:nth-child(4),.ann-tbl th:nth-child(4){width:120px}
 @media (max-width:700px){.ann{padding:16px}.ann-sum{grid-template-columns:1fr}}
 @media print{.ann{padding:0}.ann-region{-webkit-print-color-adjust:exact;print-color-adjust:exact}.ann-tbl tr{break-inside:avoid}.ann-prov,.ann-school{break-after:avoid}}
+
+/* ===== สมัครทางไปรษณีย์ (ส่วนแยก) ===== */
+.roles-extra{grid-template-columns:1fr;margin-top:14px}
+.role-postal{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px 16px;border:2px dashed var(--fill-2)}
+.role-postal .ico{grid-row:span 2;background:var(--warn-soft);color:var(--warn)}
+.role-postal h2{align-self:end}.role-postal p{align-self:start}
+.role-postal .go{grid-column:3;grid-row:1 / span 2;margin:0}
+.pf-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 16px;align-items:end}
+.pf-type{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:280px}
+.pf-type button{min-height:48px;border-radius:var(--r);border:2px solid var(--brand);background:var(--surface);color:var(--brand);font:inherit;font-weight:700;font-size:16px;cursor:pointer;padding:0 14px}
+.pf-type button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
+.pf-type button:disabled{opacity:.5;cursor:default}
+.pf-split{grid-template-columns:minmax(0,1fr) 380px}
+.pf-name{display:grid;grid-template-columns:130px minmax(0,1fr) minmax(0,1fr);gap:14px 16px}
+.pf-next{min-height:48px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;border-radius:var(--r);background:var(--fill);font-weight:700}
+.pf-note{display:flex;flex-direction:column;gap:2px}
+.p-ok{color:var(--ok);font-weight:600}.p-warn{color:var(--warn);font-weight:600}.p-bad{color:var(--bad);font-weight:600}
+.pf-save .kbd{font-size:12px;border:1px solid currentColor;border-radius:6px;padding:1px 6px;opacity:.8}
+.pf-h{font-size:15px;margin-top:4px}
+.pf-list{list-style:none;margin:0;padding:0;display:grid;gap:4px;counter-reset:pf}
+.pf-list li{counter-increment:pf}
+.pf-list button{width:100%;display:grid;grid-template-columns:28px 1fr;gap:0 6px;text-align:left;border:0;background:var(--fill);border-radius:10px;padding:8px 10px;font:inherit;color:inherit;cursor:pointer}
+.pf-list button::before{content:counter(pf) ".";grid-row:span 2;color:var(--muted);font-weight:600}
+.pf-list button span{font-size:13px;color:var(--muted)}
+.pf-list button:hover,.pf-list button[aria-current]{background:var(--brand-soft)}
+.pf-demo summary{cursor:pointer;font-size:13px;color:var(--muted)}
+.pf-demo .choices{margin-top:8px}
+.pf-nums{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px 10px;align-items:center}
+.pf-nums>b{font-size:13px;color:var(--muted);text-align:center}
+.pf-num span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.pf-num .input{text-align:center}
+.pf-filters{grid-template-columns:2fr 1fr 1fr auto}
+.row.nowrap{flex-wrap:nowrap}
+.pa-card h3{font-size:19px;margin-top:2px}
+.pa-card.pa-approved{box-shadow:inset 4px 0 0 var(--ok),var(--shadow)}
+.pa-card.pa-rejected{box-shadow:inset 4px 0 0 var(--bad),var(--shadow)}
+.pa-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 16px;margin:12px 0}
+.pa-grid>div{display:grid;gap:2px;min-width:0}
+.pa-grid .wide{grid-column:span 2}
+.pa-grid span{font-size:13px;color:var(--muted)}
+.pa-grid b{font-weight:600}
+.p-docs{display:flex;flex-wrap:wrap;gap:6px}
+.p-doc{font-size:13px;padding:2px 8px;border-radius:999px}
+.p-doc.ok{background:var(--ok-soft);color:var(--ok)}.p-doc.no{background:var(--bad-soft);color:var(--bad)}
+.cover-wrap{display:grid;gap:16px}
+.paper.cover h3{margin:14px 0 10px}
+.cv-school{display:grid;gap:4px;margin-bottom:6px}
+.cv-name{font-size:20px;font-weight:700}
+.paper .cv-tbl{margin-top:10px;font-size:15px}
+.paper .cv-tbl td,.paper .cv-tbl th{padding:7px 10px}
+.paper .cv-tbl .r{text-align:right;width:120px}
+.paper .cv-tbl small{color:#666;font-size:12px}
+.paper .cv-tbl tfoot td{font-weight:700;background:#eef3fb}
+.cv-ck{width:34px;text-align:center!important;font-size:17px}
+.cv-zero{color:#999}
+.cv-lines{display:grid;gap:10px;margin-top:18px}
+.cv-lines div{display:flex;gap:8px;align-items:baseline;min-width:0}
+.cv-lines span{white-space:nowrap}
+.cv-lines b{font-weight:600;border-bottom:1px dotted #999;flex:1;min-width:0;padding:0 4px}
+.cv-lines .cv-3{display:grid;grid-template-columns:1.4fr 1fr 1.2fr;gap:10px}
+.cv-list{margin-top:22px;break-before:page}
+.cv-list table{font-size:13px}
+.paper .r{text-align:right}
+@media print{
+  .cover-wrap{display:block}
+  .paper.cover{break-after:page}
+  .paper.cover:last-child{break-after:auto}
+}
+@media (max-width:900px){
+  .pf-bar{grid-template-columns:1fr}
+  .pf-type{min-width:0}
+  .pf-split{grid-template-columns:1fr}
+  .pf-filters{grid-template-columns:1fr 1fr}
+  .pa-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:640px){
+  .role-postal{grid-template-columns:auto 1fr}
+  .role-postal .ico{grid-row:auto}
+  .role-postal p,.role-postal .go{grid-column:1 / -1;grid-row:auto}
+  .pf-name{grid-template-columns:1fr 1fr}
+  .pf-name>.field:first-child{grid-column:1 / -1}
+  .pa-grid{grid-template-columns:1fr}
+  .pa-grid .wide{grid-column:auto}
+  .cv-lines .cv-3{grid-template-columns:1fr}
+}
+.paper .cv-tbl th.r{white-space:nowrap}
+.paper .nw{white-space:nowrap}
+@media (max-width:640px){.pf-eq{grid-template-columns:1fr 1fr}.pf-eq .choice{font-size:14px;padding:10px}}

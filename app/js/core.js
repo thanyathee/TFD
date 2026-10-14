@@ -88,6 +88,7 @@ const ICONS = {
   print: '<path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
   status: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
   list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
 };
 /* ไอคอนของแท็บเมนู 2 ปุ่ม */
@@ -118,7 +119,7 @@ const App = {
     document.addEventListener('submit', e => { e.preventDefault(); this.dispatch(e.target.dataset.submit, e.target, e); });
     const fromHash = () => {
       const h = (location.hash || '').slice(1);
-      this.go(['student', 'teacher', 'staff'].includes(h) ? h + '-entry' : 'home');
+      this.go(['student', 'teacher', 'staff', 'postal'].includes(h) ? h + '-entry' : 'home');
     };
     window.addEventListener('hashchange', fromHash);
     fromHash();
@@ -213,7 +214,7 @@ const App = {
   },
   topbar(nav) {
     const r = this.session.role;
-    const roleName = {student: 'นักเรียน', teacher: 'ครู / สถานศึกษา', staff: 'เจ้าหน้าที่มูลนิธิฯ'}[r];
+    const roleName = {student: 'นักเรียน', teacher: 'ครู / สถานศึกษา', staff: 'เจ้าหน้าที่มูลนิธิฯ', postal: 'สมัครทางไปรษณีย์'}[r];
     const right = r ? `<div class="whoami">${esc(roleName)}<b>${esc(this.session.who || '')}</b></div>
       <button class="btn sm" data-action="home">ออกจากระบบ</button>` : '';
     const duo = nav && nav.length === 2;   // เมนู 2 ปุ่ม (ครู): ปุ่มกว้างเท่ากัน มีแถบสีเลื่อนไปมา
@@ -448,6 +449,10 @@ App.views.home = function () {
         <p>ตรวจสอบรายชื่อนักเรียน อัปโหลดเอกสาร และส่งใบสมัครมายังมูลนิธิฯ</p><span class="btn primary go">เข้าสู่ระบบครู</span></button>
       <button class="role" data-go="staff-entry"><span class="ico">${icon('staff')}</span><h2>เจ้าหน้าที่มูลนิธิฯ</h2>
         <p>พิจารณาใบสมัคร จัดการสถานศึกษา และรายงาน</p><span class="btn primary go">เข้าสู่ระบบเจ้าหน้าที่</span></button>
+    </div>
+    <div class="roles roles-extra">
+      <button class="role role-postal" data-go="postal-entry"><span class="ico">${icon('mail')}</span><h2>สมัครทางไปรษณีย์</h2>
+        <p>เจ้าหน้าที่บันทึกใบสมัครกระดาษแบบสรุปย่อ พิมพ์ใบปะหน้าโรงเรียน และ ผจก. อนุมัติทุน</p><span class="btn primary go">เข้าสู่ระบบ</span></button>
     </div>
     <div class="note info small row between"><span>ทำในบทบาทหนึ่งแล้วเห็นผลในบทบาทอื่นทันที ข้อมูลทดลองเก็บไว้ในเบราว์เซอร์นี้เท่านั้น</span>
       <button class="btn ghost sm" data-action="reset">ล้างข้อมูลทดลอง</button></div>`};
