@@ -53,7 +53,7 @@ App.views['staff-entry'] = function (p) {
   const v = p.values || {};
   const e = p.errors || {};
   return {html: `
-    <div class="page-head"><div><h1>office.tiscofoundation.org</h1><p class="sub">ระบบสำนักงานมูลนิธิทิสโก้ เพื่อการกุศล</p></div></div>
+    <div class="page-head"><div><h1>เข้าสู่ระบบเจ้าหน้าที่มูลนิธิฯ</h1><p class="sub">ระบบสำนักงานมูลนิธิทิสโก้ เพื่อการกุศล</p></div></div>
     <div class="split">
       <form class="card" data-submit="staff-login" novalidate>
         ${field('username', 'Username', input('username', v.username, 'autocomplete="username" autocapitalize="off"'), {req: 1, err: e.username})}

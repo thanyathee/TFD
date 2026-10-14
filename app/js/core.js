@@ -404,7 +404,7 @@ App.views.home = function () {
       <button class="role" data-go="teacher-entry"><span class="ico">${icon('teacher')}</span><h2>ครู / สถานศึกษา</h2>
         <p>ตรวจสอบรายชื่อนักเรียน อัปโหลดเอกสาร และส่งใบสมัครมายังมูลนิธิฯ</p><span class="btn primary go">เข้าสู่ระบบครู</span></button>
       <button class="role" data-go="staff-entry"><span class="ico">${icon('staff')}</span><h2>เจ้าหน้าที่มูลนิธิฯ</h2>
-        <p>office.tiscofoundation.org — พิจารณาใบสมัคร จัดการสถานศึกษา และรายงาน</p><span class="btn primary go">เข้าสู่ระบบเจ้าหน้าที่</span></button>
+        <p>พิจารณาใบสมัคร จัดการสถานศึกษา และรายงาน</p><span class="btn primary go">เข้าสู่ระบบเจ้าหน้าที่</span></button>
     </div>
     <div class="note info small row between"><span>ทำในบทบาทหนึ่งแล้วเห็นผลในบทบาทอื่นทันที ข้อมูลทดลองเก็บไว้ในเบราว์เซอร์นี้เท่านั้น</span>
       <button class="btn ghost sm" data-action="reset">ล้างข้อมูลทดลอง</button></div>`};
