@@ -527,38 +527,71 @@ App.views['post-schools'] = pNeedLogin(function (p) {
 App.on('p-sch-filter', function (form) { this.go('post-schools', {f: formData(form)}); });
 App.on('p-open', function (el) { this.pPref().school = el.dataset.id; this.pSave(); this.go('post-form'); });
 
-App.pCoverHtml = function (id, withList) {
+App.pHead = function (sc, sub) {
+  return `<div class="a4-head"><span class="a4-logo">TF</span><div><b>มูลนิธิทิสโก้ เพื่อการกุศล</b><span>ใบสมัครทุนการศึกษาทางไปรษณีย์ · ปีการศึกษา ${this.db.cycle.year}</span></div>
+    <div class="cv-hs"><b>${esc(sc.name)}</b><span>${sub}</span></div></div>`;
+};
+/* ใบที่ 1: ใบสรุปใบสมัครของสถานศึกษา */
+App.pCoverHtml = function (id) {
   const sc = this.schoolById[id];
   const b = this.P().batches[id] || {};
   const c = this.pCounts(id);
-  const es = this.pEntriesOf(id).slice().sort((a, b2) => a.type.localeCompare(b2.type) || P_CLASSES.indexOf(a.next_class) - P_CLASSES.indexOf(b2.next_class));
   const dots = '....................';
   const n = v => v ? `<b>${v}</b>` : '<span class="cv-zero">0</span>';
-  return `<div class="paper a4 cover">
-    <div class="a4-head"><span class="a4-logo">TF</span><div><b>มูลนิธิทิสโก้ เพื่อการกุศล</b><span>ใบสมัครทุนการศึกษาทางไปรษณีย์ · ปีการศึกษา ${this.db.cycle.year}</span></div></div>
+  return `<div class="paper a4 land cover">
+    ${this.pHead(sc, 'ใบสรุป')}
     <h3>ใบสรุปใบสมัครของสถานศึกษา</h3>
     <div class="cv-school"><div class="cv-name">${esc(sc.name)}</div>
       <div>ที่อยู่ ${esc(sc.address || '')} ${esc(sc.subdistrict || '')} ${esc(sc.district)} จังหวัด${esc(sc.province)} ${esc(this.regionName(sc.region))} ${esc(sc.postcode || '')}</div></div>
-    <table class="cv-tbl"><thead><tr><th class="cv-ck"></th><th>ระดับ</th><th class="r">ทุนใหม่ (ราย)</th><th class="r">ทุนต่อเนื่อง (ราย)</th><th class="r">รวม</th></tr></thead>
+    <div class="cv-body"><table class="cv-tbl"><thead><tr><th class="cv-ck"></th><th>ระดับ (ชั้นปีหน้า)</th><th class="r">ทุนใหม่ (ราย)</th><th class="r">ทุนต่อเนื่อง (ราย)</th><th class="r">รวม</th></tr></thead>
       <tbody>${c.rows.map(([g, t, r]) => `<tr><td class="cv-ck">${r.NEW + r.CONT ? '☑' : '☐'}</td><td>${t}${g === 'primary' ? ' <small>(ผจก. พิจารณาที่ใบสมัคร)</small>' : g === 'wait' ? ' <small>(รอหลักฐานการย้ายสถานศึกษา)</small>' : ''}</td>
-        <td class="r">${n(r.NEW)}</td><td class="r">${n(r.CONT)}</td><td class="r">${n(r.NEW + r.CONT)}</td></tr>`).join('')}</tbody>
-      <tfoot><tr><td></td><td>รวม</td><td class="r">${c.total.NEW}</td><td class="r">${c.total.CONT}</td><td class="r">${c.total.NEW + c.total.CONT}</td></tr></tfoot></table>
+        <td class="r">${n(r.NEW)}</td><td class="r">${n(r.CONT)}</td><td class="r">${n(r.NEW + r.CONT)}</td></tr>`).join('')}
+      <tr class="cv-total"><td></td><td>รวม</td><td class="r">${c.total.NEW}</td><td class="r">${c.total.CONT}</td><td class="r">${c.total.NEW + c.total.CONT}</td></tr></tbody></table>
     <div class="cv-lines">
       <div><span>หมายเหตุ</span><b>${esc(b.note) || dots}</b></div>
       <div><span>หนังสือนำส่ง</span><b>${esc(b.letter) || dots}</b></div>
-      <div class="cv-3"><div><span>คุณครูผู้ดูแลทุน</span><b>${esc(b.teacher_name) || dots}</b></div><div><span>เบอร์โทร</span><b>${esc(b.teacher_phone) || dots}</b></div>
-        <div><span>อีเมล</span><b>${esc(b.teacher_email) || dots}</b></div></div></div>
-    <p class="foot">บันทึกโดย ${esc(this.pUser(b.by).name || '—')}${b.updated ? ' · ' + thDate(b.updated, true) : ''}</p>
-    ${withList && es.length ? `<div class="cv-list"><h3>รายชื่อที่บันทึกในระบบ (${es.length} ราย)</h3>
-      <table><thead><tr><th class="n">ลำดับ</th><th>ทุน</th><th>ชื่อ–นามสกุล</th><th>ชั้นปีนี้ → ปีหน้า</th><th class="r">เกรด</th><th class="r">เงินทุน</th><th>ผลพิจารณา</th></tr></thead>
-      <tbody>${es.map((e, i) => `<tr><td class="n">${i + 1}</td><td>${e.type === 'NEW' ? 'ใหม่' : 'ต่อเนื่อง'}</td><td>${esc(pName(e))}</td><td class="nw">${esc(e.cls)} → ${esc(e.next_class)}</td>
-        <td class="r">${esc(e.gpa || '—')}</td><td class="r">${this.pRate(e).amount.toLocaleString('th-TH')}</td>
-        <td>${e.decision ? DECISION[e.decision.result].label : '☐ อนุมัติ ☐ ไม่อนุมัติ'}</td></tr>`).join('')}</tbody></table></div>` : ''}
+      <div><span>คุณครูผู้ดูแลทุน</span><b>${esc(b.teacher_name) || dots}</b></div>
+      <div><span>เบอร์โทร</span><b>${esc(b.teacher_phone) || dots}</b></div>
+      <div><span>อีเมล</span><b>${esc(b.teacher_email) || dots}</b></div>
+      <p class="foot">บันทึกโดย ${esc(this.pUser(b.by).name || '—')}${b.updated ? ' · ' + thDate(b.updated, true) : ''}</p></div></div>
+  </div>`;
+};
+/* ใบที่ 2: รายชื่อที่บันทึกในระบบ — ต่อเนื่องก่อน แล้วทุนใหม่ แยกตามระดับชั้นปีหน้า แสดงข้อมูลที่บันทึกทุกช่อง */
+App.pListHtml = function (id) {
+  const sc = this.schoolById[id];
+  const es = this.pEntriesOf(id);
+  const eqName = k => k === 'none' ? 'ไม่มีเลย' : (EQUIP.find(x => x[0] === k) || [, k])[1];
+  const lab = (list, k) => (list.find(x => x[0] === k) || [, '—'])[1];
+  const res = e => e.decision ? DECISION[e.decision.result].label : '☐ อนุมัติ<br>☐ ไม่อนุมัติ';
+  const fac = e => esc(e.faculty || '') + (e.pvs_type ? `<br><small>${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]}</small>` : '') || '—';
+  const groups = [];
+  ['CONT', 'NEW'].forEach(t => P_LEVELS.forEach(([g, gt]) => {
+    const l = es.filter(e => e.type === t && groupOfClass(e.next_class) === g).sort((a, b) => P_CLASSES.indexOf(a.next_class) - P_CLASSES.indexOf(b.next_class));
+    if (l.length) groups.push([t, gt, l]);
+  }));
+  const head = t => t === 'CONT'
+    ? '<th class="n">ลำดับ</th><th>เลขประจำตัวประชาชน</th><th>ชื่อ–นามสกุล</th><th>ชั้นปีนี้</th><th>ชั้นปีหน้า</th><th>สาขา</th><th class="r">เกรด</th><th>นำเงินทุนไปใช้จ่าย</th>' +
+      P_DOCS.map(([, d]) => `<th class="cv-doc">${d}</th>`).join('') + '<th class="r">เงินทุน</th><th>หมายเหตุ</th><th>ผลพิจารณา</th>'
+    : '<th class="n">ลำดับ</th><th>เลขประจำตัวประชาชน</th><th>ชื่อ–นามสกุล</th><th>ชั้นปีนี้</th><th>ชั้นปีหน้า</th><th>สาขา</th><th class="r">เกรด</th><th>สภาพครอบครัว</th><th>เครื่องใช้ในบ้าน</th><th>บ้านที่อยู่อาศัย</th><th>ที่ดินทำกิน</th><th class="r">เงินทุน</th><th>หมายเหตุ</th><th>ผลพิจารณา</th>';
+  const row = (e, i) => {
+    const base = `<td class="n">${i + 1}</td><td class="nw">${esc(e.cid)}</td><td class="nw">${esc(pName(e))}</td><td class="nw">${esc(e.cls)}</td><td class="nw">${esc(e.next_class)}</td><td>${fac(e)}</td><td class="r">${esc(e.gpa || '—')}</td>`;
+    const tail = `<td class="r">${this.pRate(e).amount.toLocaleString('th-TH')}</td><td>${esc(e.note || '')}</td><td class="nw">${res(e)}</td>`;
+    return e.type === 'CONT'
+      ? `<tr>${base}<td>${esc(e.use_money || '—')}</td>${P_DOCS.map(([k]) => `<td class="cv-doc">${arr(e.docs).includes(k) ? '✓' : '✗'}</td>`).join('')}${tail}</tr>`
+      : `<tr>${base}<td>${esc(e.family || '—')}</td><td>${arr(e.equipment).map(eqName).join(', ') || '—'}</td><td>${esc(lab(P_HOUSING, e.housing))}</td><td>${esc(lab(P_LAND, e.land))}</td>${tail}</tr>`;
+  };
+  return `<div class="paper a4 land cover cv-list">
+    ${this.pHead(sc, 'รายชื่อ')}
+    <h3>รายชื่อที่บันทึกในระบบ <span>(${es.length} ราย)</span></h3>
+    <div class="c">${esc(sc.name)} · จังหวัด${esc(sc.province)} · ระดับชั้นนับตามชั้นปีหน้า</div>
+    ${groups.length ? groups.map(([t, gt, l]) => `<h4 class="a4-sub">${TYPE[t]} ${gt} <span>(${l.length} ราย)</span></h4>
+      <table class="cv-ltbl"><thead><tr>${head(t)}</tr></thead><tbody>${l.map(row).join('')}</tbody></table>`).join('')
+      : '<p class="c">— ยังไม่มีรายชื่อที่บันทึก —</p>'}
   </div>`;
 };
 App.views['post-cover'] = pNeedLogin(function (p) {
   const db = this.P();
-  const withList = this.session.pWithList !== false;
+  const pr = this.session.pPrint || {sum: true, list: true};
   const ids = p.id === 'all'
     ? Object.keys(db.batches).filter(id => this.schoolById[id] && this.pStatus(id) !== 'doing')
       .sort((a, b) => this.schoolById[a].province.localeCompare(this.schoolById[b].province, 'th') || this.schoolById[a].name.localeCompare(this.schoolById[b].name, 'th'))
@@ -571,8 +604,10 @@ App.views['post-cover'] = pNeedLogin(function (p) {
         ${one && this.session.pRole !== 'manager' && st === 'doing' ? `<button class="btn" data-action="p-open" data-id="${p.id}">บันทึกต่อ</button>` : ''}
         <button class="btn primary" data-action="p-print" data-id="${esc(p.id)}">${icon('print')} พิมพ์</button></div></div>
     ${one && st === 'doing' ? '<div class="note warn no-print">โรงเรียนนี้ยังบันทึกไม่เสร็จ ตัวเลขอาจยังไม่ครบ</div>' : ''}
-    <label class="check no-print"><input type="checkbox" data-onchange="p-withlist" ${withList ? 'checked' : ''}> <span>พิมพ์รายชื่อแนบท้าย</span></label>
-    <div class="a4-wrap cover-wrap">${ids.map(id => this.pCoverHtml(id, withList)).join('')}</div>`, after: pFitA4};
+    <div class="row no-print"><span class="small muted">พิมพ์ (A4 แนวนอน):</span>
+      <label class="check"><input type="checkbox" data-onchange="p-printpart" data-k="sum" ${pr.sum ? 'checked' : ''}> <span>ใบสรุปใบสมัครของสถานศึกษา</span></label>
+      <label class="check"><input type="checkbox" data-onchange="p-printpart" data-k="list" ${pr.list ? 'checked' : ''}> <span>รายชื่อที่บันทึกในระบบ</span></label></div>
+    <div class="a4-wrap cover-wrap">${ids.map(id => (pr.sum ? this.pCoverHtml(id) : '') + (pr.list ? this.pListHtml(id) : '')).join('') || '<div class="empty">เลือกอย่างน้อย 1 ใบ</div>'}</div>`, after: pFitA4};
 });
 function pFitA4() {
   document.querySelectorAll('.cover-wrap .paper.a4').forEach(el => {
@@ -581,7 +616,10 @@ function pFitA4() {
   });
 }
 window.addEventListener('resize', () => { if (App.view && App.view.name === 'post-cover') pFitA4(); });
-App.on('p-withlist', function (el) { this.session.pWithList = el.checked; this.render(); });
+App.on('p-printpart', function (el) {
+  this.session.pPrint = {...(this.session.pPrint || {sum: true, list: true}), [el.dataset.k]: el.checked};
+  this.render();
+});
 App.on('p-print', function (el) {
   const db = this.P();
   const ids = el.dataset.id === 'all' ? Object.keys(db.batches).filter(id => this.pStatus(id) !== 'doing') : [el.dataset.id];
