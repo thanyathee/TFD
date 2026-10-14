@@ -933,3 +933,21 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
   .pf-ptbl .tbl td:nth-child(9)::before{content:"ผู้พิจารณา ";color:var(--muted)}
   .pf-ptbl .tbl td:nth-child(9) br{display:none}
 }
+/* ใบปะหน้าโรงเรียน: แยกช่องจังหวัด / สถานะ / แก้ไขล่าสุด */
+.pf-sch2 .tbl td:nth-child(2){width:auto}
+.pf-sch2 .tbl td:nth-child(2) .pf-sname{min-width:260px}
+@media (max-width:760px){
+  .pf-sch2 .tbl td:nth-child(3){flex-basis:100%;margin-left:24px;font-size:13px;color:var(--muted)}
+  .pf-sch2 .tbl td:nth-child(3)::before{content:"จ."}
+  .pf-sch2 .tbl td:nth-child(3)::before{content:"จ."}
+  .pf-sch2 .tbl td:nth-child(4)::before{content:"ใหม่ "}
+  .pf-sch2 .tbl td:nth-child(5)::before{content:"ต่อเนื่อง "}
+  .pf-sch2 .tbl td:nth-child(6)::before{content:"รวม "}
+  .pf-sch2 .tbl td:nth-child(4){margin-left:24px}
+  .pf-sch2 .tbl td:nth-child(4),.pf-sch2 .tbl td:nth-child(5),.pf-sch2 .tbl td:nth-child(6){font-size:13px;color:var(--ink-2)}
+  .pf-sch2 .tbl td:nth-child(7){flex-basis:auto;margin-left:24px}
+  .pf-sch2 .tbl td:nth-child(8),.pf-sch2 .tbl td:nth-child(9):not(:last-child){font-size:13px;color:var(--ink-2);flex-basis:auto;margin-left:0}
+  .pf-sch2 .tbl td:nth-child(2) .pf-sname{min-width:0}
+}
+@media (max-width:760px){.pf-sch2 .tbl td:nth-child(3){flex-basis:100%!important}.pf-sch2 .tbl td:nth-child(4),.pf-sch2 .tbl td:nth-child(5),.pf-sch2 .tbl td:nth-child(6){flex-basis:auto!important}}
+@media (max-width:760px){.pf-sch2 .tbl td:nth-child(8){margin-left:24px!important;flex-basis:100%!important}.pf-sch2 .tbl td:nth-child(7){margin-left:auto!important}}
