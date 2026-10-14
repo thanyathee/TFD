@@ -773,3 +773,9 @@ h1 .pf-lot{font-size:15px;padding:3px 12px}
   .pf-ptbl .tbl td:nth-child(6)::before{content:"เงินทุน "}
 }
 .pf-ptbl .tbl td:nth-child(8){white-space:nowrap}
+/* เลขที่ใบปะหน้า */
+.pf-code{font-variant-numeric:tabular-nums;letter-spacing:.3px;white-space:nowrap}
+.pf-code.lg{display:inline-block;font-size:14px;font-weight:700;color:var(--brand);background:var(--brand-soft);border-radius:8px;padding:3px 10px;margin-bottom:6px}
+.pf-afind{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;gap:10px 14px;align-items:end}
+@media (max-width:640px){.pf-afind{grid-template-columns:1fr}}
+.cv-code{font-size:16px!important;border:1.5px solid #000;border-radius:6px;padding:1px 8px;margin-bottom:2px;display:inline-block}

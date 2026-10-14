@@ -246,9 +246,21 @@ App.pTouch = function (lot) {
 };
 /* 1 ลอต = จนท. 1 คน: คนที่เปิดลอตเป็นเจ้าของ (แอดมินแก้ได้ทุกลอต) */
 App.pOwner = function (school) { return (this.P().batches[school] || {}).by || ''; };
-App.pCanEdit = function (school) {
-  const o = this.pOwner(school);
-  return !o || o === this.session.pUser || this.session.pRole === 'admin';
+/* ผจก. เริ่มพิจารณาชุดไหนแล้ว จนท. แก้ชุดนั้นไม่ได้ (แอดมินยังแก้ได้) */
+App.pLocked = function (lot) { return this.pEntriesOf(lot).some(e => e.decision); };
+App.pCanEdit = function (lot) {
+  if (this.session.pRole === 'admin') return true;
+  if (this.session.pRole !== 'clerk' || this.pLocked(lot)) return false;
+  const o = this.pOwner(lot);
+  return !o || o === this.session.pUser;
+};
+/* เลขที่ใบปะหน้า เช่น 70-0006 — พิมพ์บนใบปะหน้า ให้ ผจก. คีย์ค้นหา */
+App.pCode = function (lot) { return `${String(this.db.cycle.year).slice(-2)}-${(lot || '').replace(/\D/g, '').padStart(4, '0')}`; };
+App.pFindCode = function (q) {
+  const d = (q || '').replace(/\D/g, '');
+  if (!d) return '';
+  const n = String(parseInt(d.length > 4 && d.startsWith(String(this.db.cycle.year).slice(-2)) ? d.slice(2) : d, 10));
+  return Object.keys(this.P().batches).find(id => String(parseInt(id.slice(1), 10)) === n && this.pLotUsed(id)) || '';
 };
 /* จนท.บันทึก เห็นเฉพาะโรงเรียน / ข้อมูลของตนเอง · ผจก. และแอดมินเห็นทั้งหมด */
 App.pSees = function (lot) {
@@ -265,7 +277,7 @@ App.pNav = function () {
     form: ['post-form', 'บันทึกข้อมูล'], schools: ['post-schools', 'ใบปะหน้าโรงเรียน', ['post-cover']],
     approve: ['post-approve', 'อนุมัติทุน'], work: ['post-work', r === 'clerk' ? 'ผลงานของฉัน' : 'ผลงานเจ้าหน้าที่'], users: ['post-users', 'ผู้ใช้งาน'], people: ['post-people', 'รายชื่อผู้สมัคร'], recipients: ['post-recipients', 'ผู้ได้รับทุนปีก่อน'],
   };
-  const keys = r === 'clerk' ? ['form', 'schools', 'work'] : r === 'manager' ? ['schools', 'people', 'approve', 'work'] : ['form', 'schools', 'people', 'approve', 'work', 'recipients', 'users'];
+  const keys = r === 'clerk' ? ['form', 'schools', 'work'] : r === 'manager' ? ['approve', 'people', 'work'] : ['form', 'schools', 'people', 'approve', 'work', 'recipients', 'users'];
   return keys.map(k => all[k]);
 };
 App.pRoleBar = function () {
@@ -347,7 +359,7 @@ App.pCidNote = function (cid, type, school, editId) {
 };
 
 App.views['post-form'] = pNeedLogin(function (p) {
-  if (this.session.pRole === 'manager') return this.views['post-schools'].call(this, {});
+  if (this.session.pRole === 'manager') return this.views['post-approve'].call(this, {});
   const pf = this.pPref();
   const db = this.P();
   const edit = p.edit ? db.entries.find(e => e.id === p.edit) : null;
@@ -430,8 +442,9 @@ App.views['post-form'] = pNeedLogin(function (p) {
   return {nav: this.pNav(), html: `${this.pRoleBar()}
     <div class="page-head"><div><h1>บันทึกใบสมัครทางไปรษณีย์</h1><p class="sub">พิมพ์ทีละคน กด Enter เพื่อบันทึกแล้วไปคนต่อไป</p></div></div>
     ${bar}
-    <div class="split pf-split">${!this.pCanEdit(lot) ? `<div class="card stack"><div class="note warn"><b>รายการชุดนี้ ${esc(this.pUser(this.pOwner(lot)).name)} เป็นผู้บันทึก</b><br>
-      ดูรายชื่อได้ แต่บันทึกเพิ่ม / แก้ไขไม่ได้</div>
+    <div class="split pf-split">${!this.pCanEdit(lot) ? `<div class="card stack"><div class="note warn">${this.pLocked(lot)
+      ? '<b>ผจก. พิจารณาชุดนี้แล้ว</b><br>ดูรายชื่อได้ แต่บันทึกเพิ่ม / แก้ไขไม่ได้ · ถ้าโรงเรียนนี้ส่งมาเพิ่ม เลือกโรงเรียนอีกครั้งเพื่อเริ่มชุดใหม่'
+      : `<b>รายการชุดนี้ ${esc(this.pUser(this.pOwner(lot)).name)} เป็นผู้บันทึก</b><br>ดูรายชื่อได้ แต่บันทึกเพิ่ม / แก้ไขไม่ได้`}</div>
       <div class="row"><button class="btn" data-action="p-change">เลือกโรงเรียนอื่น</button></div></div>`
     : edit && edit.decision ? `<div class="card"><div class="note warn">ผจก. พิจารณารายการนี้แล้ว (${DECISION[edit.decision.result].label}) จึงแก้ไขไม่ได้</div>
       <div class="row"><button class="btn" data-go="post-form">กลับ</button></div></div>` : form}
@@ -549,7 +562,7 @@ App.pSchoolResults = function () {
   const tag = s => {
     const lots = this.pLotsOf(s.id).filter(id => this.pSees(id) && this.pLotUsed(id));
     if (!lots.length) return '';
-    const open = lots.find(id => !this.pLot(id).done && this.pOwner(id) === this.session.pUser);
+    const open = lots.find(id => !this.pLot(id).done && !this.pLocked(id) && this.pOwner(id) === this.session.pUser);
     if (open) return `<span class="pf-tag">กำลังบันทึก · ${this.pEntriesOf(open).length} ราย</span>`;
     return `<span class="pf-tag done">บันทึกแล้ว ${lots.reduce((a, id) => a + this.pEntriesOf(id).length, 0)} ราย</span>`;
   };
@@ -573,7 +586,7 @@ App.on('p-pick', function (el) {
   this.pKeepForm();
   this.session.pSearch = false;
   const school = el.dataset.id;
-  const open = this.pLotsOf(school).find(id => !this.pLot(id).done && this.pOwner(id) === this.session.pUser);
+  const open = this.pLotsOf(school).find(id => !this.pLot(id).done && !this.pLocked(id) && this.pOwner(id) === this.session.pUser);
   const lot = open || this.pNewLot(school);
   this.pPref().lot = lot;
   this.pSave();
@@ -721,6 +734,7 @@ App.on('p-batch-done', function () { /* ฟอร์มใบปะหน้า�
 
 /* ---------- หน้า 2: รายชื่อโรงเรียน / ใบปะหน้า ---------- */
 App.views['post-schools'] = pNeedLogin(function (p) {
+  if (this.session.pRole === 'manager') return this.views['post-approve'].call(this, {});
   const db = this.P();
   const f = p.f || {};
   const role = this.session.pRole;
@@ -748,7 +762,7 @@ App.views['post-schools'] = pNeedLogin(function (p) {
       rows.map((r, i) => [i + 1, `<span class="pf-sname"><b>${role === 'clerk' ? esc(r.sc.name) : `<button type="button" class="linkbtn" data-go="post-people" data-school="${r.sc.id}">${esc(r.sc.name)}</button>`}</b><span class="small muted">จ.${esc(r.sc.province)}</span></span>`, r.c.total.NEW, r.c.total.CONT,
         `<b>${r.c.total.NEW + r.c.total.CONT}</b>`, `<div class="pf-st">${pBadge(r.st)}<span>${r.b.updated ? pShortDate(r.b.updated) : '—'}${role === 'clerk' ? '' : ` · ${esc(this.pUser(r.b.by).name || '—')}`}</span></div>`,
         `<div class="row nowrap"><button class="btn sm pf-ic" data-go="post-cover" data-id="${r.id}" title="ใบปะหน้า" aria-label="ใบปะหน้า">${icon('print')}</button>
-          ${role !== 'manager' && this.pCanEdit(r.id) ? `<button class="btn sm" data-action="p-open" data-id="${r.id}">${r.b.done ? 'แก้ไข' : 'บันทึกต่อ'}</button>` : ''}
+          ${role !== 'manager' ? `<button class="btn sm" data-action="p-open" data-id="${r.id}">${!this.pCanEdit(r.id) ? 'ดู' : r.b.done ? 'แก้ไข' : 'บันทึกต่อ'}</button>` : ''}
           ${role !== 'clerk' && r.c.entered ? `<button class="btn sm" data-go="post-approve" data-id="${r.id}">อนุมัติ</button>` : ''}</div>`]))}</div>`};
 });
 App.on('p-sch-filter', function (form) { this.go('post-schools', {f: formData(form)}); });
@@ -756,7 +770,7 @@ App.on('p-open', function (el) { this.pKeepForm(); this.session.pSearch = false;
 
 App.pHead = function (sc, sub, lot) {
   return `<div class="a4-head"><span class="a4-logo">TF</span><div><b>มูลนิธิทิสโก้ เพื่อการกุศล</b><span>ใบสมัครทุนการศึกษาทางไปรษณีย์ · ปีการศึกษา ${this.db.cycle.year}</span></div>
-    <div class="cv-hs"><b>${esc(sc.name)}</b><span>${sub}</span></div></div>`;
+    <div class="cv-hs"><b class="cv-code">เลขที่ ${this.pCode(lot)}</b><span>${sub}</span></div></div>`;
 };
 /* ใบที่ 1: ใบสรุปใบสมัครของสถานศึกษา */
 App.pCoverHtml = function (id) {
@@ -813,7 +827,7 @@ App.pListHtml = function (id) {
   };
   const hd = (t, gt, n) => `<div class="a4-head cv-lhead"><span class="a4-logo">TF</span>
     <div><b>${esc(sc.name)} · จังหวัด${esc(sc.province)} · ${esc(this.regionName(sc.region))}</b></div>
-    <div class="cv-hs">${t ? `<div class="cv-grp"><span class="cv-t cv-t-${t}">${TYPE[t]}</span><span class="cv-lv">${gt}</span></div><span class="cv-n">${n} ราย</span>` : ''}</div></div>`;
+    <div class="cv-hs"><b class="cv-code">เลขที่ ${this.pCode(id)}</b>${t ? `<div class="cv-grp"><span class="cv-t cv-t-${t}">${TYPE[t]}</span><span class="cv-lv">${gt}</span></div><span class="cv-n">${n} ราย</span>` : ''}</div></div>`;
   const ft = (page, by) => `<div class="cv-foot"><span>${by ? `บันทึกโดย ${esc(by)}` : ''}</span><span>${page}</span></div>`;
   if (!groups.length) return `<div class="paper a4 land cover cv-list">${hd('', '', 0)}<p class="c">— ยังไม่มีรายชื่อที่บันทึก —</p></div>`;
   /* นับแผ่นแยกตามกลุ่ม เช่น ทุนต่อเนื่อง ม.ปลาย แผ่นที่ 1 / 1 */
@@ -841,7 +855,7 @@ App.views['post-cover'] = pNeedLogin(function (p) {
   const st = one ? this.pStatus(p.id) : null;
   return {nav: this.pNav(), html: `<div class="no-print">${this.pRoleBar()}</div>
     <div class="page-head no-print"><div><h1>ใบปะหน้า${one ? '' : ' — ทั้งหมด'}</h1><p class="sub">${one ? `${esc(this.pLotTitle(p.id))} · บันทึก ${this.pLotDate(p.id)}` : `${ids.length} ชุด`}</p></div>
-      <div class="row"><button class="btn" data-go="post-schools">กลับ</button>
+      <div class="row"><button class="btn" data-go="${this.session.pRole === 'manager' ? 'post-approve' : 'post-schools'}">กลับ</button>
         ${one && this.session.pRole !== 'manager' && st === 'doing' ? `<button class="btn" data-action="p-open" data-id="${p.id}">บันทึกต่อ</button>` : ''}
         <button class="btn primary" data-action="p-print" data-id="${esc(p.id)}">${icon('print')} พิมพ์</button></div></div>
     ${one && st === 'doing' ? '<div class="note warn no-print">ยังบันทึกไม่เสร็จ ตัวเลขอาจยังไม่ครบ</div>' : ''}
@@ -876,13 +890,24 @@ App.views['post-approve'] = pNeedLogin(function (p) {
   const db = this.P();
   const can = this.session.pRole === 'manager';
   if (!p.id) {
-    const ids = [...new Set(db.entries.map(e => e.lot))].filter(id => this.pSc(id)).sort((a, b) => this.pLotSort(a, b));
+    const f = p.f || {};
+    const q = (f.q || '').trim();
+    /* แสดงเฉพาะชุดที่ จนท. บันทึกครบแล้ว (ชุดที่ยังบันทึกอยู่ ผจก. ยังไม่ต้องเห็น) */
+    const ids = [...new Set(db.entries.map(e => e.lot))].filter(id => this.pSc(id) && (this.pLot(id).done || this.pLocked(id)))
+      .filter(id => !q || this.pCode(id).includes(q) || this.pFindCode(q) === id || this.pSc(id).name.includes(q) || this.pSc(id).province.includes(q))
+      .filter(id => !f.st || (f.st === 'wait' ? this.pEntriesOf(id).some(e => !e.decision) : this.pEntriesOf(id).every(e => e.decision)))
+      .sort((a, b) => this.pLotSort(a, b));
     const rows = ids.map(id => { const es = this.pEntriesOf(id); return {id, n: es.length, wait: es.filter(e => !e.decision).length, st: this.pStatus(id)}; });
     return {nav: this.pNav(), html: `${this.pRoleBar()}
-      <div class="page-head"><div><h1>อนุมัติทุน (ทางไปรษณีย์)</h1><p class="sub">เลือกโรงเรียน แล้วพิจารณาทีละคน${can ? '' : ' · แอดมินดูได้อย่างเดียว'}</p></div></div>
-      ${tbl([{t: '#'}, {t: 'โรงเรียน'}, {t: 'บันทึกแล้ว', r: 1}, {t: 'รอพิจารณา', r: 1}, {t: 'สถานะ'}, {t: ''}],
-        rows.map((r, i) => [i + 1, `<b>${esc(this.pSc(r.id).name)}</b> <br><span class="small muted">จ.${esc(this.pSc(r.id).province)} · บันทึก ${this.pLotDate(r.id)}</span>`, r.n,
-          r.wait ? `<b>${r.wait}</b>` : '0', pBadge(r.st), `<button class="btn sm ${r.wait ? 'primary' : ''}" data-go="post-approve" data-id="${r.id}">${r.wait ? 'พิจารณา' : 'ดู'}</button>`]))}`};
+      <div class="page-head"><div><h1>อนุมัติทุน (ทางไปรษณีย์)</h1><p class="sub">คีย์เลขที่ใบปะหน้า (มุมขวาบนของใบปะหน้า) หรือชื่อโรงเรียน แล้วพิจารณาทีละคน${can ? '' : ' · แอดมินดูได้อย่างเดียว'}</p></div></div>
+      <form class="card pf-afind" data-submit="p-approve-find">
+        ${field('q', 'เลขที่ใบปะหน้า / ชื่อโรงเรียน', input('q', f.q, 'placeholder="เช่น 70-0006 หรือ 6" autocomplete="off"'), {err: p.err})}
+        ${field('st', 'แสดง', select('st', [['wait', 'ยังพิจารณาไม่ครบ'], ['done', 'พิจารณาครบแล้ว']], f.st, 'ทั้งหมด', 'data-onchange="p-approve-st"'))}
+        <div class="field"><span class="label">&nbsp;</span><button class="btn primary" type="submit">ค้นหา</button></div></form>
+      <div class="pf-stbl">${tbl([{t: 'เลขที่'}, {t: 'โรงเรียน'}, {t: 'บันทึกแล้ว', r: 1}, {t: 'รอพิจารณา', r: 1}, {t: 'สถานะ'}, {t: ''}],
+        rows.map(r => [`<b class="pf-code">${this.pCode(r.id)}</b>`, `<span class="pf-sname"><b>${esc(this.pSc(r.id).name)}</b><span class="small muted">จ.${esc(this.pSc(r.id).province)} · บันทึก ${this.pLotDate(r.id)}</span></span>`, r.n,
+          r.wait ? `<b>${r.wait}</b>` : '0', pBadge(r.st), `<button class="btn sm ${r.wait ? 'primary' : ''}" data-go="post-approve" data-id="${r.id}">${r.wait ? 'พิจารณา' : 'ดู'}</button>`]))}</div>`,
+      after() { const x = document.getElementById('q'); if (x) x.focus(); }};
   }
   if (!this.pLot(p.id)) return this.views['post-approve'].call(this, {});
   const sc = this.pSc(p.id);
@@ -919,7 +944,7 @@ App.views['post-approve'] = pNeedLogin(function (p) {
   const amt = es.filter(e => (e.decision || {}).result === 'approved').reduce((a, e) => a + this.pRate(e).amount, 0);
   const ids = [...new Set(db.entries.filter(e => !e.decision).map(e => e.lot))].filter(x => x !== p.id && this.pSc(x)).sort((a, b) => this.pLotSort(a, b));
   return {nav: this.pNav(), html: `${this.pRoleBar()}
-    <div class="page-head"><div><h1>${esc(sc.name)}</h1><p class="sub">จ.${esc(sc.province)} · ${esc(this.regionName(sc.region))} · ดูข้อมูลในระบบประกอบรูปภาพในใบสมัคร</p></div>
+    <div class="page-head"><div><span class="pf-code lg">เลขที่ใบปะหน้า ${this.pCode(p.id)}</span><h1>${esc(sc.name)}</h1><p class="sub">จ.${esc(sc.province)} · ${esc(this.regionName(sc.region))} · ดูข้อมูลในระบบประกอบรูปภาพในใบสมัคร</p></div>
       <div class="row"><button class="btn" data-go="post-approve">รายชื่อโรงเรียน</button><button class="btn" data-go="post-cover" data-id="${p.id}">${icon('print')} ใบปะหน้า</button></div></div>
     <div class="stats"><div class="stat"><span>รอพิจารณา</span><b>${wait}</b></div><div class="stat"><span>อนุมัติ</span><b>${cnt('approved')}</b><small>${baht(amt)}</small></div>
       <div class="stat"><span>ไม่อนุมัติ</span><b>${cnt('rejected')}</b></div></div>
@@ -929,6 +954,15 @@ App.views['post-approve'] = pNeedLogin(function (p) {
     ${can && !wait && ids.length ? `<div class="row end"><button class="btn primary" data-go="post-approve" data-id="${ids[0]}">ถัดไป: ${esc(this.pLotTitle(ids[0]))}</button></div>` : ''}`,
     after() { if (p.focus) { const el = document.getElementById('pa-' + p.focus); if (el) el.scrollIntoView({block: 'center'}); } }};
 });
+/* คีย์เลขที่ใบปะหน้าตรงชุดไหน เปิดชุดนั้นเลย · ไม่ตรงก็กรองรายการ */
+App.on('p-approve-find', function (form) {
+  const f = formData(form);
+  const lot = /^[\d\s-]+$/.test(f.q || '') ? this.pFindCode(f.q) : '';
+  if (lot && this.pEntriesOf(lot).length && (this.pLot(lot).done || this.pLocked(lot))) { this.go('post-approve', {id: lot}); return; }
+  if (lot && this.pEntriesOf(lot).length) { this.go('post-approve', {f, err: 'ชุดนี้ จนท. ยังบันทึกไม่ครบ'}); return; }
+  this.go('post-approve', {f, err: /^[\d\s-]+$/.test(f.q || '') ? 'ไม่พบเลขที่ใบปะหน้านี้' : ''});
+});
+App.on('p-approve-st', function (el) { this.go('post-approve', {f: formData(el.form)}); });
 App.on('p-decide', function (el) {
   if (this.session.pRole !== 'manager') return;
   const e = this.P().entries.find(x => x.id === el.dataset.id);
