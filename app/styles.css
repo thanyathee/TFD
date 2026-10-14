@@ -685,3 +685,4 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
   .cv-list .cv-foot{position:absolute;left:0;right:0;bottom:0}
 }
 .pf-fs{border:0;margin:0;padding:0;display:grid;gap:12px;min-width:0}
+.pf-sres button:disabled{opacity:.55;cursor:default;box-shadow:none}
