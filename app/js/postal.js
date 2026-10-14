@@ -931,7 +931,8 @@ App.views['post-approve'] = pNeedLogin(function (p) {
       <div class="page-head"><div><h1>อนุมัติทุน (ทางไปรษณีย์)</h1><p class="sub">คีย์เลขที่ใบปะหน้า (มุมขวาบนของใบปะหน้า) หรือชื่อโรงเรียน แล้วพิจารณาทีละคน${can ? '' : ' · แอดมินดูได้อย่างเดียว'}</p></div></div>
       <form class="card pf-afind" data-submit="p-approve-find">
         ${field('q', 'เลขที่ใบปะหน้า / ชื่อโรงเรียน', input('q', f.q, 'placeholder="เช่น 70-0006 หรือ 6" autocomplete="off"'), {err: p.err})}
-        <div class="field"><span class="label">&nbsp;</span><button class="btn primary" type="submit">ค้นหา</button></div>
+        <div class="field"><span class="label">&nbsp;</span><div class="row nowrap"><button class="btn primary" type="submit">ค้นหา</button>
+          <button class="btn" type="button" data-action="p-approve-clear">ล้างค่า</button></div></div>
         <div class="pf-afilters">
           ${field('region', 'ภาค', select('region', regions, f.region, 'ทุกภาค', 'data-onchange="p-approve-st"'))}
           ${field('province', 'จังหวัด', select('province', provs, f.province, 'ทุกจังหวัด', 'data-onchange="p-approve-st"'))}
@@ -1008,6 +1009,7 @@ App.on('p-approve-find', function (form) {
   if (lot && this.pEntriesOf(lot).length) { this.go('post-approve', {f, err: 'ชุดนี้ จนท. ยังบันทึกไม่ครบ'}); return; }
   this.go('post-approve', {f, err: /^[\d\s-]+$/.test(f.q || '') ? 'ไม่พบเลขที่ใบปะหน้านี้' : ''});
 });
+App.on('p-approve-clear', function () { this.go('post-approve', {f: {}}); });
 App.on('p-approve-st', function (el) {
   const f = formData(el.form);
   if (el.name === 'region') f.province = '';
@@ -1101,7 +1103,7 @@ App.views['post-people'] = pNeedLogin(function (p) {
       ${field('g', 'ระดับ (ชั้นปีหน้า)', select('g', P_LEVELS_ALL, f.g, 'ทุกระดับ', 'data-onchange="p-people-sel"'))}
       ${field('res', 'ผลพิจารณา', select('res', P_RESULT, f.res, 'ทั้งหมด', 'data-onchange="p-people-sel"'))}
       ${field('by', 'ผู้บันทึก', select('by', db.users.filter(u => u.role !== 'manager').map(u => [u.username, u.name]), f.by, 'ทุกคน', 'data-onchange="p-people-sel"'))}
-      <div class="field"><span class="label">&nbsp;</span><div class="row nowrap"><button class="btn primary" type="submit">ค้นหา</button><button class="btn ghost" type="button" data-action="p-people-clear">ล้าง</button></div></div></form>
+      <div class="field"><span class="label">&nbsp;</span><div class="row nowrap"><button class="btn primary" type="submit">ค้นหา</button><button class="btn ghost" type="button" data-action="p-people-clear">ล้างค่า</button></div></div></form>
     <p class="small muted">พบ ${rows.length} คน${rows.length > shown.length ? ` · แสดง ${shown.length} คนแรก` : ''}</p>
     <div class="pf-ptbl">${tbl([{t: '#'}, {t: 'เลขบัตร / ชื่อ'}, {t: 'โรงเรียน'}, {t: 'ทุน · ชั้น'}, {t: 'เกรด', r: 1}, {t: 'เงินทุน', r: 1}, {t: 'ผล'}, {t: 'ผู้บันทึก'}],
       shown.map((x, i) => [i + 1,
