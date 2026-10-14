@@ -455,6 +455,8 @@ def main():
         ev = [(started, 'นักเรียนเริ่มกรอกใบสมัคร', 'started')]
         if submitted:
             ev.append((submitted, 'นักศึกษาส่งใบสมัครถึงมูลนิธิฯ โดยตรง' if bachelor else 'นักเรียนส่งข้อมูลให้ครู', 'submitted'))
+            if transfer:
+                ev.append((submitted, f"นักเรียนแจ้งย้ายสถานศึกษา (ไปที่: {apps[-1]['next_school_text'] or 'ยังไม่ทราบ'} · ปีหน้าเรียน {nxt})", 'transfer_notice'))
         t_sent = None
         if status in ('waiting_transfer_proof', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'):
             t_sent = submitted + timedelta(days=rng.randint(1, 6), hours=rng.randint(0, 8))

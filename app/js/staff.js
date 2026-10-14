@@ -582,7 +582,7 @@ App.on('transfer-save', function (form) {
   if (Object.keys(e).length) { this.go('staff-transfer', {code: s.code, values: {...a, cls: v.t_class, notified: v.notified, note: v.note}, errors: e}); return; }
   if (last) Object.assign(last, {to: a.school, cls: v.t_class, date: v.notified, note: v.note, by: this.session.name, at: nowIso()});
   else this.db.transfers.push({code: s.code, from, to: a.school, cls: v.t_class, date: v.notified, note: v.note, by: this.session.name, at: nowIso()});
-  addHistory(s, `${last ? 'แก้ไขการย้าย' : 'ย้ายสถานศึกษา'}: ${this.schoolName(from)} → ${this.schoolName(a.school)} (${v.t_class}) — ${this.session.name}`, 'transfer');
+  addHistory(s, `${this.session.name} ${last ? 'แก้ไขการย้าย' : 'บันทึกการย้าย'}: ${a.school === from ? `เรียนที่เดิม ${this.schoolName(from)}` : `${this.schoolName(from)} → ${this.schoolName(a.school)}`} ชั้น ${v.t_class}${s.next_class && s.next_class !== v.t_class ? ` (เดิมแจ้งไว้: ${s.next_class})` : ''}`, 'transfer');
   s.school = a.school;
   s.next_class = v.t_class;
   if (s.status === 'waiting_transfer_proof') { s.status = 'waiting_staff'; addHistory(s, 'ได้รับหลักฐานการย้ายสถานศึกษาแล้ว — รอเจ้าหน้าที่ดำเนินการ', 'transfer_proof'); }

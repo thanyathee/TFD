@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v15';
+const STORE_KEY = 'tfd-scholarship-demo-v16';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -123,7 +123,9 @@ const App = {
     const copy = o => JSON.parse(JSON.stringify(o));
     const sent = ['waiting_transfer_proof', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'];
     return {
-      students: s.students.map(x => x.school_next === 'transfer' && x.status === 'waiting_staff' ? {...x, status: 'waiting_transfer_proof'} : x).map(x => {
+      students: s.students.map(x => x.school_next === 'transfer' && x.status === 'waiting_staff' ? {...x, status: 'waiting_transfer_proof'} : x)
+        .map(x => x.school_next === 'transfer' && ['need_more_info', 'waiting_manager', 'decided'].includes(x.status)
+          ? {...x, history: (x.history || []).concat({at: '2027-05-10T10:00', text: `จนท. 01 บันทึกการย้าย: เรียนที่เดิม ชั้น ${x.next_class}`, kind: 'transfer'})} : x).map(x => {
         /* เอกสารตัวอย่าง: ส่งแล้ว = ครบ, รอครู = ตาม demo_docs (none / partial / full) */
         const docs = docsFor(x).filter(d => !d[3]);
         const n = sent.includes(x.status) || x.demo_docs === 'full' ? docs.length : x.demo_docs === 'partial' ? Math.ceil(docs.length / 2) : 0;

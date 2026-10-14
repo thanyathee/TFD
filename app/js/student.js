@@ -672,6 +672,7 @@ App.on('student-step', function (form, ev) {
   s.return_reason = '';
   s.step = 1;
   addHistory(s, direct ? 'นักศึกษาส่งใบสมัครถึงมูลนิธิฯ โดยตรง' : 'นักเรียนส่งข้อมูลให้ครู', 'submitted');
+  if (s.school_next === 'transfer') addHistory(s, `นักเรียนแจ้งย้ายสถานศึกษา (ไปที่: ${s.next_school_text || 'ยังไม่ทราบ'} · ปีหน้าเรียน ${s.next_class || '-'})`, 'transfer_notice');
   this.save();
   this.toast('ส่งใบสมัครเรียบร้อยแล้ว');
   this.go('student-status');
