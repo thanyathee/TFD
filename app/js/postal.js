@@ -367,7 +367,7 @@ App.views['post-form'] = pNeedLogin(function (p) {
   const clsOther = v.cls_sel === '__other' || (!!v.cls && !P_CLASSES.includes(v.cls));
   const nextOther = v.next_sel === '__other' || (!!v.next_class && !P_CLASSES.includes(v.next_class));
   const OTHER = ['__other', 'อื่น ๆ (พิมพ์เอง)'];
-  const nextItems = nexts.map(x => [x, `${x} (คิดให้)`]).concat(P_CLASSES.filter(x => !nexts.includes(x)).map(x => [x, x]), [OTHER]);
+  const nextItems = nexts.map(x => [x, x]).concat(P_CLASSES.filter(x => !nexts.includes(x)).map(x => [x, x]), [OTHER]);
   const g = groupOfClass(v.cls), gn = groupOfClass(v.next_class);
   const needFac = ['voc', 'highvoc', 'bachelor'].includes(g) || ['voc', 'highvoc', 'bachelor'].includes(gn);
   const isPvs = /^ปวส/.test(v.next_class);
@@ -395,7 +395,7 @@ App.views['post-form'] = pNeedLogin(function (p) {
       <div class="stack">${field('cls_sel', type === 'CONT' ? 'ชั้นปีนี้' : 'ชั้นปัจจุบัน', lock ? input('cls', v.cls, 'readonly')
           : select('cls_sel', P_CLASSES.map(x => [x, x]).concat([OTHER]), clsOther ? '__other' : v.cls, 'เลือกชั้น', 'data-onchange="p-cls"'), {req: 1, err: e.cls})}
         ${!lock && clsOther ? field('cls_text', 'พิมพ์ชั้นเอง', input('cls_text', clsOther ? v.cls : '', 'placeholder="เช่น ปวส.1 (ต่อเนื่อง 2 ปี)"')) : ''}</div>
-      <div class="stack">${field('next_sel', 'ชั้นปีหน้า <span class="small muted">(คิดให้อัตโนมัติ · แก้ได้)</span>',
+      <div class="stack">${field('next_sel', 'ชั้นปีหน้า',
           select('next_sel', nextItems, nextOther ? '__other' : v.next_class, 'เลือกชั้น', 'data-onchange="p-cls"'), {req: 1, err: e.next_class})}
         ${nextOther ? `<div class="grid-2">${field('next_text', 'พิมพ์ชั้นปีหน้าเอง', input('next_text', nextOther ? v.next_class : '', 'placeholder="เช่น ปริญญาตรี ปี 1 (เทียบโอน)"'))}
           ${field('next_group', 'นับเป็นระดับ', select('next_group', P_LEVELS_ALL, v.next_group || 'other'))}</div>` : ''}</div></div>
