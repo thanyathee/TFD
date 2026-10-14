@@ -744,13 +744,12 @@ App.views['post-schools'] = pNeedLogin(function (p) {
       ${field('st', 'สถานะ', select('st', Object.entries(P_STATUS).map(([k, [t]]) => [k, t]), f.st, 'ทุกสถานะ'))}
       ${role === 'clerk' ? '' : field('by', 'ผู้บันทึก', select('by', clerks.map(u => [u.username, u.name]), f.by, 'ทุกคน'))}
       <div class="field"><span class="label">&nbsp;</span><button class="btn" type="submit">ค้นหา</button></div></form>
-    ${tbl([{t: '#'}, {t: 'โรงเรียน'}, {t: 'ใหม่', r: 1}, {t: 'ต่อเนื่อง', r: 1}, {t: 'รวม', r: 1}, {t: 'สถานะ'}, {t: 'แก้ไขล่าสุด'}].concat(role === 'clerk' ? [] : [{t: 'ผู้บันทึก'}], [{t: ''}]),
-      rows.map((r, i) => [i + 1, `<span class="pf-sname"><b>${esc(r.sc.name)}</b> <span class="small muted">จ.${esc(r.sc.province)}</span></span>`, r.c.total.NEW, r.c.total.CONT,
-        `<b>${r.c.total.NEW + r.c.total.CONT}</b>`, pBadge(r.st), `<span class="nw">${r.b.updated ? pShortDate(r.b.updated) : '—'}</span>`]
-        .concat(role === 'clerk' ? [] : [esc(this.pUser(r.b.by).name || '—')], [
+    <div class="pf-stbl">${tbl([{t: '#'}, {t: 'โรงเรียน'}, {t: 'ใหม่', r: 1}, {t: 'ต่อเนื่อง', r: 1}, {t: 'รวม', r: 1}, {t: 'สถานะ · แก้ไขล่าสุด'}, {t: ''}],
+      rows.map((r, i) => [i + 1, `<span class="pf-sname"><b>${esc(r.sc.name)}</b><span class="small muted">จ.${esc(r.sc.province)}</span></span>`, r.c.total.NEW, r.c.total.CONT,
+        `<b>${r.c.total.NEW + r.c.total.CONT}</b>`, `<div class="pf-st">${pBadge(r.st)}<span>${r.b.updated ? pShortDate(r.b.updated) : '—'}${role === 'clerk' ? '' : ` · ${esc(this.pUser(r.b.by).name || '—')}`}</span></div>`,
         `<div class="row nowrap"><button class="btn sm pf-ic" data-go="post-cover" data-id="${r.id}" title="ใบปะหน้า" aria-label="ใบปะหน้า">${icon('print')}</button>
           ${role !== 'manager' && this.pCanEdit(r.id) ? `<button class="btn sm" data-action="p-open" data-id="${r.id}">${r.b.done ? 'แก้ไข' : 'บันทึกต่อ'}</button>` : ''}
-          ${role !== 'clerk' && r.c.entered ? `<button class="btn sm" data-go="post-approve" data-id="${r.id}">อนุมัติ</button>` : ''}</div>`])))}`};
+          ${role !== 'clerk' && r.c.entered ? `<button class="btn sm" data-go="post-approve" data-id="${r.id}">อนุมัติ</button>` : ''}</div>`]))}</div>`};
 });
 App.on('p-sch-filter', function (form) { this.go('post-schools', {f: formData(form)}); });
 App.on('p-open', function (el) { this.pKeepForm(); this.session.pSearch = false; this.pPref().lot = el.dataset.id; this.pSave(); this.go('post-form'); });

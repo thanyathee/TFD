@@ -722,7 +722,31 @@ h1 .pf-lot{font-size:15px;padding:3px 12px}
 .pf-done.on{background:var(--ok-soft);border-color:var(--ok)}
 .tbl .nw{white-space:nowrap}
 /* ชื่อโรงเรียนในตาราง: บรรทัดเดียว (ยาวมากค่อยขึ้นบรรทัดใหม่) */
-.pf-sname{display:inline-block;min-width:300px}
-.pf-sname b{white-space:nowrap}
-@media (max-width:900px){.pf-sname{min-width:220px}.pf-sname b{white-space:normal}}
+/* ตารางใบปะหน้า: ไม่มีแถบเลื่อนซ้ายขวา · ชื่อโรงเรียนกินพื้นที่ที่เหลือ จังหวัดอยู่ใต้ชื่อ */
+.pf-sname{display:grid;gap:2px}
+.pf-stbl .table-wrap{overflow-x:visible}
+.pf-stbl .tbl{width:100%}
+.pf-stbl .tbl td:nth-child(2){width:100%}
+.pf-stbl .tbl th,.pf-stbl .tbl td:not(:nth-child(2)){white-space:nowrap}
+@media (max-width:760px){
+  .pf-stbl .tbl thead{display:none}
+  .pf-stbl .tbl,.pf-stbl .tbl tbody{display:block}
+  .pf-stbl .tbl tr{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .pf-stbl .tbl td{display:block;border:0;padding:0;width:auto!important;white-space:nowrap}
+  .pf-stbl .tbl td:nth-child(1){color:var(--muted);align-self:flex-start}
+  .pf-stbl .tbl td:nth-child(2){flex:1 1 calc(100% - 40px);min-width:0;white-space:normal}
+  .pf-stbl .tbl td:nth-child(3){margin-left:24px}
+  .pf-stbl .tbl td:nth-child(3)::before{content:"ใหม่ "}
+  .pf-stbl .tbl td:nth-child(4)::before{content:"ต่อเนื่อง "}
+  .pf-stbl .tbl td:nth-child(5)::before{content:"รวม "}
+  .pf-stbl .tbl td:nth-child(3),.pf-stbl .tbl td:nth-child(4),.pf-stbl .tbl td:nth-child(5){font-size:13px;color:var(--ink-2)}
+  .pf-stbl .tbl td:nth-child(2)+td{flex-basis:auto}
+  .pf-stbl .tbl td:last-child{flex-basis:100%;margin-left:24px}
+  .pf-stbl .tbl td:nth-child(6){flex-basis:100%;margin-left:24px}
+  .pf-st{flex-direction:row;align-items:center}
+}
+}
 .btn.sm.pf-ic{padding:0 12px}
+.pf-st{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.pf-st>span:not(.badge){font-size:13px;color:var(--ink-2);white-space:nowrap}
+@media (max-width:760px){.pf-stbl .pf-st{flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 10px}}
