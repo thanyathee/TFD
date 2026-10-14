@@ -75,21 +75,12 @@ CREATE INDEX ON subdistricts (postcode);
 -- ---------------------------------------------------------------------
 -- 2) สถานศึกษา และบัญชีผู้ใช้ฝั่งครู/เจ้าหน้าที่
 -- ---------------------------------------------------------------------
--- กลุ่มสถานศึกษาที่ได้อัตราพิเศษ ม.ต้น (เช่น พระปริยัติธรรม ราชประชานุเคราะห์ ศึกษาสงเคราะห์ มีหอพักให้ฟรี)
--- แอดมินเพิ่ม / แก้ / ปิดใช้ได้เอง ไม่ต้องแก้โค้ด
-CREATE TABLE school_rate_groups (
-  id             serial PRIMARY KEY,
-  name           text NOT NULL UNIQUE,
-  m_lower_amount integer NOT NULL CHECK (m_lower_amount >= 0),  -- อัตราทุน ม.ต้น (บาท/ปี) แทนอัตราปกติ
-  active         boolean NOT NULL DEFAULT true
-);
-
 CREATE TABLE schools (
   id             serial PRIMARY KEY,
   institution_code text UNIQUE,                 -- InstitutionID
   name           text NOT NULL,
   school_type    text NOT NULL CHECK (school_type IN ('school','college','university','other')),
-  rate_group_id  integer REFERENCES school_rate_groups(id),   -- NULL = อัตราปกติ
+  special_rate   boolean NOT NULL DEFAULT false,  -- อัตราพิเศษ ม.ต้น (เช่น พระปริยัติธรรม ราชประชานุเคราะห์ ศึกษาสงเคราะห์ มีหอพักให้ฟรี)
   subdistrict_id integer REFERENCES subdistricts(id),
   district_id    integer NOT NULL REFERENCES districts(id),
   address        text,                          -- บ้านเลขที่ หมู่ ถนน อาคาร
@@ -405,8 +396,8 @@ CREATE TABLE decisions (                   -- ผลพิจารณาสุ�
   application_id  uuid PRIMARY KEY REFERENCES applications(id),
   manager_id      uuid NOT NULL REFERENCES staff_users(id),  -- ผู้บันทึก (ไม่เข้าเกณฑ์ = เจ้าหน้าที่รีวิว)
   result          decision_result NOT NULL,
-  standard_amount integer,                 -- ยอดตามอัตรามาตรฐาน (ม.ต้น ใช้อัตรากลุ่มของโรงเรียนปีหน้า ถ้ามี)
-  rate_group_id   integer REFERENCES school_rate_groups(id),  -- กลุ่มอัตราพิเศษที่ใช้ตอนตัดสิน (เก็บไว้ แม้ภายหลังโรงเรียนเปลี่ยนกลุ่ม)
+  standard_amount integer,                 -- ยอดตามอัตรามาตรฐาน (ม.ต้น ที่โรงเรียนปีหน้าเป็นอัตราพิเศษ ใช้อัตราพิเศษ)
+  special_rate    boolean NOT NULL DEFAULT false,  -- ใช้อัตราพิเศษตอนตัดสิน (เก็บไว้ แม้ภายหลังโรงเรียนเปลี่ยนอัตรา)
   approved_amount integer,                 -- ยอดที่อนุมัติจริง
   amount_reason   text,                    -- บังคับเมื่อยอดไม่เท่ามาตรฐาน
   reject_reason   text,
