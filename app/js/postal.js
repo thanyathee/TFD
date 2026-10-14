@@ -2,7 +2,7 @@
    จนท. บันทึกแบบสรุปย่อทีละคน → พิมพ์ใบปะหน้าโรงเรียน → ผจก. อนุมัติทีละคน · แอดมินดูผลงานทุกคน */
 'use strict';
 
-const POSTAL_KEY = 'tfd-postal-demo-v6';
+const POSTAL_KEY = 'tfd-postal-demo-v7';
 const P_ROLE = {
   clerk: ['จนท.บันทึกข้อมูล', 'บันทึกใบสมัครทางไปรษณีย์ พิมพ์ใบปะหน้า และดูผลงานของตัวเอง'],
   manager: ['ผจก.อนุมัติทุน', 'ดูทุกโรงเรียน และอนุมัติทุนทีละคน'],
@@ -20,8 +20,23 @@ const P_CLASSES = ['ป.6', 'ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5', 'ม.6'
 const P_TITLES = ['เด็กชาย', 'เด็กหญิง', 'นาย', 'นางสาว'];
 const P_LAND = [['own', 'มีที่ดินของตนเอง'], ['rent', 'เช่าที่ดินผู้อื่น'], ['none', 'ไม่มีที่ดินทำกิน']];
 const P_DOCS = [['cert', 'หนังสือรับรอง'], ['bank', 'รายการเดินบัญชี'], ['expense', 'ใบรายการใช้จ่าย'], ['receipt', 'ใบเสร็จ']];
-const P_HOUSING = [['own', 'บ้านและที่ดินของครอบครัว'], ['own_other_land', 'บ้านของครอบครัว ที่ดินของผู้อื่น'], ['installment', 'กำลังผ่อนชำระ'],
-  ['rent_house', 'บ้านเช่า'], ['rent_room', 'ห้องเช่า'], ['dorm', 'หอพัก'], ['other', 'อื่น ๆ (บ้านญาติ / วัด / สถานสงเคราะห์)']];
+/* ที่อยู่อาศัย: [รหัส, ชื่อ, ช่องระบุเพิ่ม, ชนิด (money = เดือนละ ... บาท / text = ข้อความ)] */
+const P_HOUSING = [['own', 'บ้านและที่ดินของครอบครัว'], ['own_other_land', 'บ้านของครอบครัว ที่ดินของผู้อื่น', 'ที่ดินเป็นของใคร', 'text'],
+  ['installment', 'กำลังผ่อนบ้าน', 'ผ่อนเดือนละ (บาท)', 'money'], ['rent_house', 'บ้านเช่า', 'ค่าเช่าเดือนละ (บาท)', 'money'],
+  ['rent_room', 'ห้องเช่า', 'ค่าเช่าเดือนละ (บาท)', 'money'], ['dorm', 'หอพัก', 'ค่าหอพักเดือนละ (บาท)', 'money'],
+  ['relative', 'บ้านญาติ', 'ญาติคือใคร เช่น ป้า ลุง', 'text'], ['employer', 'บ้านนายจ้าง', 'นายจ้างคือใคร / ทำงานอะไร', 'text'],
+  ['welfare', 'บ้านพักสวัสดิการ', 'ของหน่วยงานไหน', 'text'], ['temple', 'วัด'], ['shelter', 'สถานสงเคราะห์', 'ชื่อสถานสงเคราะห์', 'text'],
+  ['other', 'อื่น ๆ', 'ระบุ', 'text']];
+/* ข้อความที่อยู่อาศัยแบบต่อเนื่อง เช่น "บ้านเช่า เดือนละ 1,500 บาท" · "บ้านญาติ (ป้า)" */
+function pHouse(e) {
+  const h = P_HOUSING.find(x => x[0] === e.housing);
+  if (!h) return '—';
+  const d = (e.housing_detail || '').trim();
+  if (!d) return h[1];
+  if (h[3] === 'money') return `${h[1]} เดือนละ ${Number(d.replace(/,/g, '')) ? Number(d.replace(/,/g, '')).toLocaleString('th-TH') : d} บาท`;
+  if (e.housing === 'own_other_land') return `${h[1]} (ที่ดินของ${d})`;
+  return e.housing === 'other' ? d : `${h[1]} (${d})`;
+}
 
 /* ---------- ข้อมูล (เก็บแยกจากระบบออนไลน์) ---------- */
 App.P = function () {
@@ -81,14 +96,14 @@ App.pFresh = function () {
   /* โรงเรียนตัวอย่าง 3 แห่ง: พิมพ์แล้ว + ผจก. พิจารณาบางส่วน / บันทึกเสร็จ / กำลังบันทึก */
   const s1 = 'SCH-001', s2 = 'SCH-010', s3 = 'SCH-022';
   nw(s1, 'clerk01', '2027-06-03T09:10', {title: 'เด็กหญิง', first: 'กัญญารัตน์', last: 'ดวงดี', cls: 'ม.2', gpa: '3.45', decision: {result: 'approved', by: 'manager01', at: '2027-06-10T14:00'}});
-  nw(s1, 'clerk01', '2027-06-03T09:14', {title: 'เด็กชาย', first: 'ปิยะพงษ์', last: 'ศรีวงศ์', cls: 'ม.3', next_class: 'ม.4', gpa: '2.98', equipment: [], housing: 'rent_house', land: 'rent', note: 'ค่าเช่าบ้าน 1,500 บาท/เดือน',
+  nw(s1, 'clerk01', '2027-06-03T09:14', {title: 'เด็กชาย', first: 'ปิยะพงษ์', last: 'ศรีวงศ์', cls: 'ม.3', next_class: 'ม.4', gpa: '2.98', equipment: [], housing: 'rent_house', housing_detail: '1500', land: 'rent',
     family: 'บิดาเสียชีวิต มารดารับจ้างทั่วไป มีน้อง 2 คน', decision: {result: 'rejected', by: 'manager01', at: '2027-06-10T14:05'}});
-  nw(s1, 'clerk01', '2027-06-03T09:20', {title: 'นางสาว', first: 'สุนิสา', last: 'แก้วมณี', cls: 'ม.5', gpa: '3.80', housing: 'other', family: 'อาศัยกับป้า บิดามารดาทำงานต่างจังหวัด'});
+  nw(s1, 'clerk01', '2027-06-03T09:20', {title: 'นางสาว', first: 'สุนิสา', last: 'แก้วมณี', cls: 'ม.5', gpa: '3.80', housing: 'relative', housing_detail: 'ป้า', family: 'อาศัยกับป้า บิดามารดาทำงานต่างจังหวัด'});
   recOf(s1).slice(0, 2).forEach((r, i) => cont(s1, r, 'clerk01', `2027-06-03T09:${30 + i * 4}`, i ? {docs: ['cert', 'bank', 'expense'], note: 'ไม่มีใบเสร็จ ค่าใช้จ่ายต่ำกว่า 500 บาท'} : {}));
   nw(s2, 'clerk02', '2027-06-05T10:02', {title: 'นาย', first: 'อภิสิทธิ์', last: 'ทองใบ', cls: 'ปวช.3', next_class: 'ปวส.1', faculty: 'ช่างกลโรงงาน', pvs_type: 'industry', gpa: '3.05', land: 'own'});
-  nw(s2, 'clerk02', '2027-06-05T10:08', {title: 'นางสาว', first: 'ศศิธร', last: 'พรมมา', cls: 'ปวช.1', faculty: 'การบัญชี', gpa: '3.62', equipment: [], housing: 'installment'});
+  nw(s2, 'clerk02', '2027-06-05T10:08', {title: 'นางสาว', first: 'ศศิธร', last: 'พรมมา', cls: 'ปวช.1', faculty: 'การบัญชี', gpa: '3.62', equipment: [], housing: 'installment', housing_detail: '3200'});
   recOf(s2).slice(0, 1).forEach(r => cont(s2, r, 'clerk02', '2027-06-05T10:15'));
-  nw(s3, 'clerk01', '2027-06-07T13:40', {title: 'นางสาว', first: 'อรทัย', last: 'สุขเจริญ', cls: 'ปริญญาตรี ปี 1', faculty: 'ครุศาสตร์', gpa: '3.21', housing: 'dorm', note: 'ค่าหอพัก 2,800 บาท/เดือน'});
+  nw(s3, 'clerk01', '2027-06-07T13:40', {title: 'นางสาว', first: 'อรทัย', last: 'สุขเจริญ', cls: 'ปริญญาตรี ปี 1', faculty: 'ครุศาสตร์', gpa: '3.21', housing: 'dorm', housing_detail: '2800'});
   /* โรงเรียนตัวอย่างที่ส่งมาเยอะ: โรงเรียนจอมทองวิทยา (เชียงใหม่) — ใช้ลองดูว่า 1 แผ่นใส่ได้กี่คน */
   const s4 = 'SCH-007';
   const FAM = ['อาศัยกับยาย บิดามารดาแยกทางกัน มารดาไปทำงานกรุงเทพฯ ส่งเงินมาไม่แน่นอน ยายอายุมากรับจ้างเก็บลำไยตามฤดูกาล',
@@ -102,8 +117,9 @@ App.pFresh = function () {
     const cls = ['ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5'][i % 5], adult = ['ม.4', 'ม.5'].includes(cls);
     nw(s4, 'clerk02', `2027-06-08T10:${String(i).padStart(2, '0')}`, {title: i % 2 ? (adult ? 'นางสาว' : 'เด็กหญิง') : (adult ? 'นาย' : 'เด็กชาย'), first: pick(i % 2 ? FIRST_F : FIRST_M), last: pick(LAST),
       cls, next_class: nextOptions(cls)[0], gpa: (2.6 + (i * 29 % 130) / 100).toFixed(2), family: FAM[i % FAM.length],
-      equipment: [['pickup'], [], ['washer', 'pickup'], ['etan'], ['none']][i % 5], housing: ['own', 'rent_house', 'other', 'rent_room', 'own_other_land', 'dorm'][i % 6], land: ['none', 'rent', 'own'][i % 3],
-      note: [, 'ค่าเช่าบ้าน 1,200 บาท/เดือน', , 'ค่าเช่าห้อง 2,000 บาท/เดือน', , 'ค่าหอพัก 1,800 บาท/เดือน'][i % 6] || ''});
+      equipment: [['pickup'], [], ['washer', 'pickup'], ['etan'], ['none']][i % 5], housing: ['own', 'rent_house', 'relative', 'rent_room', 'own_other_land', 'employer', 'dorm', 'welfare'][i % 8],
+      housing_detail: ['', '1200', 'ลุง', '2000', 'วัดในหมู่บ้าน', 'เจ้าของสวนลำไย', '1800', 'โรงพยาบาลจอมทอง'][i % 8], land: ['none', 'rent', 'own'][i % 3],
+      note: i % 7 === 3 ? 'มารดาป่วยเรื้อรัง ต้องไปโรงพยาบาลทุกเดือน' : ''});
   }
   const batch = (id, by, o) => { const t = teacher(id); return [id, {by, prim_new: 0, prim_cont: 0, wait_new: 0, wait_cont: 0, note: '', letter: '',
     teacher_name: t.name || '', teacher_phone: t.phone || '', teacher_email: t.email || '', done: false, printed: '', updated: '2027-06-07T13:40', ...o}]; };
@@ -328,12 +344,13 @@ App.views['post-form'] = pNeedLogin(function (p) {
       <div class="field"><span class="label">บ้านมีเครื่องใช้อะไรบ้าง</span><div class="choice-grid pf-eq">${EQUIP.map(([k, t]) =>
         `<label class="choice"><input type="checkbox" name="equipment" value="${k}" ${eq.includes(k) ? 'checked' : ''}> ${t}</label>`).join('')}
         <label class="choice"><input type="checkbox" name="equipment" value="none" ${eq.includes('none') ? 'checked' : ''}> ไม่มีเลย</label></div></div>
-      ${radioField('housing', 'บ้านที่อยู่อาศัยเป็นของใคร', P_HOUSING, v.housing, {cls: 'pf-wide', hint: 'บ้านเช่า / ห้องเช่า / หอพัก / ผ่อนชำระ — ใส่ค่าเช่าหรือค่างวดในช่องหมายเหตุ'})}
+      ${radioField('housing', 'บ้านที่อยู่อาศัยเป็นของใคร', P_HOUSING.map(h => [h[0], h[1]]), v.housing, {cls: 'pf-wide', attrs: 'data-onchange="p-house"'})}
+      ${(h => h && h[2] ? field('housing_detail', h[2], input('housing_detail', v.housing_detail, h[3] === 'money' ? 'inputmode="numeric" placeholder="เช่น 1500"' : '')) : '')(P_HOUSING.find(x => x[0] === v.housing))}
       ${radioField('land', 'ที่ดินทำกิน', P_LAND, v.land)}` : `
       ${field('use_money', 'นำเงินทุนไปใช้จ่ายอะไรบ้าง', textarea('use_money', v.use_money, 'rows="2" placeholder="เช่น ค่าเดินทาง ค่าอุปกรณ์การเรียน ชุดนักเรียน"'))}
       <div class="field"><span class="label">เอกสารแนบ <span class="small muted">(ติ๊กที่มี)</span></span><div class="choices pf-docs">${P_DOCS.map(([k, t]) =>
         `<label class="choice"><input type="checkbox" name="docs" value="${k}" ${docs.includes(k) ? 'checked' : ''}> ${t}</label>`).join('')}</div></div>`}
-    ${field('note', 'หมายเหตุ', input('note', v.note, `placeholder="${type === 'NEW' ? 'เช่น ค่าเช่าบ้าน 1,500 บาท/เดือน' : 'ถ้ามี'}"`))}
+    ${field('note', 'หมายเหตุ', input('note', v.note, 'placeholder="ถ้ามี"'))}
     ${errNote(e)}
     <div class="row end">${edit ? `<button class="btn ghost" type="button" data-action="p-delete" data-id="${edit.id}">ลบรายการนี้</button>
       <button class="btn" type="button" data-go="post-form">ยกเลิก</button><button class="btn primary" type="submit">บันทึกการแก้ไข</button>`
@@ -469,6 +486,11 @@ App.pRerender = function (v, focus) {
   this.pSave();
   this.go('post-form', {focus});
 };
+/* เลือกที่อยู่อาศัย → แสดงช่องระบุเพิ่ม (ของใคร / เดือนละเท่าไหร่) */
+App.on('p-house', function (el) {
+  const v = formData(el.form);
+  this.pRerender(v, (P_HOUSING.find(x => x[0] === v.housing) || [])[2] ? 'housing_detail' : 'land');
+});
 /* เปลี่ยนชั้น → คิดชั้นปีหน้า / สาขา / ประเภทวิชาใหม่ */
 App.on('p-cls', function (el) {
   const f = el.form;
@@ -538,7 +560,7 @@ App.on('p-save', function (form) {
   const type = v.type === 'CONT' ? 'CONT' : 'NEW';
   const data = {type, school: pf.school, cid: v.cid, title: v.title, first: v.first, last: v.last, cls: v.cls, next_class: next,
     faculty: v.faculty || '', pvs_type: /^ปวส/.test(next) ? v.pvs_type || 'other' : '', gpa: v.gpa || '', note: v.note || '', from_db: !!v.from_db && !v.unlocked, gpa_before: v.gpa_before || ''};
-  if (type === 'NEW') Object.assign(data, {family: v.family || '', equipment: arr(v.equipment), housing: v.housing || '', land: v.land || ''});
+  if (type === 'NEW') Object.assign(data, {family: v.family || '', equipment: arr(v.equipment), housing: v.housing || '', housing_detail: (P_HOUSING.find(x => x[0] === v.housing) || [])[2] ? v.housing_detail || '' : '', land: v.land || ''});
   else Object.assign(data, {use_money: v.use_money || '', docs: arr(v.docs)});
   if (editId) {
     const x = db.entries.find(y => y.id === editId);
@@ -658,7 +680,7 @@ App.pListHtml = function (id) {
     if (e.type === 'CONT') return `<tr>${base}<td class="nw">${e.gpa_before ? `${esc(e.gpa_before)} → ` : ''}<b>${esc(e.gpa || '—')}</b></td><td>${esc(e.use_money || '—')}${e.note ? `<br><small>หมายเหตุ: ${esc(e.note)}</small>` : ''}</td>
       ${P_DOCS.map(([k]) => `<td class="cv-ck2">${arr(e.docs).includes(k) ? '✓' : '<span class="no">✗</span>'}</td>`).join('')}</tr>`;
     return `<tr>${base}<td><b>${esc(e.gpa || '—')}</b></td><td>${esc(e.family || '—')}</td>
-      <td><small>เครื่องใช้:</small> ${arr(e.equipment).map(eqName).join(', ') || '—'} · <small>บ้าน:</small> ${esc(lab(P_HOUSING, e.housing))} · <small>ที่ดิน:</small> ${esc(lab(P_LAND, e.land))}${e.note ? `<br><small>หมายเหตุ:</small> ${esc(e.note)}` : ''}</td></tr>`;
+      <td><small>เครื่องใช้:</small> ${arr(e.equipment).map(eqName).join(', ') || '—'} · <small>บ้าน:</small> ${esc(pHouse(e))} · <small>ที่ดิน:</small> ${esc(lab(P_LAND, e.land))}${e.note ? `<br><small>หมายเหตุ:</small> ${esc(e.note)}` : ''}</td></tr>`;
   };
   const hd = (t, gt, n) => `<div class="a4-head cv-lhead"><span class="a4-logo">TF</span>
     <div><b>${esc(sc.name)} · จังหวัด${esc(sc.province)} · ${esc(this.regionName(sc.region))}</b></div>
@@ -755,7 +777,7 @@ App.views['post-approve'] = pNeedLogin(function (p) {
         <div><span>เงินทุน</span><b>${rateBadge(r)}</b></div>
         ${e.type === 'NEW' ? `<div class="wide"><span>สภาพครอบครัว</span><b>${esc(e.family || '—')}</b></div>
           <div class="wide"><span>เครื่องใช้ในบ้าน</span><b>${arr(e.equipment).map(eqName).join(' · ') || '—'}</b></div>
-          <div><span>บ้านที่อยู่อาศัย</span><b>${esc((P_HOUSING.find(x => x[0] === e.housing) || [, '—'])[1])}</b></div>
+          <div><span>บ้านที่อยู่อาศัย</span><b>${esc(pHouse(e))}</b></div>
           <div><span>ที่ดินทำกิน</span><b>${esc((P_LAND.find(x => x[0] === e.land) || [, '—'])[1])}</b></div>`
         : `<div class="wide"><span>นำเงินทุนไปใช้</span><b>${esc(e.use_money || '—')}</b></div><div class="wide"><span>เอกสารแนบ</span><b class="p-docs">${docsOk}</b></div>`}
         ${e.note ? `<div class="wide"><span>หมายเหตุ</span><b>${esc(e.note)}</b></div>` : ''}
