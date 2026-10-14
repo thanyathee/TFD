@@ -33,8 +33,9 @@ const SCHOOL_TYPES = [['school', 'โรงเรียน'], ['college', 'ว�
 
 App.staffNav = function () {
   return [['staff-dash', 'Dashboard'], ['staff-cycle', 'รอบรับสมัคร'], ['staff-schools', 'สถานศึกษา/ครู', ['staff-school']],
-    ['staff-apps', 'ใบสมัคร', ['staff-app']], ['staff-transfer', 'ย้ายสถานศึกษา'], ['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA']]
-    .concat(this.session.staffRole === 'admin' ? [['staff-users', 'ผู้ใช้งาน', ['staff-user']]] : []);
+    ['staff-apps', 'ใบสมัคร', ['staff-app']], ['staff-transfer', 'ย้ายสถานศึกษา']]
+    /* รายงาน/Export, PDPA และผู้ใช้งาน: เฉพาะแอดมินระบบ */
+    .concat(this.session.staffRole === 'admin' ? [['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA'], ['staff-users', 'ผู้ใช้งาน', ['staff-user']]] : []);
 };
 /* สลับบทบาทสำหรับทดลอง (เหมือนปุ่มบทบาทใน v14) */
 App.roleBar = function () {
@@ -47,6 +48,7 @@ App.staffList = function () { return this.db.staffUsers || STAFF.map(u => ({...u
 App.on('staff-role', function (el) {
   const u = this.staffList().find(s => s.role === el.dataset.role && s.active !== false) || STAFF.find(s => s.role === el.dataset.role);
   Object.assign(this.session, {staff: u.username, staffRole: u.role, name: u.name, who: `${u.name} · ${ROLE[u.role][0]}`});
+  if (u.role !== 'admin' && ['staff-reports', 'staff-pdpa', 'staff-users', 'staff-user'].includes(this.view.name)) { this.go('staff-dash'); return; }
   this.render();
 });
 
@@ -808,6 +810,7 @@ App.reportData = function (f) {
     csv: [cols.map(c => c.t)].concat(data)};
 };
 App.views['staff-reports'] = function (p) {
+  { const deny = adminOnly.call(this); if (deny) return deny; }
   const f = this._repF || {kind: 'all', levels: []};
   const r = this.reportData(f);
   this._lastCsv = r.csv;
@@ -856,6 +859,7 @@ App.on('report-export', function () {
 
 /* ---------- PDPA ---------- */
 App.views['staff-pdpa'] = function () {
+  { const deny = adminOnly.call(this); if (deny) return deny; }
   const d = this.db.pdpa;
   return {nav: this.staffNav(), html: `${this.roleBar()}
     <div class="page-head"><div><h1>PDPA / Privacy Notice</h1></div></div>
@@ -878,10 +882,10 @@ App.auditLog = function (action, target, detail) {
   (this.db.audit = this.db.audit || []).push({at: nowIso(), by: this.session.name || this.session.staff, action, target, detail: detail || ''});
 };
 const USER_ROLES = [['reviewer', 'จนท.รีวิว'], ['manager', 'ผจก.อนุมัติทุน'], ['admin', 'แอดมินระบบ'], ['teacher', 'ครู / สถานศึกษา']];
-const adminOnly = function () {
+function adminOnly() {
   return this.session.staffRole === 'admin' ? null : {nav: this.staffNav(), html: `${this.roleBar()}<section class="card"><h2>เฉพาะแอดมินระบบ</h2>
-    <p class="muted">หน้านี้ใช้จัดการบัญชีผู้ใช้งาน เข้าได้เฉพาะบทบาท “แอดมินระบบ”</p></section>`};
-};
+    <p class="muted">หน้านี้เข้าได้เฉพาะบทบาท “แอดมินระบบ”</p></section>`};
+}
 App.views['staff-users'] = function (p) {
   const deny = adminOnly.call(this); if (deny) return deny;
   const f = p.f || this._usF || {};
