@@ -394,7 +394,7 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .paper.a4 td:nth-child(2),.paper.a4 th:nth-child(2){width:150px;white-space:nowrap}
 @media print{.a4-sub{break-after:avoid}}
 /* เจ้าหน้าที่: รายชื่อสถานศึกษา */
-.sch-filters{grid-template-columns:2fr 1fr 1fr 1fr}
+.sch-filters{grid-template-columns:2fr 1fr 1fr 1fr 1fr}
 .sch-list .tlist-head,.sch-list .trow{grid-template-columns:56px minmax(220px,2fr) minmax(160px,1.2fr) minmax(160px,1.2fr) 100px}
 .sch-list .n{text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
 .sch-list small{display:block;font-size:12.5px;color:var(--muted);font-weight:500}
@@ -459,3 +459,9 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 @media (max-width:900px){.tr-filters{grid-template-columns:1fr 1fr}.tr-filters>.field:first-child{grid-column:1/-1}}
 .tr-list .cls{display:inline-block;margin-left:4px;padding:1px 8px;border-radius:6px;background:var(--fill-2);color:var(--ink);font-size:13px;font-weight:600;white-space:nowrap}
 .tr-list .cls{display:block;width:max-content;margin:4px 0 2px}
+/* กลุ่มอัตราพิเศษ */
+.rg-table{display:grid;gap:8px}
+.rg-row{display:grid;grid-template-columns:2fr 1fr 150px;gap:10px;align-items:end}
+.rg-meta{display:flex;gap:12px;align-items:center;min-height:48px}
+.badge.sm{font-size:12px;padding:2px 9px;margin-top:4px}
+@media (max-width:700px){.rg-row{grid-template-columns:1fr 110px}.rg-meta{grid-column:1/-1;min-height:0}}

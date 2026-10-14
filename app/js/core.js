@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v9';
+const STORE_KEY = 'tfd-scholarship-demo-v10';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -127,7 +127,11 @@ const App = {
         const n = sent.includes(x.status) || x.demo_docs === 'full' ? docs.length : x.demo_docs === 'partial' ? Math.ceil(docs.length / 2) : 0;
         return {...copy(x), docFiles: Object.fromEntries(docs.slice(0, n).map(d => [d[0], [`${x.code}_${d[0]}.pdf`]]))};
       }),
-      schools: copy(s.schools),
+      /* โรงเรียนตัวอย่างที่อยู่ในกลุ่มอัตราพิเศษ (ใช้ทดลอง) */
+      schools: copy(s.schools).map(x => ({...x, rate_group: {'SCH-004': 'G1', 'SCH-018': 'G2', 'SCH-003': 'G3', 'SCH-020': 'G4'}[x.id] || ''})),
+      /* กลุ่มสถานศึกษาที่ได้อัตราพิเศษ ม.ต้น — แอดมินเพิ่ม / แก้ / ลบได้ที่หน้า "รอบรับสมัคร" */
+      rateGroups: [{id: 'G1', name: 'โรงเรียนพระปริยัติธรรม', amount: 1000}, {id: 'G2', name: 'โรงเรียนราชประชานุเคราะห์', amount: 1000},
+        {id: 'G3', name: 'โรงเรียนศึกษาสงเคราะห์', amount: 1000}, {id: 'G4', name: 'โรงเรียนที่มีหอพักให้ฟรี', amount: 1000}],
       teachers: copy(s.teachers),
       transfers: [],
       cycle: {year: 2570, history_year: 2569, status: 'open', open: '2026-11-01', close: '2027-01-31',
@@ -236,6 +240,14 @@ const App = {
   schoolName(id) { return (this.schoolById[id] || {}).name || '—'; },
   teacherOf(schoolId) { return this.db.teachers.find(t => t.school === schoolId); },
   rateAmount(code) { return (this.db.rates.find(r => r.code === code) || {}).amount || 0; },
+  rateGroup(id) { return (this.db.rateGroups || []).find(g => g.id === id); },
+  /* อัตรามาตรฐานของนักเรียน: ม.ต้น ที่โรงเรียนปีหน้าอยู่ในกลุ่มอัตราพิเศษ → ใช้อัตรากลุ่ม (โรงเรียนปีหน้า = หลังบันทึกย้ายแล้ว) */
+  stdRate(s) {
+    const base = this.rateAmount(s.rate);
+    const sc = this.schoolById[s.school] || {};
+    const g = s.rate === 'M_LOWER' && this.rateGroup(sc.rate_group);
+    return g ? {amount: g.amount, group: g, base} : {amount: base, group: null, base};
+  },
   rateName(code) { return (this.db.rates.find(r => r.code === code) || {}).name || '—'; },
 
   /* ภาค → จังหวัด → อำเภอ/เขต (→ ตำบล) (→ สถานศึกษา) ใช้ร่วมกันทุกบทบาท */

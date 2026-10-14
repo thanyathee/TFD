@@ -53,7 +53,7 @@ applications 1─* siblings / other_funding / documents / staff_reviews / status
 2. **นักเรียนไม่มีรหัสผ่าน** ใช้เลขบัตร + วันเกิด + เบอร์โทรยืนยันตัวตน แล้วออก session/OTP
 3. **1 โรงเรียน = 1 Username** (ตาม Admin v14) ผูกกับ `school_id` บัญชีจึงเห็นเฉพาะนักเรียนในโรงเรียนตัวเอง
 4. **บทบาทผูกกับบัญชี** (`teacher` / `reviewer` / `manager` / `admin`) แทนปุ่มสลับบทบาทในต้นแบบ
-5. **อัตราทุนคิดจากชั้นปีถัดไป** (`next_class` → `rate_level_code`) และเก็บทั้ง `standard_amount` และ `approved_amount` ถ้ายอดไม่ตรงอัตรามาตรฐาน ต้องใส่ `amount_reason` (บังคับด้วย CHECK)
+5. **อัตราทุนคิดจากชั้นปีถัดไป** · ม.ต้น ที่โรงเรียนปีหน้าอยู่ใน `school_rate_groups` (เช่น พระปริยัติธรรม) ใช้อัตรากลุ่มแทน · (`next_class` → `rate_level_code`) และเก็บทั้ง `standard_amount` และ `approved_amount` ถ้ายอดไม่ตรงอัตรามาตรฐาน ต้องใส่ `amount_reason` (บังคับด้วย CHECK)
 6. **ไฟล์แนบ** เก็บใน Object Storage แบบ private ฐานข้อมูลเก็บแค่ path ชนิดไฟล์ และขนาด โดยตรวจตามที่ตั้งไว้ใน `document_types`
 7. **ประวัติไม่ถูกเขียนทับ** เปลี่ยนสถานะเมื่อไหร่ trigger จะบันทึกลง `application_status_history` อัตโนมัติ ส่วน `audit_log` ห้าม UPDATE/DELETE
 8. **ทุนต่อเนื่อง** เก็บทั้งคำตอบของนักเรียน (`received_prev_year`) และผลที่ จนท. ตรวจกับประวัติจริง (`prev_year_verified`)

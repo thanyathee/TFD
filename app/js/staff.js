@@ -209,6 +209,19 @@ App.views['staff-cycle'] = function () {
         ${field('c_cut', 'วันตัดรอบแรก (เฉพาะ ป.6 / ม.3)', input('c_cut', c.first_cutoff, 'type="date"'), {hint: 'ป.6 / ม.3 ที่ส่งหลักฐานภายในวันนี้ → พิจารณารอบแรก'})}
         ${field('c_tclose', 'วันสุดท้ายรับหลักฐาน (ทุกระดับชั้น)', input('c_tclose', c.transfer_close, 'type="date"'), {hint: 'ส่งหลังวันตัดรอบแรกแต่ไม่เกินวันนี้ → พิจารณารอบที่ 2 (รอบรอฟังผล) · เกินวันนี้ถือว่าสละสิทธิ์'})}
       </div></section>
+      <section class="card"><h3>อัตราพิเศษตามกลุ่มสถานศึกษา (ม.ต้น)</h3>
+        <p class="small muted">นักเรียนที่จะเรียน ม.ต้น ในปีหน้า ที่โรงเรียนอยู่ในกลุ่มเหล่านี้ จะได้อัตราตามตาราง แทนอัตราปกติ ม.ต้น ${baht(this.rateAmount('M_LOWER'))}
+          · กำหนดว่าโรงเรียนไหนอยู่กลุ่มใดที่หน้า “สถานศึกษา/ครู”</p>
+        <div class="rg-table">${(this.db.rateGroups || []).map((g, i) => { const n = this.db.schools.filter(x => x.rate_group === g.id).length;
+          return `<div class="rg-row"><input type="hidden" name="rg_id_${i}" value="${g.id}">
+            ${field(`rg_name_${i}`, i ? '' : 'ชื่อกลุ่มสถานศึกษา', input(`rg_name_${i}`, g.name))}
+            ${field(`rg_amt_${i}`, i ? '' : 'อัตรา ม.ต้น (บาท/ปี)', input(`rg_amt_${i}`, g.amount, 'type="number" min="0" inputmode="numeric"'))}
+            <div class="rg-meta"><span class="small muted">${n} โรงเรียน</span>
+              <label class="check small"><input type="checkbox" name="rg_del_${i}" ${n ? 'disabled title="ย้ายโรงเรียนออกจากกลุ่มก่อนจึงลบได้"' : ''}> ลบ</label></div></div>`; }).join('')}
+          <div class="rg-row"><input type="hidden" name="rg_id_new" value="">
+            ${field('rg_name_new', (this.db.rateGroups || []).length ? '' : 'ชื่อกลุ่มสถานศึกษา', input('rg_name_new', '', 'placeholder="+ เพิ่มกลุ่มใหม่ เช่น โรงเรียนสังกัด…"'))}
+            ${field('rg_amt_new', '', input('rg_amt_new', '', 'type="number" min="0" inputmode="numeric" placeholder="1000"'))}<div></div></div>
+        </div></section>
       <div class="row end"><button class="btn primary" type="submit">บันทึก</button></div>
     </form>`};
 };
@@ -217,6 +230,14 @@ App.on('cycle-save', function (form) {
   if (v.c_open && v.c_close && v.c_close <= v.c_open) { this.toast('วันปิดรับสมัครต้องอยู่หลังวันเปิดรับสมัคร'); return; }
   Object.assign(this.db.cycle, {year: Number(v.c_year), history_year: Number(v.c_hist), status: v.c_status, open: v.c_open, close: v.c_close,
     transfer_open: v.c_topen, first_cutoff: v.c_cut, transfer_close: v.c_tclose});
+  /* กลุ่มอัตราพิเศษ: แก้ชื่อ / อัตรา, ลบ (เฉพาะกลุ่มที่ไม่มีโรงเรียน), เพิ่มใหม่ */
+  const groups = (this.db.rateGroups || []).map((g, i) => ({id: g.id, name: (v[`rg_name_${i}`] || '').trim() || g.name,
+    amount: Number(v[`rg_amt_${i}`]) || 0, del: !!v[`rg_del_${i}`]})).filter(g => !g.del).map(({del, ...g}) => g);
+  if ((v.rg_name_new || '').trim()) {
+    const next = 1 + Math.max(0, ...(this.db.rateGroups || []).map(g => Number(g.id.slice(1)) || 0));
+    groups.push({id: 'G' + next, name: v.rg_name_new.trim(), amount: Number(v.rg_amt_new) || this.rateAmount('M_LOWER')});
+  }
+  this.db.rateGroups = groups;
   this.save();
   this.toast('บันทึกการตั้งค่ารอบรับสมัครแล้ว');
   this.go('staff-cycle');
@@ -299,7 +320,8 @@ App.views['staff-app'] = function (p) {
       : `<p class="small muted">ใบสมัครนี้อยู่สถานะ “${STATUS[s.status].label}” — จนท.รีวิวดำเนินการได้เมื่อสถานะเป็น “รอเจ้าหน้าที่ดำเนินการ”</p>${reviewSummary(s)}`;
   } else if (role === 'manager') {
     const can = s.status === 'waiting_manager';
-    const std = this.rateAmount(s.rate);
+    const sr0 = this.stdRate(s), std = sr0.amount;
+    const pendingMove = s.school_next === 'transfer' && !this.db.transfers.some(t => t.code === s.code);
     const dec = v.m_decision || 'approved';
     panel = (sr ? `<div class="subcard"><span class="label">ความเห็น จนท.รีวิว (${esc(sr.reviewer)}) · รอบ ${sr.round || s.round || '-'}</span><span class="small">${esc(sr.comment || '—')}</span></div>` : '') + (can ? `
       <form class="stack" data-submit="staff-decide" data-code="${s.code}" novalidate>
@@ -307,7 +329,9 @@ App.views['staff-app'] = function (p) {
         ['reserve', 'สำรอง', 'อยู่ในรายชื่อสำรอง ยังไม่รวมวงเงินทุนที่อนุมัติ']], dec, {req: 1, col: 1, attrs: 'data-onchange="manager-ui"'})}
       <div class="stack" id="amount_box" ${dec === 'approved' ? '' : 'hidden'}>
         <div class="subcard"><span class="small muted">ระดับชั้นปีการศึกษา ${this.db.cycle.year}</span><b>${esc(this.rateName(s.rate))} (${esc(s.next_class || '-')})</b>
-          <span class="small muted">อัตราทุนมาตรฐาน</span><b>${baht(std)}</b></div>
+          <span class="small muted">อัตราทุนมาตรฐาน</span><b>${baht(std)}</b>
+          ${sr0.group ? `<span class="badge t-violet">อัตราพิเศษ: ${esc(sr0.group.name)}</span><span class="small muted">อัตราปกติ ม.ต้น ${baht(sr0.base)} · คิดจากโรงเรียนปีหน้า ${esc(this.schoolName(s.school))}</span>` : ''}
+          ${pendingMove && s.rate === 'M_LOWER' ? '<span class="small" style="color:var(--warn)">นักเรียนแจ้งย้ายสถานศึกษา แต่ยังไม่ได้บันทึกโรงเรียนใหม่ — อัตรานี้คิดจากโรงเรียนเดิม ควรบันทึกการย้ายก่อน</span>' : ''}</div>
         ${radioField('m_amount', 'จำนวนเงินทุนที่อนุมัติ', [['std', baht(std), `ตามอัตรามาตรฐานของระดับชั้นปี ${this.db.cycle.year}`],
           ['special', baht(this.rateAmount('SPECIAL')), 'อัตราอื่น ๆ / อัตราพิเศษ']], v.m_amount || 'std', {req: 1, col: 1, attrs: 'data-onchange="manager-ui"'})}
         <div id="special_box" ${v.m_amount === 'special' ? '' : 'hidden'}>
@@ -380,9 +404,9 @@ App.on('staff-decide', function (form) {
     this.go('staff-app', {code: s.code, values: v, errors: {m_reason: `กรุณาระบุเหตุผลที่ปรับจำนวนเงินทุนเป็น ${baht(this.rateAmount('SPECIAL'))}`}});
     return;
   }
-  const std = this.rateAmount(s.rate);
+  const sr0 = this.stdRate(s), std = sr0.amount;
   const ok = v.m_decision === 'approved';
-  s.decision = {result: v.m_decision, standard_amount: ok ? std : null, approved_amount: ok ? (v.m_amount === 'special' ? this.rateAmount('SPECIAL') : std) : null,
+  s.decision = {result: v.m_decision, rate_group: ok && sr0.group ? sr0.group.name : '', standard_amount: ok ? std : null, approved_amount: ok ? (v.m_amount === 'special' ? this.rateAmount('SPECIAL') : std) : null,
     reason: ok && v.m_amount === 'special' ? v.m_reason : '', note: v.m_note, by: this.session.name};
   s.status = 'decided';
   addHistory(s, `ผู้จัดการพิจารณาเรียบร้อย — ผลการพิจารณา: ${{approved: 'อนุมัติทุน', rejected: 'ไม่อนุมัติทุน', reserve: 'สำรอง'}[v.m_decision]}${ok ? ' ' + baht(s.decision.approved_amount) : ''}`, 'manager_' + v.m_decision);
@@ -565,7 +589,7 @@ App.views['staff-schools'] = function (p) {
   const pvCount = count(inRg, 'province');
   const inPv = inRg.filter(s => !pv || s.province === pv);
   const dsCount = count(inPv, 'district');
-  const list = inPv.filter(s => (!ds || s.district === ds) && (!q || (s.name + s.id + ((this.teacherOf(s.id) || {}).username || '')).toLowerCase().includes(q)))
+  const list = inPv.filter(s => (!p.group || (p.group === 'none' ? !s.rate_group : s.rate_group === p.group)) && (!ds || s.district === ds) && (!q || (s.name + s.id + ((this.teacherOf(s.id) || {}).username || '')).toLowerCase().includes(q)))
     .sort((a, b) => th(a.province, b.province) || th(a.district, b.district) || th(a.name, b.name));
   const opts = (cnt, label) => Object.keys(cnt).sort((a, b) => th(label(a), label(b))).map(k => [k, `${label(k)} (${cnt[k]})`]);
   const area = rg || pv || ds ? [rg && this.regionName(rg), pv && 'จ.' + pv, ds].filter(Boolean).join(' › ') : 'ทั้งประเทศ';
@@ -577,6 +601,7 @@ App.views['staff-schools'] = function (p) {
       ${field('s_rg', 'ภาค', select('s_rg', opts(rgCount, k => this.regionName(k)), rg, 'ทุกภาค', 'data-onchange="schools-filter" data-level="rg"'))}
       ${field('s_prov', 'จังหวัด', select('s_prov', opts(pvCount, k => k), pv, 'ทุกจังหวัด', 'data-onchange="schools-filter" data-level="pv"'))}
       ${field('s_dist', 'อำเภอ / เขต', select('s_dist', opts(dsCount, k => k), ds, pv ? 'ทุกอำเภอ' : 'เลือกจังหวัดก่อน', `data-onchange="schools-filter" data-level="ds" ${pv ? '' : 'disabled'}`))}
+      ${field('s_group', 'กลุ่มอัตราทุน', select('s_group', [['none', 'ปกติ']].concat((this.db.rateGroups || []).map(g => [g.id, `${g.name} (${all.filter(x => x.rate_group === g.id).length})`])), p.group, 'ทุกกลุ่ม', 'data-onchange="schools-filter" data-level="grp"'))}
     </div>
     <div class="small muted"><b>${esc(area)}</b> · พบ <b>${list.length}</b> แห่ง</div>
     <div class="tlist sch-list" role="table" aria-label="รายชื่อสถานศึกษา">
@@ -584,7 +609,7 @@ App.views['staff-schools'] = function (p) {
       ${list.length ? list.map((s, i) => { const t = this.teacherOf(s.id);
         return `<button class="trow" role="row" data-go="staff-school" data-id="${s.id}">
           <span class="n">${i + 1}</span>
-          <span class="c-name">${esc(s.name)}<small>${s.id} · ${(s.levels || []).map(l => GROUP_SHORT[l]).join(', ')}</small></span>
+          <span class="c-name">${esc(s.name)}<small>${s.id} · ${(s.levels || []).map(l => GROUP_SHORT[l]).join(', ')}</small>${this.rateGroup(s.rate_group) ? `<span class="badge t-violet sm">${esc(this.rateGroup(s.rate_group).name)}</span>` : ''}</span>
           <span class="c-area">จ.${esc(s.province)}<small>${esc(s.district)} · ${esc(this.regionName(s.region))}</small></span>
           <span class="c-acc">${t ? `${esc(t.username)}<small>${esc(t.name)}</small>` : '<span class="muted">ยังไม่มีบัญชีครู</span>'}</span>
           <span class="c-status">${t ? `<span class="badge ${t.active === false ? 't-bad' : 't-ok'}">${t.active === false ? 'ปิดใช้งาน' : 'ใช้งาน'}</span>` : ''}</span></button>`; }).join('')
@@ -595,7 +620,7 @@ App.views['staff-schools'] = function (p) {
 const schoolFilters = level => {
   const v = id => document.getElementById(id).value;
   /* เปลี่ยนระดับบน ล้างระดับล่าง */
-  return {region: v('s_rg'), province: level === 'rg' ? '' : v('s_prov'), district: level === 'ds' ? v('s_dist') : '', q: v('s_q')};
+  return {region: v('s_rg'), province: level === 'rg' ? '' : v('s_prov'), district: level === 'ds' || level === 'grp' ? v('s_dist') : '', group: v('s_group'), q: v('s_q')};
 };
 App.on('schools-filter', function (el) { this.go('staff-schools', schoolFilters(el.dataset.level)); });
 App.on('schools-search', function (el) {
@@ -607,7 +632,7 @@ App.views['staff-school'] = function (p) {
   const sc = isNew ? {id: 'SCH-' + String(this.db.schools.length + 1).padStart(3, '0'), type: 'school', levels: [],
     region: p.region || '', province: p.province || '', district: p.district || ''} : this.schoolById[p.id];
   const t = (isNew ? null : this.teacherOf(sc.id)) || {};
-  const v = p.values || {name: sc.name, type: sc.type, address: sc.address, postcode: sc.postcode, levels: sc.levels, username: t.username || '',
+  const v = p.values || {name: sc.name, type: sc.type, rate_group: sc.rate_group || '', address: sc.address, postcode: sc.postcode, levels: sc.levels, username: t.username || '',
     active: t.active === false ? 'no' : 'yes', t_name: t.name, t_position: t.position, t_dept: t.department, t_phone: t.phone, t_email: t.email,
     region: sc.region, province: sc.province, district: sc.district, sub: sc.subdistrict};
   const e = p.errors || {};
@@ -619,7 +644,8 @@ App.views['staff-school'] = function (p) {
       <section class="card"><div class="grid-2">
         ${field('sid', 'InstitutionID', input('sid', sc.id, 'readonly'), {hint: 'ใช้รหัสเดียวกันสำหรับโรงเรียน วิทยาลัย และมหาวิทยาลัย'})}
         ${field('stype', 'ประเภทสถานศึกษา', select('stype', SCHOOL_TYPES, v.type))}
-      </div>${field('sname', 'ชื่อสถานศึกษา', input('sname', v.name), {req: 1, err: e.sname})}</section>
+      </div>${field('sgroup', 'กลุ่มอัตราทุน (ม.ต้น)', select('sgroup', (this.db.rateGroups || []).map(g => [g.id, `${g.name} — ${baht(g.amount)}`]), v.rate_group, `ปกติ — ${baht(this.rateAmount('M_LOWER'))}`),
+        {hint: 'ใช้กับนักเรียนที่จะเรียน ม.ต้น ที่โรงเรียนนี้ในปีหน้า · แก้รายชื่อกลุ่มได้ที่หน้า “รอบรับสมัคร”'})}${field('sname', 'ชื่อสถานศึกษา', input('sname', v.name), {req: 1, err: e.sname})}</section>
       <section class="card"><h3>พื้นที่และที่อยู่สถานศึกษา</h3>
         <div class="subcard">${field('raw', 'วางที่อยู่แบบยาวเพื่อให้ระบบช่วยแยก (ไม่บังคับ)', textarea('raw', '', 'rows="2" placeholder="เช่น 151 ถนน... ตำบลในเวียง อำเภอเมืองแพร่ จังหวัดแพร่ 54000"'))}
           <div class="row between"><span class="hint">ระบบช่วยกรอกให้เบื้องต้นเท่านั้น Admin ต้องตรวจสอบก่อนบันทึก</span><button class="btn sm" type="button" data-action="school-parse">ช่วยแยกที่อยู่</button></div></div>
@@ -665,7 +691,7 @@ App.on('school-parse', function () {
   const line = raw.split(/\s(?:ตำบล|ต\.|แขวง|อำเภอ|อ\.|เขต|จังหวัด|จ\.)/)[0];
   const zip = (/\b(\d{5})\b/.exec(raw) || [])[1] || (sub ? sub.zip : '');
   const form = document.querySelector('form[data-submit=school-save]');
-  const v = {...formData(form), name: document.getElementById('sname').value, type: document.getElementById('stype').value, levels: arr(formData(form).levels),
+  const v = {...formData(form), name: document.getElementById('sname').value, type: document.getElementById('stype').value, rate_group: document.getElementById('sgroup').value, levels: arr(formData(form).levels),
     username: document.getElementById('username').value, active: document.getElementById('active').value,
     region, province: pv, district: dist, sub: sub ? sub.th : '', address: line, postcode: zip};
   this.go('staff-school', {...this.view.params, values: v});
@@ -684,10 +710,10 @@ App.on('school-save', function (form) {
   const uname = (v.username || '').toLowerCase();
   if (!uname) e.username = 'กรุณากำหนด Username';
   else if (this.db.teachers.some(t => t.username === uname && t.school !== id)) e.username = 'Username นี้ถูกใช้แล้ว (1 โรงเรียน = 1 Username)';
-  const values = {name: v.sname, type: v.stype, address: v.saddr, postcode: v.szip, levels: arr(v.levels), username: v.username, active: v.active,
+  const values = {name: v.sname, type: v.stype, rate_group: v.sgroup, address: v.saddr, postcode: v.szip, levels: arr(v.levels), username: v.username, active: v.active,
     t_name: v.t_name, t_position: v.t_position, t_dept: v.t_dept, t_phone: v.t_phone, t_email: v.t_email, ...a};
   if (Object.keys(e).length) { this.go('staff-school', {...this.view.params, values, errors: e}); return; }
-  const rec = {id, name: v.sname, type: v.stype, region: a.region, province: a.province, district: a.district, subdistrict: a.sub,
+  const rec = {id, name: v.sname, type: v.stype, rate_group: v.sgroup || '', region: a.region, province: a.province, district: a.district, subdistrict: a.sub,
     address: v.saddr, postcode: v.szip, levels: arr(v.levels)};
   if (isNew) this.db.schools.push(rec); else Object.assign(this.schoolById[id], rec);
   const t = this.db.teachers.find(x => x.school === id);
@@ -719,10 +745,18 @@ App.reportData = function (f) {
   if (k === 'budget') {
     const ap = list.filter(s => s.decision && s.decision.result === 'approved');
     const cols = [{t: 'ระดับชั้นปีที่ได้รับทุน'}, {t: 'อัตรา', r: 1}, {t: 'จำนวน (คน)', r: 1}, {t: 'งบประมาณ', r: 1}];
-    const rows = this.db.rates.map(r => { const g = ap.filter(s => r.code === 'SPECIAL' ? s.decision.approved_amount !== s.decision.standard_amount : s.rate === r.code && s.decision.approved_amount === s.decision.standard_amount);
-      return [esc(r.name), baht(r.amount), g.length, baht(g.reduce((a, s) => a + s.decision.approved_amount, 0))]; });
-    return {cols, rows, foot: ['รวม', '', ap.length, baht(ap.reduce((a, s) => a + s.decision.approved_amount, 0))],
-      csv: [cols.map(c => c.t)].concat(this.db.rates.map((r, i) => [r.name, r.amount, rows[i][2], rows[i][3].replace(/[^\d]/g, '')]))};
+    const sum = g => g.reduce((a, s) => a + s.decision.approved_amount, 0);
+    const std = s => s.decision.approved_amount === s.decision.standard_amount;
+    const data = this.db.rates.map(r => {
+      const g = ap.filter(s => r.code === 'SPECIAL' ? !std(s) : s.rate === r.code && std(s) && !(r.code === 'M_LOWER' && s.decision.rate_group));
+      return [r.name, r.amount, g.length, sum(g)]; });
+    /* ม.ต้น อัตราพิเศษตามกลุ่มสถานศึกษา แยกบรรทัด ต่อจาก ม.ต้น ปกติ */
+    const grp = [...new Set(ap.filter(s => s.decision.rate_group && std(s)).map(s => s.decision.rate_group))].map(name => {
+      const g = ap.filter(s => s.decision.rate_group === name && std(s)); return [`ม.ต้น — ${name}`, g[0].decision.standard_amount, g.length, sum(g)]; });
+    const at = this.db.rates.findIndex(r => r.code === 'M_LOWER') + 1;
+    data.splice(at, 0, ...grp);
+    return {cols, rows: data.map(r => [esc(r[0]), baht(r[1]), r[2], baht(r[3])]), foot: ['รวม', '', ap.length, baht(sum(ap))],
+      csv: [cols.map(c => c.t)].concat(data)};
   }
   if (k === 'schools') {
     const cols = [{t: 'สถานศึกษา'}, {t: 'จังหวัด'}, {t: 'ผู้สมัคร', r: 1}, {t: 'ส่งถึงมูลนิธิฯ', r: 1}, {t: 'อนุมัติ', r: 1}, {t: 'งบประมาณ', r: 1}];
