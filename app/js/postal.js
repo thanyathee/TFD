@@ -2,7 +2,7 @@
    จนท. บันทึกแบบสรุปย่อทีละคน → พิมพ์ใบปะหน้าโรงเรียน → ผจก. อนุมัติทีละคน · แอดมินดูผลงานทุกคน */
 'use strict';
 
-const POSTAL_KEY = 'tfd-postal-demo-v2';
+const POSTAL_KEY = 'tfd-postal-demo-v3';
 const P_ROLE = {
   clerk: ['จนท.บันทึกข้อมูล', 'บันทึกใบสมัครทางไปรษณีย์ พิมพ์ใบปะหน้า และดูผลงานของตัวเอง'],
   manager: ['ผจก.อนุมัติทุน', 'ดูทุกโรงเรียน และอนุมัติทุนทีละคน'],
@@ -59,7 +59,7 @@ App.pFresh = function () {
   this.db.schools.forEach(sc => {
     const classes = (sc.levels || []).flatMap(g => CLASS_GROUPS[g] || []).filter(c => P_CLASSES.includes(c));
     if (!classes.length) return;
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < (sc.id === 'SCH-007' ? 40 : 6); i++) {
       let cid; do { cid = pMakeId(rand); } while (used.has(cid)); used.add(cid);
       const f = rand() < 0.55, cls = pick(classes), adult = !/^ป\.|^ม\.[1-3]$/.test(cls);
       recipients.push({cid, title: f ? (adult ? 'นางสาว' : 'เด็กหญิง') : (adult ? 'นาย' : 'เด็กชาย'), first: pick(f ? FIRST_F : FIRST_M), last: pick(LAST),
@@ -89,6 +89,21 @@ App.pFresh = function () {
   nw(s2, 'clerk02', '2027-06-05T10:08', {title: 'นางสาว', first: 'ศศิธร', last: 'พรมมา', cls: 'ปวช.1', faculty: 'การบัญชี', gpa: '3.62', equipment: [], housing: 'installment'});
   recOf(s2).slice(0, 1).forEach(r => cont(s2, r, 'clerk02', '2027-06-05T10:15'));
   nw(s3, 'clerk01', '2027-06-07T13:40', {title: 'นางสาว', first: 'อรทัย', last: 'สุขเจริญ', cls: 'ปริญญาตรี ปี 1', faculty: 'ครุศาสตร์', gpa: '3.21', housing: 'rent'});
+  /* โรงเรียนตัวอย่างที่ส่งมาเยอะ: โรงเรียนจอมทองวิทยา (เชียงใหม่) — ใช้ลองดูว่า 1 แผ่นใส่ได้กี่คน */
+  const s4 = 'SCH-007';
+  const FAM = ['อาศัยกับยาย บิดามารดาแยกทางกัน มารดาไปทำงานกรุงเทพฯ ส่งเงินมาไม่แน่นอน ยายอายุมากรับจ้างเก็บลำไยตามฤดูกาล',
+    'บิดาเสียชีวิต มารดารับจ้างทั่วไป รายได้วันละ 300 บาท มีน้อง 2 คนกำลังเรียน', 'บิดามารดาทำไร่ข้าวโพดบนที่เช่า มีหนี้ ธ.ก.ส. พี่น้อง 4 คน',
+    'อาศัยกับป้า บิดาถูกจำคุก มารดาขาดการติดต่อ', 'บิดาพิการขาขวา มารดาขายของที่ตลาดนัด รายได้ไม่แน่นอน ต้องดูแลยายที่ป่วยติดเตียง'];
+  const USE = ['ค่าเดินทางไปโรงเรียน ค่าอุปกรณ์การเรียน ชุดนักเรียน', 'ค่าบำรุงการศึกษา ค่าหนังสือ ค่าเดินทาง ค่าอาหารกลางวันบางส่วน และค่าอินเทอร์เน็ตสำหรับทำการบ้าน',
+    'ค่ารถรับส่ง ค่าชุดพละ รองเท้า กระเป๋า', 'ค่าเทอม ค่าอุปกรณ์ ค่าเดินทาง ซื้อเครื่องคิดเลข'];
+  recOf(s4).slice(0, 26).forEach((r, i) => cont(s4, r, i % 3 ? 'clerk02' : 'clerk01', `2027-06-08T09:${String(i).padStart(2, '0')}`,
+    {gpa: (2.5 + (i * 37 % 140) / 100).toFixed(2), use_money: USE[i % USE.length], docs: i % 5 ? ['cert', 'bank', 'expense', 'receipt'] : ['cert', 'bank', 'expense']}));
+  for (let i = 0; i < 30; i++) {
+    const cls = ['ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5'][i % 5], adult = ['ม.4', 'ม.5'].includes(cls);
+    nw(s4, i % 2 ? 'clerk02' : 'clerk01', `2027-06-08T10:${String(i).padStart(2, '0')}`, {title: i % 2 ? (adult ? 'นางสาว' : 'เด็กหญิง') : (adult ? 'นาย' : 'เด็กชาย'), first: pick(i % 2 ? FIRST_F : FIRST_M), last: pick(LAST),
+      cls, next_class: nextOptions(cls)[0], gpa: (2.6 + (i * 29 % 130) / 100).toFixed(2), family: FAM[i % FAM.length],
+      equipment: [['pickup'], [], ['washer', 'pickup'], ['etan'], ['none']][i % 5], housing: ['own', 'rent', 'other', 'own_other_land'][i % 4], land: ['none', 'rent', 'own'][i % 3]});
+  }
   const batch = (id, by, o) => { const t = teacher(id); return [id, {by, prim_new: 0, prim_cont: 0, wait_new: 0, wait_cont: 0, note: '', letter: '',
     teacher_name: t.name || '', teacher_phone: t.phone || '', teacher_email: t.email || '', done: false, printed: '', updated: '2027-06-07T13:40', ...o}]; };
   return {
@@ -102,7 +117,8 @@ App.pFresh = function () {
       batch(s1, 'clerk01', {prim_new: 4, prim_cont: 2, wait_cont: 1, letter: 'ศธ 04221/215 ลงวันที่ 1 มิ.ย. 2570', note: 'รอฟังผล 1 ราย รอหลักฐานการย้ายสถานศึกษา',
         done: true, printed: '2027-06-04T08:30', updated: '2027-06-04T08:30'}),
       batch(s2, 'clerk02', {wait_new: 1, letter: 'ที่ วท 112/2570', done: true, updated: '2027-06-05T10:20'}),
-      batch(s3, 'clerk01', {updated: '2027-06-07T13:40'})]),
+      batch(s3, 'clerk01', {updated: '2027-06-07T13:40'}),
+      batch(s4, 'clerk01', {prim_new: 0, wait_new: 2, wait_cont: 1, letter: 'ที่ ศธ 04297/88 ลงวันที่ 5 มิ.ย. 2570', done: true, updated: '2027-06-08T10:30'})]),
   };
 };
 
@@ -595,7 +611,9 @@ App.pCoverHtml = function (id) {
 /* ใบที่ 2: รายชื่อที่บันทึกในระบบ — ต่อเนื่องก่อน แล้วทุนใหม่ แยกตามระดับชั้นปีหน้า แสดงข้อมูลที่บันทึกทุกช่อง */
 /* ใบที่ 2: รายชื่อที่บันทึกในระบบ — 1 ตาราง / 1 แผ่น · ต่อเนื่องก่อน แล้วทุนใหม่ แยกตามระดับชั้นปีหน้า
    ทุกตารางใช้ช่องและความกว้างเดียวกัน (ความสูงตามข้อมูล) · หัวกระดาษบอกโรงเรียน / กลุ่ม เพื่อให้ตารางได้พื้นที่มากที่สุด */
-const P_LIST_COLS = [6, 17, 9, 8, 7, 28, 15, 10];
+/* ความกว้างช่อง (%) — ทุกแผ่นของประเภททุนเดียวกันเท่ากัน */
+const P_LIST_COLS = {CONT: [6, 19, 12, 10, 37, 4, 4, 4, 4], NEW: [6, 19, 12, 6, 32, 25]};
+const P_PER_SHEET = 12;   // คนต่อแผ่น (A4 แนวนอน · เว้นช่องลำดับให้ ผจก. วงผล)
 App.pListHtml = function (id) {
   const sc = this.schoolById[id];
   const es = this.pEntriesOf(id);
@@ -606,28 +624,34 @@ App.pListHtml = function (id) {
     const l = es.filter(e => e.type === t && groupOfClass(e.next_class) === g).sort((a, b) => P_CLASSES.indexOf(a.next_class) - P_CLASSES.indexOf(b.next_class));
     if (l.length) groups.push([t, gt, l]);
   }));
-  const head = t => '<th class="n">ลำดับ</th><th>เลขประจำตัวประชาชน<br>ชื่อ–นามสกุล</th><th>ชั้นปีนี้<br><small>สาขา</small></th><th>ชั้นปีหน้า</th>'
-    + (t === 'CONT' ? '<th class="r">เกรดเฉลี่ย<br><small>ก่อนรับทุน ↓ ปีนี้</small></th><th>นำเงินทุนไปใช้จ่าย</th><th>เอกสารแนบ</th>'
-      : '<th class="r">เกรดเฉลี่ย</th><th>สภาพครอบครัว</th><th>เครื่องใช้ในบ้าน · บ้าน · ที่ดินทำกิน</th>')
-    + '<th>หมายเหตุ</th>';
+  const DOC_SHORT = {cert: 'หนังสือรับรอง', bank: 'รายการเดินบัญชี', expense: 'ใบรายการใช้จ่าย', receipt: 'ใบเสร็จ'};
+  const head = t => '<th class="n">ลำดับ</th><th>เลขประจำตัวประชาชน<br>ชื่อ–นามสกุล</th><th>ระดับชั้น<br><small>ปีนี้ → ปีหน้า · สาขา</small></th>'
+    + (t === 'CONT' ? '<th>เกรดเฉลี่ย<br><small>ก่อนรับทุน → ปีนี้</small></th><th>นำเงินทุนไปใช้จ่าย</th>' + P_DOCS.map(([k]) => `<th class="cv-dv"><span>${DOC_SHORT[k]}</span></th>`).join('')
+      : '<th>เกรด</th><th>สภาพครอบครัว</th><th>เครื่องใช้ในบ้าน · บ้าน · ที่ดินทำกิน</th>');
   const row = (e, i) => {
     const base = `<td class="n">${i + 1}</td><td><span class="cv-id">${esc(e.cid)}</span><br><b>${esc(pName(e))}</b></td>
-      <td>${esc(e.cls)}${e.faculty ? `<br><small>${esc(e.faculty)}</small>` : ''}</td>
-      <td>${esc(e.next_class)}${e.pvs_type ? `<br><small>${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]}</small>` : ''}</td>`;
-    const note = `<td>${esc(e.note || '')}</td>`;
-    if (e.type === 'CONT') return `<tr>${base}<td class="r">${e.gpa_before ? `${esc(e.gpa_before)}<br>↓ ` : ''}<b>${esc(e.gpa || '—')}</b></td><td>${esc(e.use_money || '—')}</td>
-      <td class="cv-docs">${P_DOCS.map(([k, d]) => `<span class="${arr(e.docs).includes(k) ? '' : 'no'}">${arr(e.docs).includes(k) ? '✓' : '✗'} ${d}</span>`).join('')}</td>${note}</tr>`;
-    return `<tr>${base}<td class="r"><b>${esc(e.gpa || '—')}</b></td><td>${esc(e.family || '—')}</td>
-      <td><small>เครื่องใช้:</small> ${arr(e.equipment).map(eqName).join(', ') || '—'}<br><small>บ้าน:</small> ${esc(lab(P_HOUSING, e.housing))}<br><small>ที่ดิน:</small> ${esc(lab(P_LAND, e.land))}</td>${note}</tr>`;
+      <td>${esc(e.cls)} → ${esc(e.next_class)}${e.faculty || e.pvs_type ? `<br><small>${esc(e.faculty || '')}${e.pvs_type ? ` (${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]})` : ''}</small>` : ''}</td>`;
+    if (e.type === 'CONT') return `<tr>${base}<td class="nw">${e.gpa_before ? `${esc(e.gpa_before)} → ` : ''}<b>${esc(e.gpa || '—')}</b></td><td>${esc(e.use_money || '—')}</td>
+      ${P_DOCS.map(([k]) => `<td class="cv-ck2">${arr(e.docs).includes(k) ? '✓' : '<span class="no">✗</span>'}</td>`).join('')}</tr>`;
+    return `<tr>${base}<td><b>${esc(e.gpa || '—')}</b></td><td>${esc(e.family || '—')}</td>
+      <td><small>เครื่องใช้:</small> ${arr(e.equipment).map(eqName).join(', ') || '—'} · <small>บ้าน:</small> ${esc(lab(P_HOUSING, e.housing))} · <small>ที่ดิน:</small> ${esc(lab(P_LAND, e.land))}</td></tr>`;
   };
-  const hd = (title, page) => `<div class="a4-head cv-lhead"><span class="a4-logo">TF</span>
+  const hd = (title, page, by) => `<div class="a4-head cv-lhead"><span class="a4-logo">TF</span>
     <div><b>${esc(sc.name)} · จังหวัด${esc(sc.province)}</b><span>รายชื่อที่บันทึกในระบบ (${es.length} ราย) · ใบสมัครทางไปรษณีย์ ปีการศึกษา ${this.db.cycle.year} · ระดับชั้นนับตามชั้นปีหน้า</span></div>
-    <div class="cv-hs"><b class="cv-grp">${title}</b><span>${page}</span></div></div>`;
-  if (!groups.length) return `<div class="paper a4 land cover cv-list">${hd('ไม่มีรายชื่อ', '')}<p class="c">— ยังไม่มีรายชื่อที่บันทึก —</p></div>`;
-  return groups.map(([t, gt, l], gi) => `<div class="paper a4 land cover cv-list">
-    ${hd(`${TYPE[t]} ${gt} <span>(${l.length} ราย)</span>`, `แผ่นที่ ${gi + 1} / ${groups.length}`)}
-    <table class="cv-ltbl"><colgroup>${P_LIST_COLS.map(w => `<col style="width:${w}%">`).join('')}</colgroup>
-      <thead><tr>${head(t)}</tr></thead><tbody>${l.map(row).join('')}</tbody></table></div>`).join('');
+    <div class="cv-hs"><b class="cv-grp">${title}</b><span>${page}${by ? ` · บันทึกโดย ${esc(by)}` : ''}</span></div></div>`;
+  if (!groups.length) return `<div class="paper a4 land cover cv-list">${hd('ไม่มีรายชื่อ', '', '')}<p class="c">— ยังไม่มีรายชื่อที่บันทึก —</p></div>`;
+  /* นับแผ่นแยกตามกลุ่ม เช่น ทุนต่อเนื่อง ม.ปลาย แผ่นที่ 1 / 1 */
+  return groups.map(([t, gt, l]) => {
+    const pages = [];
+    for (let i = 0; i < l.length; i += P_PER_SHEET) pages.push(l.slice(i, i + P_PER_SHEET));
+    return pages.map((chunk, pi) => {
+      const by = [...new Set(chunk.map(e => this.pUser(e.by).name))].join(', ');
+      return `<div class="paper a4 land cover cv-list">
+      ${hd(`${TYPE[t]} ${gt} <span>(${l.length} ราย)</span>`, `แผ่นที่ ${pi + 1} / ${pages.length}`, by)}
+      <table class="cv-ltbl"><colgroup>${P_LIST_COLS[t].map(w => `<col style="width:${w}%">`).join('')}</colgroup>
+        <thead><tr>${head(t)}</tr></thead><tbody>${chunk.map((e, i) => row(e, pi * P_PER_SHEET + i)).join('')}</tbody></table></div>`;
+    }).join('');
+  }).join('');
 };
 App.views['post-cover'] = pNeedLogin(function (p) {
   const db = this.P();
