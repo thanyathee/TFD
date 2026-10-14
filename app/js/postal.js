@@ -457,6 +457,8 @@ App.pSchoolPanel = function (lot, editId) {
   const num = (k, label) => `<label class="pf-num"><span>${label}</span><input class="input" type="number" min="0" name="${k}" value="${esc(b[k] || 0)}" inputmode="numeric"></label>`;
   return `<section class="card stack">
       <div><h3>${esc(sc.name)}</h3><p class="small muted">${esc(sc.address || '')} ${esc(sc.subdistrict || '')} ${esc(sc.district)} จ.${esc(sc.province)} · ${esc(this.regionName(sc.region))}</p>
+        <label class="check pf-done ${b.done ? 'on' : ''}"><input type="checkbox" data-action="p-done" data-id="${lot}" ${b.done ? 'checked' : ''} ${this.pCanEdit(lot) ? '' : 'disabled'}>
+          <span><b>บันทึกครบแล้ว (พร้อมพิมพ์ใบปะหน้า)</b></span></label>
         <div class="row">${pBadge(st)}<button class="btn sm" data-go="post-cover" data-id="${lot}">${icon('print')} ใบปะหน้า</button>
 </div>
         ${mine.length ? `<p class="small muted pf-other">ที่บันทึกไว้ก่อนหน้า: ${mine.map(id => `<button type="button" class="linkbtn" data-action="p-open" data-id="${id}">${this.pLotDate(id)} (${this.pEntriesOf(id).length} ราย)</button>`).join(' · ')}</p>` : ''}</div>
@@ -475,7 +477,6 @@ App.pSchoolPanel = function (lot, editId) {
       ${field('b-tn', 'ครูผู้ดูแลทุน', `<input class="input" id="b-tn" name="teacher_name" value="${esc(b.teacher_name != null ? b.teacher_name : t.name || '')}">`)}
       <div class="grid-2">${field('b-tp', 'เบอร์โทร', `<input class="input" id="b-tp" name="teacher_phone" value="${esc(b.teacher_phone != null ? b.teacher_phone : t.phone || '')}" inputmode="tel">`)}
         ${field('b-te', 'อีเมล', `<input class="input" id="b-te" name="teacher_email" value="${esc(b.teacher_email != null ? b.teacher_email : t.email || '')}" inputmode="email">`)}</div>
-      <label class="check"><input type="checkbox" name="done" ${b.done ? 'checked' : ''}> <span><b>บันทึกครบแล้ว (พร้อมพิมพ์ใบปะหน้า)</b></span></label>
     </fieldset></form>`;
 };
 
@@ -496,8 +497,6 @@ App.pStore = function (f) {
     const b = this.pTouch(f.dataset.pbatch);
     ['prim_new', 'prim_cont', 'other_new', 'other_cont', 'wait_new', 'wait_cont'].forEach(k => (b[k] = Math.max(0, parseInt(v[k], 10) || 0)));
     ['note', 'letter', 'teacher_name', 'teacher_phone', 'teacher_email'].forEach(k => (b[k] = v[k] || ''));
-    const done = !!v.done;
-    if (done !== b.done) { b.done = done; this.pSave(); this.toast(done ? 'บันทึกครบแล้ว' : 'เปิดให้บันทึกต่อ'); this.render(); return; }
   } else {
     this.P().drafts[this.pDraftKey()] = v;
     const s = document.getElementById('p-autosave');
@@ -703,6 +702,15 @@ App.on('p-delete', function (el) {
   this.pSave();
   this.toast('ลบรายการแล้ว');
   this.go('post-form');
+});
+App.on('p-done', function (el) {
+  if (!this.pCanEdit(el.dataset.id)) return;
+  this.pKeepForm();
+  const b = this.pTouch(el.dataset.id);
+  b.done = el.checked;
+  this.pSave();
+  this.toast(b.done ? 'บันทึกครบแล้ว พร้อมพิมพ์ใบปะหน้า' : 'เปิดให้บันทึกต่อ');
+  this.render();
 });
 App.on('p-batch-done', function () { /* ฟอร์มใบปะหน้าบันทึกอัตโนมัติ — Enter ไม่ต้องทำอะไร */ });
 
