@@ -774,7 +774,7 @@ App.views['post-schools'] = pNeedLogin(function (p) {
       <div class="stat"><span>ทุนต่อเนื่อง</span><b>${total.CONT}</b><small>ราย</small></div><div class="stat"><span>รวม</span><b>${total.NEW + total.CONT}</b><small>ราย</small></div></div>
     <form class="card filters pf-filters" data-submit="p-sch-filter">
       ${field('q', 'ค้นหาโรงเรียน / จังหวัด', input('q', f.q))}
-      ${field('st', 'สถานะ', select('st', Object.entries(P_STATUS).map(([k, [t]]) => [k, t]), f.st, 'ทุกสถานะ'))}
+      ${field('st', 'สถานะ', select('st', Object.entries(P_STATUS).map(([k, [t]]) => [k, role === 'clerk' || !P_MGR_LABEL[k] ? t : P_MGR_LABEL[k][0]]), f.st, 'ทุกสถานะ'))}
       ${role === 'clerk' ? '' : field('by', 'ผู้บันทึก', select('by', clerks.map(u => [u.username, u.name]), f.by, 'ทุกคน'))}
       <div class="field"><span class="label">&nbsp;</span><button class="btn" type="submit">ค้นหา</button></div></form>
     <div class="pf-stbl">${tbl([{t: '#'}, {t: 'โรงเรียน'}, {t: 'ใหม่', r: 1}, {t: 'ต่อเนื่อง', r: 1}, {t: 'รวม', r: 1}, {t: 'สถานะ · แก้ไขล่าสุด'}, {t: ''}],
@@ -914,14 +914,14 @@ App.views['post-approve'] = pNeedLogin(function (p) {
     /* แสดงเฉพาะชุดที่ จนท. บันทึกครบแล้ว (ชุดที่ยังบันทึกอยู่ ผจก. ยังไม่ต้องเห็น) */
     const ids = [...new Set(db.entries.map(e => e.lot))].filter(id => this.pSc(id) && (this.pLot(id).done || this.pLocked(id)))
       .filter(id => !q || this.pCode(id).includes(q) || this.pFindCode(q) === id || this.pSc(id).name.includes(q) || this.pSc(id).province.includes(q))
-      .filter(id => !f.st || (f.st === 'wait' ? this.pEntriesOf(id).some(e => !e.decision) : this.pEntriesOf(id).every(e => e.decision)))
+      .filter(id => !f.st || this.pStatus(id) === f.st)
       .sort((a, b) => this.pLotSort(a, b));
     const rows = ids.map(id => { const es = this.pEntriesOf(id); return {id, n: es.length, wait: es.filter(e => !e.decision).length, st: this.pStatus(id)}; });
     return {nav: this.pNav(), html: `${this.pRoleBar()}
       <div class="page-head"><div><h1>อนุมัติทุน (ทางไปรษณีย์)</h1><p class="sub">คีย์เลขที่ใบปะหน้า (มุมขวาบนของใบปะหน้า) หรือชื่อโรงเรียน แล้วพิจารณาทีละคน${can ? '' : ' · แอดมินดูได้อย่างเดียว'}</p></div></div>
       <form class="card pf-afind" data-submit="p-approve-find">
         ${field('q', 'เลขที่ใบปะหน้า / ชื่อโรงเรียน', input('q', f.q, 'placeholder="เช่น 70-0006 หรือ 6" autocomplete="off"'), {err: p.err})}
-        ${field('st', 'แสดง', select('st', [['wait', 'ยังพิจารณาไม่ครบ'], ['done', 'พิจารณาครบแล้ว']], f.st, 'ทั้งหมด', 'data-onchange="p-approve-st"'))}
+        ${field('st', 'สถานะ', select('st', Object.entries(P_MGR_LABEL).map(([k, [t]]) => [k, t]), f.st, 'ทุกสถานะ', 'data-onchange="p-approve-st"'))}
         <div class="field"><span class="label">&nbsp;</span><button class="btn primary" type="submit">ค้นหา</button></div></form>
       <div class="pf-stbl pf-atbl">${tbl([{t: 'เลขที่'}, {t: 'โรงเรียน'}, {t: 'ผู้บันทึก'}, {t: 'บันทึกแล้ว', r: 1}, {t: 'รอพิจารณา', r: 1}, {t: 'สถานะ'}, {t: ''}],
         rows.map(r => [`<b class="pf-code">${this.pCode(r.id)}</b>`, `<span class="pf-sname"><b>${esc(this.pSc(r.id).name)}</b><span class="small muted">จ.${esc(this.pSc(r.id).province)} · บันทึก ${this.pLotDate(r.id)}</span></span>`, `<span class="nw">${esc(this.pUser(this.pOwner(r.id)).name)}</span>`, r.n,
