@@ -189,6 +189,39 @@ App.on('dash-drill', function (el) {
   document.getElementById('drill').scrollIntoView({behavior: 'smooth', block: 'start'});
 });
 
+/* แก้ประเภทวิชา ปวส. (ทั่วไป / อุตสาหกรรม) กรณีนักเรียนเลือกผิด — จนท.รีวิว และ ผจก. ก่อนตัดสินผล */
+function pvsField(s) {
+  /* มีผลกับอัตราทุนเฉพาะคนที่ปีหน้าเรียน ปวส. */
+  if (!/^ปวส/.test(s.next_class || '')) return null;
+  return (s.group || groupOfClass(s.class)) === 'highvoc' ? 'pvs_type' : 'next_pvs_type';
+}
+function pvsFixCard(s, role) {
+  const k = pvsField(s);
+  if (!k || !['reviewer', 'manager'].includes(role) || s.status === 'decided') return '';
+  const cur = s[k] === 'industry' ? 'industry' : 'other';
+  return `<section class="card"><h3>ประเภทวิชา ปวส.</h3>
+    <form class="stack" data-submit="pvs-fix" data-code="${s.code}" novalidate>
+      ${radioField('pvs_fix', k === 'pvs_type' ? 'ประเภทวิชา' : 'ประเภทวิชา (ปวส. ที่จะเรียน)', PVS_TYPES, cur)}
+      ${(() => { const orig = s[k + '_by_student'] != null ? s[k + '_by_student'] : s[k];
+        return `<p class="small muted">นักเรียนเลือก: <b>${orig === 'industry' ? 'อุตสาหกรรม' : orig ? 'ทั่วไป' : '-'}</b>${s[k + '_by_student'] != null && s[k + '_by_student'] !== s[k] ? ' · <b style="color:var(--warn)">เจ้าหน้าที่แก้แล้ว</b>' : ''} · อัตราทุนตอนนี้ ${baht(this.stdRate(s).amount)}</p>`; })()}
+      <button class="btn sm" type="submit">บันทึกประเภทวิชา</button></form></section>`;
+}
+App.on('pvs-fix', function (form) {
+  const s = this.studentByCode[form.dataset.code];
+  const k = pvsField(s);
+  const v = formData(form).pvs_fix;
+  if (!k || !v || s[k] === v) { this.toast('ประเภทวิชาไม่เปลี่ยน'); return; }
+  const before = this.stdRate(s).amount;
+  if (s[k + '_by_student'] == null) s[k + '_by_student'] = s[k] || '';
+  s[k] = v;
+  s.rate = rateOf(s.next_class, /^ปวส/.test(s.next_class) ? (s.next_pvs_type || s.pvs_type) : '');
+  const after = this.stdRate(s).amount;
+  addHistory(s, `${this.session.name} แก้ประเภทวิชา ปวส. เป็น${v === 'industry' ? 'อุตสาหกรรม' : 'ทั่วไป'} (อัตรา ${baht(before)} → ${baht(after)})`, 'pvs_fix');
+  this.save();
+  this.toast(`บันทึกแล้ว · อัตราทุน ${baht(after)}`);
+  this.go('staff-app', {code: s.code});
+});
+
 /* ---------- รอบรับสมัคร ---------- */
 App.views['staff-cycle'] = function () {
   const c = this.db.cycle;
@@ -339,7 +372,7 @@ App.views['staff-app'] = function (p) {
           return `<div class="doc-row"><div><div>${code} — ${name}</div><div class="code">${fl.length ? esc(fl.length > 1 ? fl.length + ' ไฟล์' : fl[0]) : opt ? 'ไม่มี (ไม่บังคับ)' : 'ยังไม่ได้แนบ'}</div></div>
             ${fl.length ? `<button class="btn sm" type="button" data-action="preview">Preview</button>` : ''}</div>`; }).join('')}</div></section>
       </div>
-      <aside class="stack"><section class="card"><h3>${ROLE[role][0]}</h3>${panel}</section></aside>
+      <aside class="stack"><section class="card"><h3>${ROLE[role][0]}</h3>${panel}</section>${pvsFixCard.call(this, s, role)}</aside>
     </div>`, after: focusFirstError};
 };
 function reviewSummary(s) {
