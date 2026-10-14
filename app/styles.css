@@ -688,3 +688,25 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .pf-sres button:disabled{opacity:.55;cursor:default;box-shadow:none}
 /* ใบปะหน้า / ใบรายชื่อ: เส้นตารางสีดำ */
 .paper.cover table,.paper.cover th,.paper.cover td{border-color:#000}
+/* ค้นหาโรงเรียน: ภาค · จังหวัด · ชื่อ */
+.pf-find{display:grid;grid-template-columns:180px 200px minmax(0,1fr);gap:10px}
+.pf-hint{font-size:14px;color:var(--muted);padding:10px 2px 0}
+.pf-count{font-size:13px;color:var(--muted);margin:10px 2px 6px}
+.pf-sres{max-height:none;overflow:visible;margin-top:0}
+.pf-rows{display:grid;border:1px solid var(--line);border-radius:12px;overflow:hidden;max-height:360px;overflow-y:auto}
+.pf-sres .pf-rows button{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;border:0;border-top:1px solid var(--line);border-radius:0;background:var(--surface);padding:11px 14px;box-shadow:none;text-align:left}
+.pf-sres .pf-rows button:first-child{border-top:0;box-shadow:none}
+.pf-sres .pf-rows button:hover:not(:disabled){background:var(--brand-soft)}
+.pf-rows .nm{font-weight:600;font-size:15px;color:var(--ink)}
+.pf-rows .ar{font-size:13px;color:var(--muted);white-space:nowrap}
+.pf-tag{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--ok-soft);color:var(--ok);white-space:nowrap}
+.pf-tag.off{background:var(--fill);color:var(--muted)}
+.pf-sres .pf-rows button:disabled{opacity:1;background:var(--fill)}
+.pf-sres .pf-rows button:disabled .nm{color:var(--muted);font-weight:500}
+@media (max-width:640px){
+  .pf-find{grid-template-columns:1fr 1fr}
+  .pf-find #p-sq{grid-column:1 / -1}
+  .pf-sres .pf-rows button{grid-template-columns:minmax(0,1fr) auto;gap:2px 8px}
+  .pf-rows .ar{grid-column:1;grid-row:2;white-space:normal}
+  .pf-rows .pf-tag{grid-column:2;grid-row:1 / span 2}
+}

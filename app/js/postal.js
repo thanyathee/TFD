@@ -294,8 +294,7 @@ App.views['post-form'] = pNeedLogin(function (p) {
   const bar = `<section class="card pf-bar no-print">
     <div class="field pf-sch"><label class="label" for="p-sq">โรงเรียน</label>${sc && !this.session.pSearch ? `<div class="pf-picked"><div><b>${esc(sc.name)}</b>
         <span>${esc(sc.district)} จ.${esc(sc.province)}</span></div>${edit ? '' : '<button type="button" class="btn sm" data-action="p-change">เปลี่ยนโรงเรียน</button>'}</div>`
-      : `<input class="input" id="p-sq" data-oninput="p-sq" placeholder="พิมพ์ชื่อโรงเรียน อำเภอ หรือจังหวัด" autocomplete="off">
-        <div class="pf-sres" id="p-sres">${this.pSchoolResults('')}</div>`}</div></section>`;
+      : this.pFindHtml()}</div></section>`;
   if (!sc) return {nav: this.pNav(), html: `${this.pRoleBar()}
     <div class="page-head"><div><h1>บันทึกใบสมัครทางไปรษณีย์</h1><p class="sub">เลือกโรงเรียนครั้งเดียว แล้วพิมพ์ทีละคน · ประเภททุนระบบเลือกให้จากเลข 13 หลัก</p></div></div>
     ${bar}<div class="note info">เลือกโรงเรียนก่อน แล้วเริ่มบันทึกได้เลย</div>`, after() { const s = document.getElementById('p-sq'); if (s) s.focus(); }};
@@ -445,20 +444,46 @@ App.pKeepForm = function () {
   if (b) this.pStore(b);
 };
 /* ค้นหาโรงเรียนจากฐานข้อมูลสถานศึกษาเดียวกับระบบออนไลน์ */
-App.pSchoolResults = function (q) {
-  q = (q || '').trim();
+/* ค้นหาโรงเรียน: ภาค → จังหวัด และ / หรือ พิมพ์ชื่อ · ยังไม่เลือกอะไรจะไม่แสดงรายการ */
+App.pFind = function () { return this.session.pFind || (this.session.pFind = {region: '', province: '', q: ''}); };
+App.pFindHtml = function () {
+  const f = this.pFind();
+  const sch = this.db.schools;
+  const regions = this.data.geo.regions.filter(r => sch.some(s => s.region === r.code)).map(r => [r.code, r.name]);
+  const provs = [...new Set(sch.filter(s => !f.region || s.region === f.region).map(s => s.province))].sort((a, b) => a.localeCompare(b, 'th'));
+  return `<div class="pf-find">
+      ${select('p-sr', regions, f.region, 'ทุกภาค', 'data-onchange="p-sr" aria-label="ภาค"')}
+      ${select('p-sp', provs, f.province, 'ทุกจังหวัด', 'data-onchange="p-sp" aria-label="จังหวัด"')}
+      <input class="input" id="p-sq" data-oninput="p-sq" value="${esc(f.q)}" placeholder="พิมพ์ชื่อโรงเรียน หรืออำเภอ" autocomplete="off" aria-label="ค้นหาโรงเรียน">
+    </div>
+    <div class="pf-sres" id="p-sres">${this.pSchoolResults()}</div>`;
+};
+App.pSchoolResults = function () {
+  const f = this.pFind();
+  const q = (f.q || '').trim();
+  if (!q && !f.region && !f.province) return '<p class="pf-hint">เลือกภาค / จังหวัด หรือพิมพ์ชื่อโรงเรียน</p>';
   const db = this.P();
   /* ชื่อโรงเรียนที่ขึ้นต้นตรงกันมาก่อน → ชื่อมีคำนี้ → อำเภอ / จังหวัด */
   const score = s => { const n = s.name.replace(/^โรงเรียน|^วิทยาลัย|^มหาวิทยาลัย/, '');
     return !q ? 1 : n.startsWith(q) || s.name.startsWith(q) ? 4 : s.name.includes(q) ? 3 : [s.district, s.province].some(x => (x || '').includes(q)) ? 1 : 0; };
-  const list = this.pSchools().map(s => [s, score(s)]).filter(x => x[1]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
-  if (!list.length) return '<p class="small muted">ไม่พบโรงเรียน — แจ้งแอดมินให้เพิ่มสถานศึกษาในระบบ</p>';
-  return list.slice(0, 8).map(s => this.pSees(s.id) ? `<button type="button" data-action="p-pick" data-id="${s.id}"><b>${esc(s.name)}</b>
-    <span>${esc(s.district)} จ.${esc(s.province)}${db.batches[s.id] ? ` · ${this.session.pRole === 'clerk' ? 'ที่ฉัน' : esc(this.pUser(db.batches[s.id].by).name) + ' '}บันทึกแล้ว ${this.pEntriesOf(s.id).length} ราย` : ''}</span></button>`
-    : `<button type="button" disabled><b>${esc(s.name)}</b><span>${esc(s.district)} จ.${esc(s.province)} · มี จนท. ท่านอื่นรับผิดชอบแล้ว</span></button>`).join('')
-    + (list.length > 8 ? `<p class="small muted">และอีก ${list.length - 8} แห่ง — พิมพ์เพิ่มเพื่อค้นหาให้แคบลง</p>` : '');
+  const list = this.pSchools().filter(s => (!f.region || s.region === f.region) && (!f.province || s.province === f.province))
+    .map(s => [s, score(s)]).filter(x => x[1]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+  if (!list.length) return '<p class="pf-hint">ไม่พบโรงเรียน — แจ้งแอดมินให้เพิ่มสถานศึกษาในระบบ</p>';
+  const MAX = 30;
+  const tag = s => {
+    const b = db.batches[s.id];
+    if (!this.pSees(s.id)) return '<span class="pf-tag off">มี จนท. อื่นรับผิดชอบ</span>';
+    if (!b) return '';
+    return `<span class="pf-tag">${this.session.pRole === 'clerk' ? 'ของฉัน' : esc(this.pUser(b.by).name)} · ${this.pEntriesOf(s.id).length} ราย</span>`;
+  };
+  return `<div class="pf-count">${list.length} โรงเรียน</div><div class="pf-rows">${list.slice(0, MAX).map(s =>
+    `<button type="button" ${this.pSees(s.id) ? `data-action="p-pick" data-id="${s.id}"` : 'disabled'}><span class="nm">${esc(s.name)}</span>
+      <span class="ar">${esc(s.district.replace(/^อำเภอ|^เขต/, 'อ.'))} · จ.${esc(s.province)}</span>${tag(s)}</button>`).join('')}</div>`
+    + (list.length > MAX ? `<p class="pf-hint">แสดง ${MAX} แห่งแรก — พิมพ์ชื่อเพื่อค้นหาให้แคบลง</p>` : '');
 };
-App.on('p-sq', function (el) { document.getElementById('p-sres').innerHTML = this.pSchoolResults(el.value); });
+App.on('p-sr', function (el) { Object.assign(this.pFind(), {region: el.value, province: ''}); this.render(); const x = document.getElementById('p-sp'); if (x) x.focus(); });
+App.on('p-sp', function (el) { this.pFind().province = el.value; this.render(); const x = document.getElementById('p-sq'); if (x) x.focus(); });
+App.on('p-sq', function (el) { this.pFind().q = el.value; document.getElementById('p-sres').innerHTML = this.pSchoolResults(); });
 document.addEventListener('keydown', e => {
   if (e.target.id !== 'p-sq' || e.key !== 'Enter') return;
   e.preventDefault();
