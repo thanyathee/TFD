@@ -2,7 +2,7 @@
    จนท. บันทึกแบบสรุปย่อทีละคน → พิมพ์ใบปะหน้าโรงเรียน → ผจก. อนุมัติทีละคน · แอดมินดูผลงานทุกคน */
 'use strict';
 
-const POSTAL_KEY = 'tfd-postal-demo-v5';
+const POSTAL_KEY = 'tfd-postal-demo-v6';
 const P_ROLE = {
   clerk: ['จนท.บันทึกข้อมูล', 'บันทึกใบสมัครทางไปรษณีย์ พิมพ์ใบปะหน้า และดูผลงานของตัวเอง'],
   manager: ['ผจก.อนุมัติทุน', 'ดูทุกโรงเรียน และอนุมัติทุนทีละคน'],
@@ -21,7 +21,7 @@ const P_TITLES = ['เด็กชาย', 'เด็กหญิง', 'นา�
 const P_LAND = [['own', 'มีที่ดินของตนเอง'], ['rent', 'เช่าที่ดินผู้อื่น'], ['none', 'ไม่มีที่ดินทำกิน']];
 const P_DOCS = [['cert', 'หนังสือรับรอง'], ['bank', 'รายการเดินบัญชี'], ['expense', 'ใบรายการใช้จ่าย'], ['receipt', 'ใบเสร็จ']];
 const P_HOUSING = [['own', 'บ้านและที่ดินของครอบครัว'], ['own_other_land', 'บ้านของครอบครัว ที่ดินของผู้อื่น'], ['installment', 'กำลังผ่อนชำระ'],
-  ['rent', 'บ้านเช่า / ห้องเช่า / หอพัก'], ['other', 'อื่น ๆ (บ้านญาติ / วัด / สถานสงเคราะห์)']];
+  ['rent_house', 'บ้านเช่า'], ['rent_room', 'ห้องเช่า'], ['dorm', 'หอพัก'], ['other', 'อื่น ๆ (บ้านญาติ / วัด / สถานสงเคราะห์)']];
 
 /* ---------- ข้อมูล (เก็บแยกจากระบบออนไลน์) ---------- */
 App.P = function () {
@@ -81,14 +81,14 @@ App.pFresh = function () {
   /* โรงเรียนตัวอย่าง 3 แห่ง: พิมพ์แล้ว + ผจก. พิจารณาบางส่วน / บันทึกเสร็จ / กำลังบันทึก */
   const s1 = 'SCH-001', s2 = 'SCH-010', s3 = 'SCH-022';
   nw(s1, 'clerk01', '2027-06-03T09:10', {title: 'เด็กหญิง', first: 'กัญญารัตน์', last: 'ดวงดี', cls: 'ม.2', gpa: '3.45', decision: {result: 'approved', by: 'manager01', at: '2027-06-10T14:00'}});
-  nw(s1, 'clerk01', '2027-06-03T09:14', {title: 'เด็กชาย', first: 'ปิยะพงษ์', last: 'ศรีวงศ์', cls: 'ม.3', next_class: 'ม.4', gpa: '2.98', equipment: [], housing: 'rent', land: 'rent',
+  nw(s1, 'clerk01', '2027-06-03T09:14', {title: 'เด็กชาย', first: 'ปิยะพงษ์', last: 'ศรีวงศ์', cls: 'ม.3', next_class: 'ม.4', gpa: '2.98', equipment: [], housing: 'rent_house', land: 'rent', note: 'ค่าเช่าบ้าน 1,500 บาท/เดือน',
     family: 'บิดาเสียชีวิต มารดารับจ้างทั่วไป มีน้อง 2 คน', decision: {result: 'rejected', by: 'manager01', at: '2027-06-10T14:05'}});
   nw(s1, 'clerk01', '2027-06-03T09:20', {title: 'นางสาว', first: 'สุนิสา', last: 'แก้วมณี', cls: 'ม.5', gpa: '3.80', housing: 'other', family: 'อาศัยกับป้า บิดามารดาทำงานต่างจังหวัด'});
   recOf(s1).slice(0, 2).forEach((r, i) => cont(s1, r, 'clerk01', `2027-06-03T09:${30 + i * 4}`, i ? {docs: ['cert', 'bank', 'expense'], note: 'ไม่มีใบเสร็จ ค่าใช้จ่ายต่ำกว่า 500 บาท'} : {}));
   nw(s2, 'clerk02', '2027-06-05T10:02', {title: 'นาย', first: 'อภิสิทธิ์', last: 'ทองใบ', cls: 'ปวช.3', next_class: 'ปวส.1', faculty: 'ช่างกลโรงงาน', pvs_type: 'industry', gpa: '3.05', land: 'own'});
   nw(s2, 'clerk02', '2027-06-05T10:08', {title: 'นางสาว', first: 'ศศิธร', last: 'พรมมา', cls: 'ปวช.1', faculty: 'การบัญชี', gpa: '3.62', equipment: [], housing: 'installment'});
   recOf(s2).slice(0, 1).forEach(r => cont(s2, r, 'clerk02', '2027-06-05T10:15'));
-  nw(s3, 'clerk01', '2027-06-07T13:40', {title: 'นางสาว', first: 'อรทัย', last: 'สุขเจริญ', cls: 'ปริญญาตรี ปี 1', faculty: 'ครุศาสตร์', gpa: '3.21', housing: 'rent'});
+  nw(s3, 'clerk01', '2027-06-07T13:40', {title: 'นางสาว', first: 'อรทัย', last: 'สุขเจริญ', cls: 'ปริญญาตรี ปี 1', faculty: 'ครุศาสตร์', gpa: '3.21', housing: 'dorm', note: 'ค่าหอพัก 2,800 บาท/เดือน'});
   /* โรงเรียนตัวอย่างที่ส่งมาเยอะ: โรงเรียนจอมทองวิทยา (เชียงใหม่) — ใช้ลองดูว่า 1 แผ่นใส่ได้กี่คน */
   const s4 = 'SCH-007';
   const FAM = ['อาศัยกับยาย บิดามารดาแยกทางกัน มารดาไปทำงานกรุงเทพฯ ส่งเงินมาไม่แน่นอน ยายอายุมากรับจ้างเก็บลำไยตามฤดูกาล',
@@ -102,7 +102,8 @@ App.pFresh = function () {
     const cls = ['ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5'][i % 5], adult = ['ม.4', 'ม.5'].includes(cls);
     nw(s4, 'clerk02', `2027-06-08T10:${String(i).padStart(2, '0')}`, {title: i % 2 ? (adult ? 'นางสาว' : 'เด็กหญิง') : (adult ? 'นาย' : 'เด็กชาย'), first: pick(i % 2 ? FIRST_F : FIRST_M), last: pick(LAST),
       cls, next_class: nextOptions(cls)[0], gpa: (2.6 + (i * 29 % 130) / 100).toFixed(2), family: FAM[i % FAM.length],
-      equipment: [['pickup'], [], ['washer', 'pickup'], ['etan'], ['none']][i % 5], housing: ['own', 'rent', 'other', 'own_other_land'][i % 4], land: ['none', 'rent', 'own'][i % 3]});
+      equipment: [['pickup'], [], ['washer', 'pickup'], ['etan'], ['none']][i % 5], housing: ['own', 'rent_house', 'other', 'rent_room', 'own_other_land', 'dorm'][i % 6], land: ['none', 'rent', 'own'][i % 3],
+      note: [, 'ค่าเช่าบ้าน 1,200 บาท/เดือน', , 'ค่าเช่าห้อง 2,000 บาท/เดือน', , 'ค่าหอพัก 1,800 บาท/เดือน'][i % 6] || ''});
   }
   const batch = (id, by, o) => { const t = teacher(id); return [id, {by, prim_new: 0, prim_cont: 0, wait_new: 0, wait_cont: 0, note: '', letter: '',
     teacher_name: t.name || '', teacher_phone: t.phone || '', teacher_email: t.email || '', done: false, printed: '', updated: '2027-06-07T13:40', ...o}]; };
@@ -327,12 +328,12 @@ App.views['post-form'] = pNeedLogin(function (p) {
       <div class="field"><span class="label">บ้านมีเครื่องใช้อะไรบ้าง</span><div class="choice-grid pf-eq">${EQUIP.map(([k, t]) =>
         `<label class="choice"><input type="checkbox" name="equipment" value="${k}" ${eq.includes(k) ? 'checked' : ''}> ${t}</label>`).join('')}
         <label class="choice"><input type="checkbox" name="equipment" value="none" ${eq.includes('none') ? 'checked' : ''}> ไม่มีเลย</label></div></div>
-      ${radioField('housing', 'บ้านที่อยู่อาศัยเป็นของใคร', P_HOUSING, v.housing, {cls: 'pf-wide'})}
+      ${radioField('housing', 'บ้านที่อยู่อาศัยเป็นของใคร', P_HOUSING, v.housing, {cls: 'pf-wide', hint: 'บ้านเช่า / ห้องเช่า / หอพัก / ผ่อนชำระ — ใส่ค่าเช่าหรือค่างวดในช่องหมายเหตุ'})}
       ${radioField('land', 'ที่ดินทำกิน', P_LAND, v.land)}` : `
       ${field('use_money', 'นำเงินทุนไปใช้จ่ายอะไรบ้าง', textarea('use_money', v.use_money, 'rows="2" placeholder="เช่น ค่าเดินทาง ค่าอุปกรณ์การเรียน ชุดนักเรียน"'))}
       <div class="field"><span class="label">เอกสารแนบ <span class="small muted">(ติ๊กที่มี)</span></span><div class="choices pf-docs">${P_DOCS.map(([k, t]) =>
         `<label class="choice"><input type="checkbox" name="docs" value="${k}" ${docs.includes(k) ? 'checked' : ''}> ${t}</label>`).join('')}</div></div>`}
-    ${field('note', 'หมายเหตุ', input('note', v.note, 'placeholder="ถ้ามี"'))}
+    ${field('note', 'หมายเหตุ', input('note', v.note, `placeholder="${type === 'NEW' ? 'เช่น ค่าเช่าบ้าน 1,500 บาท/เดือน' : 'ถ้ามี'}"`))}
     ${errNote(e)}
     <div class="row end">${edit ? `<button class="btn ghost" type="button" data-action="p-delete" data-id="${edit.id}">ลบรายการนี้</button>
       <button class="btn" type="button" data-go="post-form">ยกเลิก</button><button class="btn primary" type="submit">บันทึกการแก้ไข</button>`
@@ -636,7 +637,7 @@ App.pCoverHtml = function (id) {
    ทุกตารางใช้ช่องและความกว้างเดียวกัน (ความสูงตามข้อมูล) · หัวกระดาษบอกโรงเรียน / กลุ่ม เพื่อให้ตารางได้พื้นที่มากที่สุด */
 /* ความกว้างช่อง (%) — ทุกแผ่นของประเภททุนเดียวกันเท่ากัน */
 const P_LIST_COLS = {CONT: [6, 19, 12, 10, 33, 5, 5, 5, 5], NEW: [6, 19, 12, 6, 32, 25]};
-const P_PER_SHEET = 12;   // คนต่อแผ่น (A4 แนวนอน · เว้นช่องลำดับให้ ผจก. วงผล)
+const P_PER_SHEET = 10;   // คนต่อแผ่น (A4 แนวนอน · เว้นช่องลำดับให้ ผจก. วงผล)
 App.pListHtml = function (id) {
   const sc = this.schoolById[id];
   const es = this.pEntriesOf(id);
@@ -654,10 +655,10 @@ App.pListHtml = function (id) {
   const row = (e, i) => {
     const base = `<td class="n">${i + 1}</td><td><span class="cv-id">${esc(e.cid)}</span><br><b>${esc(pName(e))}</b></td>
       <td>${esc(e.cls)} → ${esc(e.next_class)}${e.faculty || e.pvs_type ? `<br><small>${esc(e.faculty || '')}${e.pvs_type ? ` (${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]})` : ''}</small>` : ''}</td>`;
-    if (e.type === 'CONT') return `<tr>${base}<td class="nw">${e.gpa_before ? `${esc(e.gpa_before)} → ` : ''}<b>${esc(e.gpa || '—')}</b></td><td>${esc(e.use_money || '—')}</td>
+    if (e.type === 'CONT') return `<tr>${base}<td class="nw">${e.gpa_before ? `${esc(e.gpa_before)} → ` : ''}<b>${esc(e.gpa || '—')}</b></td><td>${esc(e.use_money || '—')}${e.note ? `<br><small>หมายเหตุ: ${esc(e.note)}</small>` : ''}</td>
       ${P_DOCS.map(([k]) => `<td class="cv-ck2">${arr(e.docs).includes(k) ? '✓' : '<span class="no">✗</span>'}</td>`).join('')}</tr>`;
     return `<tr>${base}<td><b>${esc(e.gpa || '—')}</b></td><td>${esc(e.family || '—')}</td>
-      <td><small>เครื่องใช้:</small> ${arr(e.equipment).map(eqName).join(', ') || '—'} · <small>บ้าน:</small> ${esc(lab(P_HOUSING, e.housing))} · <small>ที่ดิน:</small> ${esc(lab(P_LAND, e.land))}</td></tr>`;
+      <td><small>เครื่องใช้:</small> ${arr(e.equipment).map(eqName).join(', ') || '—'} · <small>บ้าน:</small> ${esc(lab(P_HOUSING, e.housing))} · <small>ที่ดิน:</small> ${esc(lab(P_LAND, e.land))}${e.note ? `<br><small>หมายเหตุ:</small> ${esc(e.note)}` : ''}</td></tr>`;
   };
   const hd = (t, gt, n) => `<div class="a4-head cv-lhead"><span class="a4-logo">TF</span>
     <div><b>${esc(sc.name)} · จังหวัด${esc(sc.province)} · ${esc(this.regionName(sc.region))}</b></div>
