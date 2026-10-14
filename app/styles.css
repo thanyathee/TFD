@@ -465,3 +465,6 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .rg-meta{display:flex;gap:12px;align-items:center;min-height:48px}
 .badge.sm{font-size:12px;padding:2px 9px;margin-top:4px}
 @media (max-width:700px){.rg-row{grid-template-columns:1fr 110px}.rg-meta{grid-column:1/-1;min-height:0}}
+/* ตัวเลือก 2 คอลัมน์ (เช่น รูปแบบการเรียน) */
+.two-col .choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:600px){.two-col .choices{grid-template-columns:1fr}}

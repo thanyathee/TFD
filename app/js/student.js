@@ -162,7 +162,7 @@ function classFields(v, e = {}) {
       ${field('faculty', 'คณะ / สาขา', input('faculty', v.faculty, 'placeholder="เช่น ช่างยนต์ / การบัญชี / พยาบาลศาสตร์"'), {req: 1, err: e.faculty})}
       ${g === 'highvoc' ? radioField('pvs_type', 'ประเภทวิชา', PVS_TYPES, v.pvs_type, {req: 1, err: e.pvs_type}) : ''}
     </div>
-    ${radioField('study_mode', 'รูปแบบการเรียน', STUDY_MODES_PAPER, v.study_mode, {req: 1, err: e.study_mode, col: 1})}
+    ${radioField('study_mode', 'รูปแบบการเรียน', STUDY_MODES_PAPER, v.study_mode, {req: 1, err: e.study_mode, cls: 'two-col'})}
     <div data-when="study_mode=other">${field('study_mode_other', 'ระบุรูปแบบการเรียน', input('study_mode_other', v.study_mode_other), {err: e.study_mode_other})}</div>` : ''}`;
 }
 /* ระดับชั้นปีหน้า: ระบบเลือกให้เมื่อมีทางเดียว ส่วน ม.3 / ม.6 / ปวช.3 / ปวส.2 ให้เลือก */
