@@ -32,10 +32,10 @@ const ACTIVITY = [
 const SCHOOL_TYPES = [['school', 'โรงเรียน'], ['college', 'วิทยาลัย'], ['university', 'มหาวิทยาลัย'], ['other', 'อื่น ๆ']];
 
 App.staffNav = function () {
-  return [['staff-dash', 'Dashboard'], ['staff-cycle', 'รอบรับสมัคร'], ['staff-schools', 'สถานศึกษา/ครู', ['staff-school']],
+  return [['staff-dash', 'Dashboard'], ['staff-schools', 'สถานศึกษา/ครู', ['staff-school']],
     ['staff-apps', 'ใบสมัคร', ['staff-app']], ['staff-transfer', 'ย้ายสถานศึกษา']]
-    /* รายงาน/Export, PDPA และผู้ใช้งาน: เฉพาะแอดมินระบบ */
-    .concat(this.session.staffRole === 'admin' ? [['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA'], ['staff-users', 'ผู้ใช้งาน', ['staff-user']]] : []);
+    /* รอบรับสมัคร, รายงาน/Export, PDPA และผู้ใช้งาน: เฉพาะแอดมินระบบ */
+    .concat(this.session.staffRole === 'admin' ? [['staff-cycle', 'รอบรับสมัคร'], ['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA'], ['staff-users', 'ผู้ใช้งาน', ['staff-user']]] : []);
 };
 /* สลับบทบาทสำหรับทดลอง (เหมือนปุ่มบทบาทใน v14) */
 App.roleBar = function () {
@@ -48,7 +48,7 @@ App.staffList = function () { return this.db.staffUsers || STAFF.map(u => ({...u
 App.on('staff-role', function (el) {
   const u = this.staffList().find(s => s.role === el.dataset.role && s.active !== false) || STAFF.find(s => s.role === el.dataset.role);
   Object.assign(this.session, {staff: u.username, staffRole: u.role, name: u.name, who: `${u.name} · ${ROLE[u.role][0]}`});
-  if (u.role !== 'admin' && ['staff-reports', 'staff-pdpa', 'staff-users', 'staff-user'].includes(this.view.name)) { this.go('staff-dash'); return; }
+  if (u.role !== 'admin' && ['staff-cycle', 'staff-reports', 'staff-pdpa', 'staff-users', 'staff-user'].includes(this.view.name)) { this.go('staff-dash'); return; }
   this.render();
 });
 
@@ -231,6 +231,7 @@ App.on('pvs-fix', function (form) {
 
 /* ---------- รอบรับสมัคร ---------- */
 App.views['staff-cycle'] = function () {
+  { const deny = adminOnly.call(this); if (deny) return deny; }
   const c = this.db.cycle;
   return {nav: this.staffNav(), html: `${this.roleBar()}
     <div class="page-head"><div><h1>ตั้งค่ารอบรับสมัคร</h1></div></div>
