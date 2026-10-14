@@ -16,7 +16,9 @@ const P_STATUS = {
 const P_LEVELS = [['primary', 'ประถม'], ['lowersec', 'ม.ต้น'], ['uppersec', 'ม.ปลาย'], ['voc', 'ปวช.'], ['highvoc', 'ปวส.'], ['bachelor', 'ปริญญาตรี']];
 const P_CLASSES = ['ป.5', 'ป.6', 'ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5', 'ม.6', 'ปวช.1', 'ปวช.2', 'ปวช.3', 'ปวส.1', 'ปวส.2',
   'ปริญญาตรี ปี 1', 'ปริญญาตรี ปี 2', 'ปริญญาตรี ปี 3', 'ปริญญาตรี ปี 4'];
-const P_TITLES = ['เด็กชาย', 'เด็กหญิง', 'นาย', 'นางสาว'];
+const P_TITLES = ['ด.ช.', 'ด.ญ.', 'นาย', 'น.ส.'];
+const P_TITLE_ABBR = {'เด็กชาย': 'ด.ช.', 'เด็กหญิง': 'ด.ญ.', 'นางสาว': 'น.ส.'};
+const pAbbr = t => P_TITLE_ABBR[t] || t || '';
 const P_LAND = [['own', 'มีที่ดินของตนเอง'], ['rent', 'เช่าที่ดินผู้อื่น'], ['none', 'ไม่มีที่ดินทำกิน']];
 const P_DOCS = [['cert', 'หนังสือรับรอง'], ['bank', 'รายการเดินบัญชี'], ['expense', 'ใบรายการใช้จ่าย'], ['receipt', 'ใบเสร็จ']];
 /* ที่อยู่อาศัย: [รหัส, ชื่อ, ช่องระบุเพิ่ม, ชนิด (money = เดือนละ ... บาท / text = ข้อความ)] */
@@ -174,7 +176,7 @@ function pShortDate(iso) {
   const d = new Date(iso.length <= 10 ? iso + 'T00:00:00' : iso);
   return d.toLocaleDateString('th-TH', {day: 'numeric', month: 'short', year: '2-digit'}) + (iso.length > 10 ? ' · ' + iso.slice(11, 16) : '');
 }
-const pName = e => [e.title, e.first, e.last].filter(Boolean).join(' ') || '(ไม่มีชื่อ)';
+const pName = e => [pAbbr(e.title), e.first, e.last].filter(Boolean).join(' ') || '(ไม่มีชื่อ)';
 App.pUser = function (u) { return this.P().users.find(x => x.username === u) || {name: u}; };
 /* ลอต = ใบสมัครของโรงเรียนที่มาถึง 1 รอบ (โรงเรียนเดียวกันมาได้หลายลอต) · 1 ลอต = จนท. 1 คน · 1 ชุดใบปะหน้า */
 App.pEntriesOf = function (lot) { return this.P().entries.filter(e => e.lot === lot); };
@@ -377,6 +379,7 @@ App.views['post-form'] = pNeedLogin(function (p) {
 
   const draft = edit ? null : db.drafts[this.pDraftKey()];
   const v = pNorm(Object.assign({}, edit || draft || {}, p.values || {}));
+  v.title = pAbbr(v.title);
   const e = p.errors || {};
   const type = v.type === 'CONT' ? 'CONT' : 'NEW';
   const nexts = nextOptions(v.cls);
@@ -691,7 +694,7 @@ App.on('p-save', function (form) {
   if (Object.keys(e).length) { this.go('post-form', {edit: editId, values: v, errors: e}); return; }
   const next = v.next_class || (nextOptions(v.cls).length === 1 ? nextOptions(v.cls)[0] : '');
   const type = v.type === 'CONT' ? 'CONT' : 'NEW';
-  const data = {type, school: this.pLot(pf.lot).school, cid: v.cid, title: v.title, first: v.first, last: v.last, cls: v.cls, next_class: next, next_group: groupOfClass(next) ? '' : v.next_group || 'other',
+  const data = {type, school: this.pLot(pf.lot).school, cid: v.cid, title: pAbbr(v.title), first: v.first, last: v.last, cls: v.cls, next_class: next, next_group: groupOfClass(next) ? '' : v.next_group || 'other',
     faculty: v.faculty || '', pvs_type: /^ปวส/.test(next) ? v.pvs_type || 'other' : '', gpa: v.gpa || '', note: v.note || '', from_db: !!v.from_db && !v.unlocked, gpa_before: v.gpa_before || ''};
   if (type === 'NEW') Object.assign(data, {family: v.family || '', equipment: arr(v.equipment), housing: v.housing || '', housing_detail: (P_HOUSING.find(x => x[0] === v.housing) || [])[2] ? v.housing_detail || '' : '', land: v.land || ''});
   else Object.assign(data, {use_money: v.use_money || '', docs: arr(v.docs)});
@@ -916,41 +919,44 @@ App.views['post-approve'] = pNeedLogin(function (p) {
   const cnt = k => es.filter(e => (e.decision || {}).result === k).length;
   const wait = es.filter(e => !e.decision).length;
   const eqName = k => k === 'none' ? 'ไม่มีเลย' : (EQUIP.find(x => x[0] === k) || [, k])[1];
-  const card = (e, i) => {
+  /* ผลพิจารณา: ชุดเดียวกับระบบออนไลน์ (อนุมัติทุน · สำรอง · ไม่ผ่าน · ไม่เข้าเกณฑ์) */
+  const dec = e => {
+    const d = e.decision;
+    if (!can) return d ? `<span class="badge t-${DECISION[d.result].tone}">${DECISION[d.result].label}</span>` : '<span class="badge t-violet">รอพิจารณา</span>';
+    return `<div class="pa-dec">${Object.entries(DECISION).map(([k, x]) => `<button type="button" class="pa-b pa-${k}" data-action="p-decide" data-id="${e.id}" data-r="${d && d.result === k ? '' : k}"
+      aria-pressed="${!!d && d.result === k}" title="${d && d.result === k ? 'กดอีกครั้งเพื่อยกเลิก' : ''}">${x.label}</button>`).join('')}</div>`;
+  };
+  /* ตารางเหมือนใบรายชื่อ: ต่อเนื่องก่อน แล้วทุนใหม่ แยกตามระดับชั้นปีหน้า */
+  const groups = [];
+  ['CONT', 'NEW'].forEach(t => P_LEVELS_ALL.forEach(([g, gt]) => {
+    const l = es.filter(e => e.type === t && pGroupOf(e) === g).sort((a, b) => P_CLASSES.indexOf(a.next_class) - P_CLASSES.indexOf(b.next_class));
+    if (l.length) groups.push([t, gt, l]);
+  }));
+  let no = 0;
+  const row = e => {
     const r = this.pRate(e);
     const d = e.decision;
-    const docsOk = e.type === 'CONT' ? P_DOCS.map(([k, t]) => `<span class="p-doc ${arr(e.docs).includes(k) ? 'ok' : 'no'}">${arr(e.docs).includes(k) ? '✓' : '✗'} ${t}</span>`).join('') : '';
-    return `<article class="card pa-card ${d ? 'pa-' + d.result : ''}" id="pa-${e.id}">
-      <div class="row between"><div><span class="muted small">${i + 1}. ${TYPE[e.type]}${e.from_db ? ' · ดึงจากฐานข้อมูลปีก่อน' : ''}</span><h3>${esc(pName(e))}</h3>
-        <span class="small muted">เลขบัตร ${esc(e.cid)}</span></div>${d ? `<span class="badge t-${DECISION[d.result].tone}">${DECISION[d.result].label}</span>` : '<span class="badge t-violet">รอพิจารณา</span>'}</div>
-      <div class="pa-grid">
-        <div><span>ชั้น</span><b>${esc(e.cls)} → ${esc(e.next_class)}</b></div>
-        ${e.faculty ? `<div><span>สาขา</span><b>${esc(e.faculty)}${e.pvs_type ? ` (${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]})` : ''}</b></div>` : ''}
-        <div><span>เกรดเฉลี่ย</span><b>${e.gpa_before ? `${esc(e.gpa_before)} → ` : ''}${esc(e.gpa || '—')}</b>${e.gpa_before ? '<small class="muted">ก่อนรับทุน → ปีนี้</small>' : ''}</div>
-        <div><span>เงินทุน</span><b>${rateBadge(r)}</b></div>
-        ${e.type === 'NEW' ? `<div class="wide"><span>สภาพครอบครัว</span><b>${esc(e.family || '—')}</b></div>
-          <div class="wide"><span>เครื่องใช้ในบ้าน</span><b>${arr(e.equipment).map(eqName).join(' · ') || '—'}</b></div>
-          <div><span>บ้านที่อยู่อาศัย</span><b>${esc(pHouse(e))}</b></div>
-          <div><span>ที่ดินทำกิน</span><b>${esc((P_LAND.find(x => x[0] === e.land) || [, '—'])[1])}</b></div>`
-        : `<div class="wide"><span>นำเงินทุนไปใช้</span><b>${esc(e.use_money || '—')}</b></div><div class="wide"><span>เอกสารแนบ</span><b class="p-docs">${docsOk}</b></div>`}
-        ${e.note ? `<div class="wide"><span>หมายเหตุ</span><b>${esc(e.note)}</b></div>` : ''}
-      </div>
-      ${can ? `<div class="row end">${d ? `<span class="small muted">โดย ${esc(this.pUser(d.by).name)} · ${thDate(d.at, true)}</span><button class="btn sm ghost" data-action="p-decide" data-id="${e.id}" data-r="">ยกเลิกผล</button>` : ''}
-        <button class="btn ${d && d.result === 'rejected' ? 'danger' : ''}" data-action="p-decide" data-id="${e.id}" data-r="rejected" aria-pressed="${!!d && d.result === 'rejected'}">ไม่อนุมัติ</button>
-        <button class="btn ${d && d.result === 'approved' ? 'primary' : ''}" data-action="p-decide" data-id="${e.id}" data-r="approved" aria-pressed="${!!d && d.result === 'approved'}">อนุมัติ</button></div>`
-      : d ? `<p class="small muted">โดย ${esc(this.pUser(d.by).name)} · ${thDate(d.at, true)}</p>` : ''}
-    </article>`;
+    const base = `<td class="n">${++no}</td><td><span class="pa-id">${esc(e.cid)}</span><b>${esc(pName(e))}</b></td>
+      <td><span class="nw">${esc(e.cls)} → ${esc(e.next_class)}</span>${e.faculty || e.pvs_type ? `<small>${esc(e.faculty || '')}${e.pvs_type ? ` (${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]})` : ''}</small>` : ''}</td>
+      <td class="nw">${e.gpa_before ? `${esc(e.gpa_before)} → ` : ''}<b>${esc(e.gpa || '—')}</b></td>`;
+    const note = e.note ? `<small class="pa-note">หมายเหตุ: ${esc(e.note)}</small>` : '';
+    const main = e.type === 'CONT'
+      ? `<td>${esc(e.use_money || '—')}${note}</td><td class="pa-docs">${P_DOCS.map(([k, t]) => `<span class="${arr(e.docs).includes(k) ? 'ok' : 'no'}">${arr(e.docs).includes(k) ? '✓' : '✗'} ${t}</span>`).join('')}</td>`
+      : `<td>${esc(e.family || '—')}</td><td><small>เครื่องใช้:</small> ${arr(e.equipment).map(eqName).join(', ') || '—'}<br><small>บ้าน:</small> ${esc(pHouse(e))}<br><small>ที่ดิน:</small> ${esc((P_LAND.find(x => x[0] === e.land) || [, '—'])[1])}${note}</td>`;
+    return `<tr id="pa-${e.id}" class="${d ? 'pa-r-' + d.result : ''}">${base}${main}<td class="r nw">${r.amount ? r.amount.toLocaleString('th-TH') : '—'}</td><td>${dec(e)}</td></tr>`;
   };
+  const head = t => `<th class="n">#</th><th>เลขบัตร / ชื่อ</th><th>ระดับชั้น</th><th>เกรด</th>${t === 'CONT' ? '<th>นำเงินทุนไปใช้จ่าย</th><th>เอกสารแนบ</th>'
+    : '<th>สภาพครอบครัว</th><th>เครื่องใช้ · บ้าน · ที่ดิน</th>'}<th class="r">เงินทุน</th><th>ผลพิจารณา</th>`;
   const amt = es.filter(e => (e.decision || {}).result === 'approved').reduce((a, e) => a + this.pRate(e).amount, 0);
-  const ids = [...new Set(db.entries.filter(e => !e.decision).map(e => e.lot))].filter(x => x !== p.id && this.pSc(x)).sort((a, b) => this.pLotSort(a, b));
+  const ids = [...new Set(db.entries.filter(e => !e.decision).map(e => e.lot))].filter(x => x !== p.id && this.pSc(x) && (this.pLot(x).done || this.pLocked(x))).sort((a, b) => this.pLotSort(a, b));
   return {nav: this.pNav(), html: `${this.pRoleBar()}
     <div class="page-head"><div><span class="pf-code lg">เลขที่ใบปะหน้า ${this.pCode(p.id)}</span><h1>${esc(sc.name)}</h1><p class="sub">จ.${esc(sc.province)} · ${esc(this.regionName(sc.region))} · ดูข้อมูลในระบบประกอบรูปภาพในใบสมัคร</p></div>
       <div class="row"><button class="btn" data-go="post-approve">รายชื่อโรงเรียน</button><button class="btn" data-go="post-cover" data-id="${p.id}">${icon('print')} ใบปะหน้า</button></div></div>
-    <div class="stats"><div class="stat"><span>รอพิจารณา</span><b>${wait}</b></div><div class="stat"><span>อนุมัติ</span><b>${cnt('approved')}</b><small>${baht(amt)}</small></div>
-      <div class="stat"><span>ไม่อนุมัติ</span><b>${cnt('rejected')}</b></div></div>
-    ${['prim_new', 'prim_cont', 'other_new', 'other_cont', 'wait_new', 'wait_cont'].some(k => Number(b[k])) ? `<div class="note info">
-      ประถม ${(Number(b.prim_new) || 0) + (Number(b.prim_cont) || 0)} ราย — พิจารณาที่ใบสมัครกระดาษ · อื่น ๆ ${(Number(b.other_new) || 0) + (Number(b.other_cont) || 0)} ราย · รอฟังผล ${(Number(b.wait_new) || 0) + (Number(b.wait_cont) || 0)} ราย — รอหลักฐานการย้ายสถานศึกษา</div>` : ''}
-    <div class="stack">${es.map(card).join('') || '<div class="empty">ยังไม่มีรายชื่อ</div>'}</div>
+    <div class="pa-sum"><span>รอพิจารณา <b>${wait}</b></span>${Object.entries(DECISION).map(([k, x]) => `<span class="pa-s-${k}">${x.label} <b>${cnt(k)}</b></span>`).join('')}<span>เงินทุนที่อนุมัติ <b>${baht(amt)}</b></span></div>
+    ${['prim_new', 'prim_cont', 'other_new', 'other_cont', 'wait_new', 'wait_cont'].some(k => Number(b[k])) ? `<div class="note info small">
+      ไม่ได้บันทึกรายคน: ประถม ${(Number(b.prim_new) || 0) + (Number(b.prim_cont) || 0)} ราย — พิจารณาที่ใบสมัครกระดาษ · อื่น ๆ ${(Number(b.other_new) || 0) + (Number(b.other_cont) || 0)} ราย · รอฟังผล ${(Number(b.wait_new) || 0) + (Number(b.wait_cont) || 0)} ราย</div>` : ''}
+    ${groups.map(([t, gt, l]) => `<h3 class="pa-h"><span class="cv-t cv-t-${t}">${TYPE[t]}</span> ${gt} <span class="muted small">(${l.length} ราย)</span></h3>
+      <div class="pa-wrap"><table class="pa-tbl pa-${t}"><thead><tr>${head(t)}</tr></thead><tbody>${l.map(row).join('')}</tbody></table></div>`).join('') || '<div class="empty">ยังไม่มีรายชื่อ</div>'}
     ${can && !wait && ids.length ? `<div class="row end"><button class="btn primary" data-go="post-approve" data-id="${ids[0]}">ถัดไป: ${esc(this.pLotTitle(ids[0]))}</button></div>` : ''}`,
     after() { if (p.focus) { const el = document.getElementById('pa-' + p.focus); if (el) el.scrollIntoView({block: 'center'}); } }};
 });
@@ -1003,7 +1009,7 @@ App.on('p-work-sel', function (el) { this.go('post-work', {f: {by: el.value}}); 
 App.on('p-work-filter', function (form) { this.go('post-work', {f: formData(form)}); });
 
 /* ---------- แอดมิน / ผจก.: รายชื่อผู้สมัครทางไปรษณีย์ รายคน ---------- */
-const P_RESULT = [['wait', 'รอพิจารณา'], ['approved', 'อนุมัติ'], ['rejected', 'ไม่อนุมัติ']];
+const P_RESULT = [['wait', 'รอพิจารณา']].concat(Object.entries(DECISION).map(([k, x]) => [k, x.label]));
 App.pPeopleRows = function (f) {
   const db = this.P();
   const q = (f.q || '').trim();
