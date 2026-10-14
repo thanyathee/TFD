@@ -187,7 +187,7 @@ CREATE TABLE applications (
   rate_level_code  text,               -- อ้างอิง scholarship_rates
   study_mode       text,               -- regular / special / dual / other
   study_mode_other text,
-  pvs_type         text,               -- ประเภทวิชา ปวส.: industry / business / other
+  pvs_type         text,               -- ปวส. ประเภทวิชาอุตสาหกรรมหรือไม่: industry / other
   faculty          text,               -- คณะ / สาขาวิชา (ปวช. / ปวส. / ป.ตรี)
   program_years    smallint,           -- หลักสูตรกี่ปี (ถามเมื่อ ป.ตรี ปี 4)
   stays_same_school boolean,           -- ปีถัดไป: true = เรียนต่อสถานศึกษาเดิม, false = ย้ายสถานศึกษา
@@ -200,7 +200,7 @@ CREATE TABLE applications (
   email            text,
   school_top_level text,               -- สถานศึกษาเปิดสอนถึงระดับสูงสุด: p6, m3, m6, voc, highvoc, bachelor
   next_faculty     text,
-  next_pvs_type    text,
+  next_pvs_type    text,               -- ปวส. ที่จะเรียนปีหน้า: industry / other
   next_school_text text,               -- ย้ายไปศึกษาต่อที่ (ถ้าทราบ)
   cont_since_class text,               -- ทุนต่อเนื่อง: ได้รับทุนครั้งแรกตอนเรียนชั้น (เช่น ม.1)
   cont_years       smallint,           -- รวมกี่ปี

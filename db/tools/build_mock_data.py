@@ -291,8 +291,8 @@ def main():
         nxt = rng.choice(NEXT[cur])
         bachelor = group == 'bachelor'
         higher = group in ('voc', 'highvoc', 'bachelor')
-        pvs = rng.choice(['industry', 'business', 'other']) if group == 'highvoc' else None
-        next_pvs = rng.choice(['industry', 'business', 'other']) if nxt.startswith('ปวส') and group != 'highvoc' else None
+        pvs = rng.choice(['industry', 'other']) if group == 'highvoc' else None
+        next_pvs = rng.choice(['industry', 'other']) if nxt.startswith('ปวส') and group != 'highvoc' else None
         rate = rate_of(nxt, pvs or next_pvs)
         age = AGE[cur]
         birth = date(2026 - age, 1, 1) + timedelta(days=rng.randint(0, 364))

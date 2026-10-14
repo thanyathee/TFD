@@ -130,7 +130,7 @@ function applicantSections(s, o = {}) {
       <div><dt>สถานศึกษา</dt><dd>${esc(sc.name || '-')}</dd></div><div><dt>พื้นที่</dt><dd>${esc(this.regionName(sc.region))} / จังหวัด${esc(sc.province || '')} / ${esc(sc.district || '')}</dd></div>
       <div><dt>ระดับชั้นปัจจุบัน</dt><dd>${esc(s.class || '-')}</dd></div>
       ${s.faculty ? `<div><dt>คณะ / สาขา</dt><dd>${esc(s.faculty)}${s.program_years ? ` · หลักสูตร ${esc(s.program_years)} ปี` : ''}</dd></div>` : ''}
-      ${s.pvs_type ? `<div><dt>ประเภทวิชา</dt><dd>${esc(lab(PVS_TYPES, s.pvs_type))}</dd></div>` : ''}
+      ${s.pvs_type ? `<div><dt>ปวส. ประเภทวิชาอุตสาหกรรม</dt><dd>${s.pvs_type === 'industry' ? 'ใช่' : 'ไม่ใช่'}</dd></div>` : ''}
       ${s.study_mode ? `<div><dt>รูปแบบการเรียน</dt><dd>${esc(lab(STUDY_MODES_PAPER, s.study_mode))}${s.study_mode_other ? ' — ' + esc(s.study_mode_other) : ''}</dd></div>` : ''}
       <div><dt>ปีหน้าศึกษาต่อระดับชั้น</dt><dd>${esc(s.next_class || '-')}${s.next_faculty ? ' · ' + esc(s.next_faculty) : ''}</dd></div>
       <div><dt>สถานศึกษาปีหน้า</dt><dd>${s.school_next === 'same' ? 'ศึกษาต่อสถานศึกษาเดิม' : s.school_next === 'transfer' ? `<span class="badge t-warn">ย้ายสถานศึกษาใหม่</span>${s.next_school_text ? ' ไป ' + esc(s.next_school_text) : ''}<div class="small muted">ส่งหลักฐานการย้าย: ${transferDeadlineText.call(this, s)}</div>` : '-'}</dd></div>

@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v12';
+const STORE_KEY = 'tfd-scholarship-demo-v13';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -38,7 +38,8 @@ const NEXT_BRANCH = {'ม.3': ['ม.4', 'ปวช.1'], 'ม.6': ['ปวส.1',
   'ปวส.2': ['ปริญญาตรี ปี 1', 'ปริญญาตรี ปี 3']};
 const nextOptions = c => NEXT_BRANCH[c] || (NEXT_NORMAL[c] ? [NEXT_NORMAL[c]] : []);
 const groupOfClass = c => (Object.entries(CLASS_GROUPS).find(([, l]) => l.includes(c)) || [''])[0];
-const PVS_TYPES = [['industry', 'อุตสาหกรรม'], ['business', 'บริหารธุรกิจ'], ['other', 'อื่น ๆ']];
+/* ปวส.: ถามแค่ว่าเป็นประเภทวิชาอุตสาหกรรมหรือไม่ (อุตสาหกรรมใช้อัตราทุนต่างจาก ปวส. ทั่วไป) */
+const PVS_TYPES = [['industry', 'ใช่ — ประเภทวิชาอุตสาหกรรม'], ['other', 'ไม่ใช่ — ประเภทวิชาอื่น']];
 const STUDY_MODES = [['regular', 'ภาคปกติ'], ['special', 'ภาคพิเศษ (เรียนวันเสาร์–อาทิตย์ / ภาคค่ำ)'],
   ['dual', 'ทวิภาคี (เรียนและฝึกงานตามหลักสูตร)'], ['other', 'อื่น ๆ']];
 /* อัตราทุนอ้างอิงระดับชั้นปีที่ได้รับทุน (ปีถัดไป) — v14 */

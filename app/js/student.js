@@ -160,7 +160,7 @@ function classFields(v, e = {}) {
       ${field('faculty', 'คณะ / สาขา', input('faculty', v.faculty, 'placeholder="เช่น ช่างยนต์ / การบัญชี / พยาบาลศาสตร์"'), {req: 1, err: e.faculty})}
       ${field('program_years', 'หลักสูตร (ปี)', select('program_years', ['2', '3', '4', '5', '6'], v.program_years, 'กรุณาเลือก'), {req: 1, err: e.program_years, hint: 'เฉพาะผู้ขอรับทุนที่กำลังศึกษาอยู่ในระดับ ปวช., ปวส. หรือปริญญาตรี'})}
     </div>
-    ${g === 'highvoc' ? field('pvs_type', 'ประเภทวิชา (ปวส.)', select('pvs_type', PVS_TYPES, v.pvs_type, 'กรุณาเลือก'), {req: 1, err: e.pvs_type, hint: 'ปวส. สาขาอุตสาหกรรมใช้อัตราทุนต่างจาก ปวส. ทั่วไป'}) : ''}
+    ${g === 'highvoc' ? field('pvs_type', 'เรียน ปวส. ประเภทวิชาอุตสาหกรรมหรือไม่', select('pvs_type', PVS_TYPES, v.pvs_type, 'กรุณาเลือก'), {req: 1, err: e.pvs_type, hint: 'เช่น ช่างยนต์ ช่างไฟฟ้า อิเล็กทรอนิกส์ ช่างกลโรงงาน ก่อสร้าง · สายบัญชี การตลาด ท่องเที่ยว คหกรรม ฯลฯ ให้เลือก “ไม่ใช่”'}) : ''}
     ${radioField('study_mode', 'รูปแบบการเรียน', STUDY_MODES_PAPER, v.study_mode, {req: 1, err: e.study_mode, col: 1})}
     <div data-when="study_mode=other">${field('study_mode_other', 'ระบุรูปแบบการเรียน', input('study_mode_other', v.study_mode_other), {err: e.study_mode_other})}</div>` : ''}`;
 }
@@ -174,7 +174,7 @@ function nextFields(v, e = {}) {
         {req: 1, err: e.next_class, hint: 'ระบบคำนวณให้ในกรณีทั่วไป ส่วน ม.3 / ม.6 / ปวช.3 / ปวส.2 ให้เลือกเอง'})}
       ${nextHigher ? field('next_faculty', 'คณะ / สาขา (ปีหน้า)', input('next_faculty', v.next_faculty, 'placeholder="ถ้าทราบแล้ว"')) : ''}
     </div>
-    ${/^ปวส/.test(next) && v.group !== 'highvoc' ? field('next_pvs_type', 'ประเภทวิชา ปวส. ที่จะศึกษา', select('next_pvs_type', PVS_TYPES, v.next_pvs_type, 'กรุณาเลือก', 'data-onchange="student-next"'), {req: 1, err: e.next_pvs_type}) : ''}
+    ${/^ปวส/.test(next) && v.group !== 'highvoc' ? field('next_pvs_type', 'ปวส. ที่จะเรียนเป็นประเภทวิชาอุตสาหกรรมหรือไม่', select('next_pvs_type', PVS_TYPES, v.next_pvs_type, 'กรุณาเลือก', 'data-onchange="student-next"'), {req: 1, err: e.next_pvs_type, hint: 'เช่น ช่างยนต์ ช่างไฟฟ้า อิเล็กทรอนิกส์ ช่างกลโรงงาน ก่อสร้าง · สายบัญชี การตลาด ท่องเที่ยว คหกรรม ฯลฯ ให้เลือก “ไม่ใช่”'}) : ''}
 `;
 }
 App.on('student-class', function (el) {
@@ -588,10 +588,10 @@ App.on('student-step', function (form, ev) {
     need('group', 'กรุณาเลือกช่วงชั้น');
     need('class', 'กรุณาเลือกระดับชั้น');
     if (higher) { need('faculty'); need('program_years', 'กรุณาเลือก'); need('study_mode', 'กรุณาเลือกรูปแบบการเรียน'); }
-    if (g === 'highvoc') need('pvs_type', 'กรุณาเลือกประเภทวิชา');
+    if (g === 'highvoc') need('pvs_type', 'กรุณาเลือกว่าเป็นประเภทวิชาอุตสาหกรรมหรือไม่');
     if (v.study_mode === 'other') need('study_mode_other', 'กรุณาระบุรูปแบบการเรียน');
     need('next_class', 'กรุณาเลือกระดับชั้นปีหน้า');
-    if (/^ปวส/.test(v.next_class) && g !== 'highvoc') need('next_pvs_type', 'กรุณาเลือกประเภทวิชา');
+    if (/^ปวส/.test(v.next_class) && g !== 'highvoc') need('next_pvs_type', 'กรุณาเลือกว่าเป็นประเภทวิชาอุตสาหกรรมหรือไม่');
     need('school_next', 'กรุณาเลือกคำตอบ');
     if (v.school_next === 'transfer' && !v.transfer_ack) e.transfer_ack = 'กรุณารับทราบเงื่อนไขการส่งหลักฐานการย้ายสถานศึกษา';
     if (s.type === 'CONT') { need('cont_since'); need('cont_years'); }
