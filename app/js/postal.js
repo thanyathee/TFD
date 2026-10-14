@@ -770,7 +770,7 @@ App.on('p-open', function (el) { this.pKeepForm(); this.session.pSearch = false;
 
 App.pHead = function (sc, sub, lot) {
   return `<div class="a4-head"><span class="a4-logo">TF</span><div><b>มูลนิธิทิสโก้ เพื่อการกุศล</b><span>ใบสมัครทุนการศึกษาทางไปรษณีย์ · ปีการศึกษา ${this.db.cycle.year}</span></div>
-    <div class="cv-hs"><b class="cv-code">เลขที่ ${this.pCode(lot)}</b><span>${sub}</span></div></div>`;
+    <div class="cv-hs"><b class="cv-code">เลขที่ ${this.pCode(lot)}</b></div></div>`;
 };
 /* ใบที่ 1: ใบสรุปใบสมัครของสถานศึกษา */
 App.pCoverHtml = function (id) {
@@ -827,7 +827,7 @@ App.pListHtml = function (id) {
   };
   const hd = (t, gt, n) => `<div class="a4-head cv-lhead"><span class="a4-logo">TF</span>
     <div><b>${esc(sc.name)} · จังหวัด${esc(sc.province)} · ${esc(this.regionName(sc.region))}</b></div>
-    <div class="cv-hs"><b class="cv-code">เลขที่ ${this.pCode(id)}</b>${t ? `<div class="cv-grp"><span class="cv-t cv-t-${t}">${TYPE[t]}</span><span class="cv-lv">${gt}</span></div><span class="cv-n">${n} ราย</span>` : ''}</div></div>`;
+    <div class="cv-hs">${t ? `<div class="cv-grp"><b class="cv-code">เลขที่ ${this.pCode(id)}</b><span class="cv-t cv-t-${t}">${TYPE[t]}</span><span class="cv-lv">${gt}</span></div><span class="cv-n">${n} ราย</span>` : `<b class="cv-code">เลขที่ ${this.pCode(id)}</b>`}</div></div>`;
   const ft = (page, by) => `<div class="cv-foot"><span>${by ? `บันทึกโดย ${esc(by)}` : ''}</span><span>${page}</span></div>`;
   if (!groups.length) return `<div class="paper a4 land cover cv-list">${hd('', '', 0)}<p class="c">— ยังไม่มีรายชื่อที่บันทึก —</p></div>`;
   /* นับแผ่นแยกตามกลุ่ม เช่น ทุนต่อเนื่อง ม.ปลาย แผ่นที่ 1 / 1 */

@@ -779,3 +779,4 @@ h1 .pf-lot{font-size:15px;padding:3px 12px}
 .pf-afind{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;gap:10px 14px;align-items:end}
 @media (max-width:640px){.pf-afind{grid-template-columns:1fr}}
 .cv-code{font-size:16px!important;border:1.5px solid #000;border-radius:6px;padding:1px 8px;margin-bottom:2px;display:inline-block}
+.cv-grp .cv-code{margin:0 4px 0 0;font-size:16px!important;padding:3px 10px;line-height:1.4}
