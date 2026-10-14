@@ -498,3 +498,20 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .af .lv-row{grid-template-columns:120px 1fr}
 @media (max-width:900px){.af-main{grid-template-columns:1fr 1fr}.af-main>.field:first-child{grid-column:1/-1}.af-main>.btn{grid-column:1/-1}.af-grid{grid-template-columns:1fr 1fr}}
 @media (min-width:901px){.af .lv-grid{grid-template-columns:1fr 1fr;column-gap:16px}}
+/* ประกาศรายชื่อผู้ได้รับทุน */
+.ann{display:block;padding:28px}
+.ann h3{font-size:19px;line-height:1.5;margin-bottom:14px}
+.ann-sum{display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start;margin-bottom:18px}
+.ann-total{background:#eef3fb;border-radius:10px;padding:14px 16px;display:grid;gap:2px}
+.ann-total span{font-size:13px;color:#555}.ann-total b{font-size:24px;color:#0055b8}.ann-total small{color:#555}
+.ann table{width:100%;border-collapse:collapse}
+.ann th,.ann td{border:1px solid #ccc;padding:5px 8px;text-align:left}
+.ann th{background:#eef3fb}.ann .r{text-align:right}.ann .n{width:56px;text-align:center}
+.ann tfoot td{font-weight:700;background:#f6f8fb}
+.ann-region{margin:20px 0 4px;padding:6px 10px;background:#0055b8;color:#fff;border-radius:6px;font-size:16px}
+.ann-prov{margin:12px 0 4px;font-size:15px;color:#0055b8;border-bottom:2px solid #dfe8f5;padding-bottom:2px}
+.ann-school{margin:10px 0 4px}
+.ann-type td{background:#f6f8fb;font-weight:700;color:#333}
+.ann-tbl td:nth-child(3),.ann-tbl th:nth-child(3){width:120px}.ann-tbl td:nth-child(4),.ann-tbl th:nth-child(4){width:120px}
+@media (max-width:700px){.ann{padding:16px}.ann-sum{grid-template-columns:1fr}}
+@media print{.ann{padding:0}.ann-region{-webkit-print-color-adjust:exact;print-color-adjust:exact}.ann-tbl tr{break-inside:avoid}.ann-prov,.ann-school{break-after:avoid}}

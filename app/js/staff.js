@@ -35,7 +35,7 @@ App.staffNav = function () {
   return [['staff-dash', 'Dashboard'],
     ['staff-apps', 'ใบสมัคร', ['staff-app']], ['staff-transfer', 'ย้ายสถานศึกษา']]
     /* สถานศึกษา/ครู, รอบรับสมัคร, รายงาน/Export, PDPA และผู้ใช้งาน: เฉพาะแอดมินระบบ */
-    .concat(this.session.staffRole === 'admin' ? [['staff-schools', 'สถานศึกษา/ครู', ['staff-school']], ['staff-cycle', 'รอบรับสมัคร'], ['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA'], ['staff-users', 'ผู้ใช้งาน', ['staff-user']]] : []);
+    .concat(this.session.staffRole === 'admin' ? [['staff-schools', 'สถานศึกษา/ครู', ['staff-school']], ['staff-cycle', 'รอบรับสมัคร'], ['staff-announce', 'ประกาศรายชื่อ'], ['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA'], ['staff-users', 'ผู้ใช้งาน', ['staff-user']]] : []);
 };
 /* สลับบทบาทสำหรับทดลอง (เหมือนปุ่มบทบาทใน v14) */
 App.roleBar = function () {
@@ -48,7 +48,7 @@ App.staffList = function () { return this.db.staffUsers || STAFF.map(u => ({...u
 App.on('staff-role', function (el) {
   const u = this.staffList().find(s => s.role === el.dataset.role && s.active !== false) || STAFF.find(s => s.role === el.dataset.role);
   Object.assign(this.session, {staff: u.username, staffRole: u.role, name: u.name, who: `${u.name} · ${ROLE[u.role][0]}`});
-  if (u.role !== 'admin' && (['staff-schools', 'staff-cycle', 'staff-reports', 'staff-pdpa', 'staff-users', 'staff-user'].includes(this.view.name) || (this.view.name === 'staff-school' && !this.view.params.back))) { this.go('staff-dash'); return; }
+  if (u.role !== 'admin' && (['staff-schools', 'staff-cycle', 'staff-announce', 'staff-reports', 'staff-pdpa', 'staff-users', 'staff-user'].includes(this.view.name) || (this.view.name === 'staff-school' && !this.view.params.back))) { this.go('staff-dash'); return; }
   this.render();
 });
 
@@ -1012,4 +1012,71 @@ App.on('lv-group', function (el) {
 App.on('lv-class', function (el) {
   const all = [...el.form.querySelectorAll(`[name=f_classes][data-g="${el.dataset.g}"]`)];
   el.form.querySelector(`[data-group="${el.dataset.g}"]`).checked = all.every(x => x.checked);
+});
+
+/* ---------- ประกาศรายชื่อผู้ได้รับทุน (เฉพาะแอดมินระบบ) ----------
+   ลำดับ: ภาค → จังหวัด (ก-ฮ) → สถานศึกษา (ก-ฮ) → ทุนต่อเนื่องก่อน แล้วทุนใหม่ → ชั้น (ป.6 → ป.ตรี) → หญิงก่อนชาย → ชื่อ (ก-ฮ)
+   ลำดับที่นับต่อเนื่องทั้งประกาศ · ชั้น = ชั้นในปีที่ได้รับทุน */
+const CLASS_ORDER = Object.values(CLASS_GROUPS).flat();
+const ANN_LEVELS = [['ประถม (ป.6)', c => c === 'ป.6'], ['ม.ต้น', c => /^ม\.[123]$/.test(c)], ['ม.ปลาย', c => /^ม\.[456]$/.test(c)],
+  ['ปวช.', c => /^ปวช/.test(c)], ['ปวส.', c => /^ปวส/.test(c)], ['ปริญญาตรี', c => /^ปริญญาตรี/.test(c)]];
+App.announceData = function () {
+  const th = (a, b) => (a || '').localeCompare(b || '', 'th');
+  const regionOrder = this.data.geo.regions.map(r => r.code);
+  const list = this.db.students.filter(s => s.decision && s.decision.result === 'approved')
+    .map(s => ({s, sc: this.schoolById[s.school] || {}, cls: s.next_class || s.class, amt: s.decision.approved_amount || 0}));
+  list.sort((a, b) => regionOrder.indexOf(a.sc.region) - regionOrder.indexOf(b.sc.region) || th(a.sc.province, b.sc.province) || th(a.sc.name, b.sc.name)
+    || (a.s.type === b.s.type ? 0 : a.s.type === 'CONT' ? -1 : 1) || CLASS_ORDER.indexOf(a.cls) - CLASS_ORDER.indexOf(b.cls)
+    || (a.s.gender === b.s.gender ? 0 : a.s.gender === 'หญิง' ? -1 : 1) || th(a.s.first_name, b.s.first_name));
+  list.forEach((x, i) => { x.no = i + 1; });
+  return list;
+};
+App.views['staff-announce'] = function () {
+  { const deny = adminOnly.call(this); if (deny) return deny; }
+  const list = this.announceData();
+  const total = list.reduce((a, x) => a + x.amt, 0);
+  const lv = ANN_LEVELS.map(([t, test]) => { const g = list.filter(x => test(x.cls)); return [t, g.length, g.reduce((a, x) => a + x.amt, 0)]; });
+  /* จัดกลุ่ม ภาค → จังหวัด → สถานศึกษา → ประเภททุน */
+  const groups = [];
+  list.forEach(x => {
+    let r = groups[groups.length - 1];
+    if (!r || r.code !== x.sc.region) groups.push(r = {code: x.sc.region, provs: []});
+    let p = r.provs[r.provs.length - 1];
+    if (!p || p.name !== x.sc.province) r.provs.push(p = {name: x.sc.province, schools: []});
+    let c = p.schools[p.schools.length - 1];
+    if (!c || c.id !== x.sc.id) p.schools.push(c = {id: x.sc.id, name: x.sc.name, district: x.sc.district, types: []});
+    let t = c.types[c.types.length - 1];
+    if (!t || t.type !== x.s.type) c.types.push(t = {type: x.s.type, rows: []});
+    t.rows.push(x);
+  });
+  this._annCsv = [['ลำดับ', 'ภาค', 'จังหวัด', 'สถานศึกษา', 'ประเภททุน', 'ชั้น', 'เพศ', 'ชื่อ–นามสกุล', 'จำนวนเงิน (บาท)']]
+    .concat(list.map(x => [x.no, this.regionName(x.sc.region), x.sc.province, x.sc.name, TYPE[x.s.type], x.cls, x.s.gender, fullName(x.s), x.amt]));
+  return {nav: this.staffNav(), html: `${this.roleBar()}
+    <div class="page-head no-print"><div><h1>ประกาศรายชื่อผู้ได้รับทุน</h1><p class="sub">เฉพาะผู้ที่ผู้จัดการอนุมัติทุนแล้ว · ปีการศึกษา ${this.db.cycle.year}</p></div>
+      <div class="row"><button class="btn" data-action="announce-export">Export Excel</button><button class="btn primary" data-action="print">${icon('print')} พิมพ์ / PDF</button></div></div>
+    <div class="ann paper">
+      <h3>ประกาศรายชื่อผู้ได้รับทุนการศึกษา มูลนิธิทิสโก้ เพื่อการกุศล<br>ปีการศึกษา ${this.db.cycle.year}</h3>
+      <section class="ann-sum">
+        <div class="ann-total"><span>จำนวนเงินทุนทั้งหมด</span><b>${baht(total)}</b><small>${list.length} ทุน</small></div>
+        <table><thead><tr><th>ระดับชั้น</th><th class="r">จำนวน (ทุน)</th><th class="r">จำนวนเงิน</th></tr></thead>
+          <tbody>${lv.map(r => `<tr><td>${r[0]}</td><td class="r">${r[1]}</td><td class="r">${baht(r[2])}</td></tr>`).join('')}</tbody>
+          <tfoot><tr><td>รวม</td><td class="r">${list.length}</td><td class="r">${baht(total)}</td></tr></tfoot></table>
+      </section>
+      ${groups.length ? groups.map(r => `<h4 class="ann-region">${esc(this.regionName(r.code))}</h4>${r.provs.map(p => `
+        <h5 class="ann-prov">จังหวัด${esc(p.name)}</h5>${p.schools.map(c => `
+          <div class="ann-school"><b>${esc(c.name)}</b> <span class="muted small">${esc(c.district || '')}</span></div>
+          <table class="ann-tbl"><thead><tr><th class="n">ลำดับ</th><th>ชื่อ–นามสกุล</th><th>ชั้น</th><th class="r">จำนวนเงิน</th></tr></thead><tbody>
+          ${c.types.map(t => `<tr class="ann-type"><td colspan="4">${TYPE[t.type]}</td></tr>${t.rows.map(x => `<tr><td class="n">${x.no}</td><td>${esc(fullName(x.s))}</td><td>${esc(x.cls)}</td><td class="r">${baht(x.amt)}</td></tr>`).join('')}`).join('')}
+          </tbody></table>`).join('')}`).join('')}`).join('') : '<p class="empty">ยังไม่มีผู้ได้รับอนุมัติทุน</p>'}
+    </div>`};
+};
+App.on('announce-export', function () {
+  const csv = '﻿' + (this._annCsv || []).map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
+    a.download = `announce-${this.db.cycle.year}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+  } catch (e) { /* ดาวน์โหลดไม่ได้ในหน้าต่างนี้ */ }
+  this.toast('สร้างไฟล์ CSV (เปิดด้วย Excel ได้)');
 });
