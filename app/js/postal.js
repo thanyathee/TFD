@@ -719,7 +719,9 @@ App.views['post-schools'] = pNeedLogin(function (p) {
   const db = this.P();
   const f = p.f || {};
   const role = this.session.pRole;
-  const ids = Object.keys(db.batches).filter(id => this.pSc(id) && this.pLotUsed(id) && this.pSees(id)).sort((a, b) => this.pLotSort(a, b));
+  /* แก้ไขล่าสุดอยู่บนสุด — กลับมาทำต่อได้ง่าย */
+  const ids = Object.keys(db.batches).filter(id => this.pSc(id) && this.pLotUsed(id) && this.pSees(id))
+    .sort((a, b) => (db.batches[b].updated || '').localeCompare(db.batches[a].updated || ''));
   let rows = ids.map(id => ({id, sc: this.pSc(id), st: this.pStatus(id), c: this.pCounts(id), b: db.batches[id]}));
   if (f.q) rows = rows.filter(r => r.sc.name.includes(f.q) || r.sc.province.includes(f.q));
   if (f.st) rows = rows.filter(r => r.st === f.st);
@@ -737,12 +739,13 @@ App.views['post-schools'] = pNeedLogin(function (p) {
       ${field('st', 'สถานะ', select('st', Object.entries(P_STATUS).map(([k, [t]]) => [k, t]), f.st, 'ทุกสถานะ'))}
       ${role === 'clerk' ? '' : field('by', 'ผู้บันทึก', select('by', clerks.map(u => [u.username, u.name]), f.by, 'ทุกคน'))}
       <div class="field"><span class="label">&nbsp;</span><button class="btn" type="submit">ค้นหา</button></div></form>
-    ${tbl([{t: '#'}, {t: 'โรงเรียน'}, {t: 'ใหม่', r: 1}, {t: 'ต่อเนื่อง', r: 1}, {t: 'รวม', r: 1}, {t: 'สถานะ'}, {t: 'ผู้บันทึก'}, {t: ''}],
-      rows.map((r, i) => [i + 1, `<b>${esc(r.sc.name)}</b> <br><span class="small muted">จ.${esc(r.sc.province)} · บันทึก ${this.pLotDate(r.id)}</span>`, r.c.total.NEW, r.c.total.CONT,
-        `<b>${r.c.total.NEW + r.c.total.CONT}</b>`, pBadge(r.st), esc(this.pUser(r.b.by).name || '—'),
+    ${tbl([{t: '#'}, {t: 'โรงเรียน'}, {t: 'ใหม่', r: 1}, {t: 'ต่อเนื่อง', r: 1}, {t: 'รวม', r: 1}, {t: 'สถานะ'}, {t: 'แก้ไขล่าสุด'}].concat(role === 'clerk' ? [] : [{t: 'ผู้บันทึก'}], [{t: ''}]),
+      rows.map((r, i) => [i + 1, `<b>${esc(r.sc.name)}</b><br><span class="small muted">จ.${esc(r.sc.province)}</span>`, r.c.total.NEW, r.c.total.CONT,
+        `<b>${r.c.total.NEW + r.c.total.CONT}</b>`, pBadge(r.st), `<span class="nw">${r.b.updated ? thDate(r.b.updated, true) : '—'}</span>`]
+        .concat(role === 'clerk' ? [] : [esc(this.pUser(r.b.by).name || '—')], [
         `<div class="row nowrap"><button class="btn sm" data-go="post-cover" data-id="${r.id}">${icon('print')} ใบปะหน้า</button>
           ${role !== 'manager' && this.pCanEdit(r.id) ? `<button class="btn sm" data-action="p-open" data-id="${r.id}">${r.b.done ? 'เปิดดู / แก้ไข' : 'บันทึกต่อ'}</button>` : ''}
-          ${role !== 'clerk' && r.c.entered ? `<button class="btn sm" data-go="post-approve" data-id="${r.id}">อนุมัติ</button>` : ''}</div>`]))}`};
+          ${role !== 'clerk' && r.c.entered ? `<button class="btn sm" data-go="post-approve" data-id="${r.id}">อนุมัติ</button>` : ''}</div>`])))}`};
 });
 App.on('p-sch-filter', function (form) { this.go('post-schools', {f: formData(form)}); });
 App.on('p-open', function (el) { this.pKeepForm(); this.session.pSearch = false; this.pPref().lot = el.dataset.id; this.pSave(); this.go('post-form'); });

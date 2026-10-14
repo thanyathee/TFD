@@ -720,3 +720,4 @@ h1 .pf-lot{font-size:15px;padding:3px 12px}
 .pf-picked span.pf-lot{font-size:12px;color:var(--brand);background:var(--surface)}
 .pf-done{margin:10px 0 8px;padding:10px 12px;border-radius:12px;background:var(--fill);border:2px solid transparent}
 .pf-done.on{background:var(--ok-soft);border-color:var(--ok)}
+.tbl .nw{white-space:nowrap}
