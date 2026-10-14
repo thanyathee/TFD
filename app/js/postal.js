@@ -936,8 +936,8 @@ App.views['post-approve'] = pNeedLogin(function (p) {
   const row = e => {
     const r = this.pRate(e);
     const d = e.decision;
-    const base = `<td class="n">${++no}</td><td><span class="pa-id">${esc(e.cid)}</span><b>${esc(pName(e))}</b></td>
-      <td><span class="nw">${esc(e.cls)} → ${esc(e.next_class)}</span>${e.faculty || e.pvs_type ? `<small>${esc(e.faculty || '')}${e.pvs_type ? ` (${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]})` : ''}</small>` : ''}</td>
+    const base = `<td class="n">${++no}</td><td><span class="pa-id">${esc(e.cid)}</span><b class="pa-name">${esc(pName(e))}</b></td>
+      <td><span class="pa-cls">${esc(e.cls)}</span><span class="pa-cls">→ ${esc(e.next_class)}</span>${e.faculty || e.pvs_type ? `<small>${esc(e.faculty || '')}${e.pvs_type ? ` (${PVS_TYPES.find(x => x[0] === e.pvs_type)[1]})` : ''}</small>` : ''}</td>
       <td class="nw">${e.gpa_before ? `${esc(e.gpa_before)} → ` : ''}<b>${esc(e.gpa || '—')}</b></td>`;
     const note = e.note ? `<small class="pa-note">หมายเหตุ: ${esc(e.note)}</small>` : '';
     const main = e.type === 'CONT'

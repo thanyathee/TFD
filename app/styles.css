@@ -862,3 +862,8 @@ h1 .pf-lot{font-size:15px;padding:3px 12px}
   .pa-tbl tr.pa-r-reserve{box-shadow:inset 4px 0 0 var(--warn)}
   .pa-tbl tr.pa-r-rejected,.pa-tbl tr.pa-r-ineligible{box-shadow:inset 4px 0 0 var(--bad)}
 }
+.pa-cls{display:block;white-space:normal}
+.pa-name{display:block;font-size:17px;font-weight:700;line-height:1.45;color:var(--ink)}
+.pa-tbl th:nth-child(3){width:155px}
+.pa-tbl .pa-cls{white-space:nowrap}
+@media (max-width:900px){.pa-tbl .pa-cls{display:inline;margin-right:6px}}
