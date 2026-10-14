@@ -913,17 +913,32 @@ App.views['post-approve'] = pNeedLogin(function (p) {
     const f = p.f || {};
     const q = (f.q || '').trim();
     /* แสดงเฉพาะชุดที่ จนท. บันทึกครบแล้ว (ชุดที่ยังบันทึกอยู่ ผจก. ยังไม่ต้องเห็น) */
-    const ids = [...new Set(db.entries.map(e => e.lot))].filter(id => this.pSc(id) && (this.pLot(id).done || this.pLocked(id)))
+    const all = [...new Set(db.entries.map(e => e.lot))].filter(id => this.pSc(id) && (this.pLot(id).done || this.pLocked(id)));
+    const firstAt = id => this.pLot(id).created || this.pEntriesOf(id).map(e => e.at).sort()[0] || '';
+    /* เรียง: เลขที่ (น้อย → มาก) · วันที่บันทึก (ล่าสุดก่อน / เก่าสุดก่อน) */
+    const SORTS = {code: (a, b) => a.localeCompare(b), new: (a, b) => firstAt(b).localeCompare(firstAt(a)), old: (a, b) => firstAt(a).localeCompare(firstAt(b))};
+    const ids = all
       .filter(id => !q || this.pCode(id).includes(q) || this.pFindCode(q) === id || this.pSc(id).name.includes(q) || this.pSc(id).province.includes(q))
+      .filter(id => !f.region || this.pSc(id).region === f.region)
+      .filter(id => !f.province || this.pSc(id).province === f.province)
       .filter(id => !f.st || this.pStatus(id) === f.st)
-      .sort((a, b) => this.pLotSort(a, b));
+      .sort(SORTS[f.sort] || SORTS.code);
+    const used = all.map(id => this.pSc(id));
+    const regions = this.data.geo.regions.filter(r => used.some(s => s.region === r.code)).map(r => [r.code, r.name]);
+    const provs = [...new Set(used.filter(s => !f.region || s.region === f.region).map(s => s.province))].sort((a, b) => a.localeCompare(b, 'th'));
     const rows = ids.map(id => { const es = this.pEntriesOf(id); return {id, n: es.length, wait: es.filter(e => !e.decision).length, st: this.pStatus(id)}; });
     return {nav: this.pNav(), html: `${this.pRoleBar()}
       <div class="page-head"><div><h1>อนุมัติทุน (ทางไปรษณีย์)</h1><p class="sub">คีย์เลขที่ใบปะหน้า (มุมขวาบนของใบปะหน้า) หรือชื่อโรงเรียน แล้วพิจารณาทีละคน${can ? '' : ' · แอดมินดูได้อย่างเดียว'}</p></div></div>
       <form class="card pf-afind" data-submit="p-approve-find">
         ${field('q', 'เลขที่ใบปะหน้า / ชื่อโรงเรียน', input('q', f.q, 'placeholder="เช่น 70-0006 หรือ 6" autocomplete="off"'), {err: p.err})}
-        ${field('st', 'สถานะ', select('st', Object.entries(P_MGR_LABEL).map(([k, [t]]) => [k, t]), f.st, 'ทุกสถานะ', 'data-onchange="p-approve-st"'))}
-        <div class="field"><span class="label">&nbsp;</span><button class="btn primary" type="submit">ค้นหา</button></div></form>
+        <div class="field"><span class="label">&nbsp;</span><button class="btn primary" type="submit">ค้นหา</button></div>
+        <div class="pf-afilters">
+          ${field('region', 'ภาค', select('region', regions, f.region, 'ทุกภาค', 'data-onchange="p-approve-st"'))}
+          ${field('province', 'จังหวัด', select('province', provs, f.province, 'ทุกจังหวัด', 'data-onchange="p-approve-st"'))}
+          ${field('st', 'สถานะ', select('st', Object.entries(P_MGR_LABEL).map(([k, [t]]) => [k, t]), f.st, 'ทุกสถานะ', 'data-onchange="p-approve-st"'))}
+          ${field('sort', 'เรียงตาม', select('sort', [['code', 'เลขที่ใบปะหน้า'], ['new', 'วันที่บันทึก (ล่าสุดก่อน)'], ['old', 'วันที่บันทึก (เก่าสุดก่อน)']], f.sort || 'code', null, 'data-onchange="p-approve-st"'))}
+        </div></form>
+      <p class="small muted">พบ ${rows.length} ใบปะหน้า</p>
       <div class="pf-stbl pf-atbl">${tbl([{t: 'เลขที่'}, {t: 'โรงเรียน'}, {t: 'ผู้บันทึก'}, {t: 'ผู้พิจารณา'}, {t: 'บันทึกแล้ว', r: 1}, {t: 'รอพิจารณา', r: 1}, {t: 'สถานะ'}, {t: ''}],
         rows.map(r => [`<b class="pf-code">${this.pCode(r.id)}</b>`, `<span class="pf-sname"><b>${esc(this.pSc(r.id).name)}</b><span class="small muted">จ.${esc(this.pSc(r.id).province)} · บันทึก ${this.pLotDate(r.id)}</span></span>`, `<span class="nw">${esc(this.pUser(this.pOwner(r.id)).name)}</span>`,
           (rv => rv.length ? rv.map(u => `<span class="nw pa-rv">${esc(this.pUser(u).name)}</span>`).join('') : '<span class="muted">—</span>')([...new Set(this.pEntriesOf(r.id).filter(e => e.decision).map(e => e.decision.by))]), r.n,
@@ -993,7 +1008,11 @@ App.on('p-approve-find', function (form) {
   if (lot && this.pEntriesOf(lot).length) { this.go('post-approve', {f, err: 'ชุดนี้ จนท. ยังบันทึกไม่ครบ'}); return; }
   this.go('post-approve', {f, err: /^[\d\s-]+$/.test(f.q || '') ? 'ไม่พบเลขที่ใบปะหน้านี้' : ''});
 });
-App.on('p-approve-st', function (el) { this.go('post-approve', {f: formData(el.form)}); });
+App.on('p-approve-st', function (el) {
+  const f = formData(el.form);
+  if (el.name === 'region') f.province = '';
+  this.go('post-approve', {f});
+});
 App.on('p-decide', function (el) {
   if (this.session.pRole !== 'manager') return;
   const e = this.P().entries.find(x => x.id === el.dataset.id);

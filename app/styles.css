@@ -776,7 +776,7 @@ h1 .pf-lot{font-size:15px;padding:3px 12px}
 /* เลขที่ใบปะหน้า */
 .pf-code{font-variant-numeric:tabular-nums;letter-spacing:.3px;white-space:nowrap}
 .pf-code.lg{display:inline-block;font-size:14px;font-weight:700;color:var(--brand);background:var(--brand-soft);border-radius:8px;padding:3px 10px;margin-bottom:6px}
-.pf-afind{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;gap:10px 14px;align-items:end}
+.pf-afind{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;align-items:end}
 @media (max-width:640px){.pf-afind{grid-template-columns:1fr}}
 .cv-code{font-size:16px!important;border:1.5px solid #000;border-radius:6px;padding:1px 8px;margin-bottom:2px;display:inline-block}
 .cv-grp .cv-code{margin:0 4px 0 0;font-size:16px!important;padding:3px 10px;line-height:1.4}
@@ -920,3 +920,5 @@ body:has(.pa-page) .topbar-in,body:has(.pa-page) .tabs{max-width:1440px}
   .pf-atbl .tbl td:nth-child(5),.pf-atbl .tbl td:nth-child(6){font-size:13px;color:var(--ink-2)}
   .pf-atbl .tbl td:nth-child(7){flex-basis:auto}
 }
+.pf-afilters{grid-column:1 / -1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 14px}
+@media (max-width:760px){.pf-afilters{grid-template-columns:1fr 1fr}}
