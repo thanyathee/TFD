@@ -311,14 +311,14 @@ App.views['staff-apps'] = function (p) {
     </form>
     <p class="small muted">พบ ${rows.length} รายการ — เลือกสถานะการดำเนินงานและผลการพิจารณาแยกกันได้</p>
     <div class="tlist app-list" role="table" aria-label="รายชื่อใบสมัคร">
-      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>ชื่อ–นามสกุล</span><span>สถานะ</span><span>สถานศึกษา</span><span>ชั้น</span><span>ประเภททุน</span><span>รอบ</span></div>
+      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>ชื่อ–นามสกุล</span><span>สถานศึกษา</span><span>ชั้น</span><span>ประเภททุน</span><span>สถานะ</span><span>รอบ</span></div>
       ${rows.length ? rows.map((s, i) => { const sc = this.schoolById[s.school] || {};
         return `<button class="trow" role="row" data-go="staff-app" data-code="${s.code}">
           <span class="n">${i + 1}</span>
-          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}${s.loan === 'yes' ? ' · กู้ กยศ.' : ''}${s.school_next === 'transfer' ? ' · ย้ายสถานศึกษา' : ''}<span class="m-only"> · ${esc(s.class || '-')} · ${TYPE[s.type]}${s.round ? ' · รอบ ' + s.round : ''}</span></small></span>
-          <span class="c-status">${badge(s)}</span>
+          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}${s.loan === 'yes' ? ' · กู้ กยศ.' : ''}${s.school_next === 'transfer' ? ' · ย้ายสถานศึกษา' : ''}<span class="m-only"> · ${esc(shortCls(s.class) || '-')} · ${TYPE[s.type]}${s.round ? ' · รอบ ' + s.round : ''}</span></small></span>
           <span class="c-school">${esc(sc.name || '-')}<small>จ.${esc(sc.province || '')} · ${esc(this.regionName(sc.region))}</small></span>
-          <span class="c-class">${esc(s.class || '-')}</span><span class="c-type">${TYPE[s.type]}</span><span class="c-round">${s.round ? s.round : '—'}</span></button>`; }).join('')
+          <span class="c-class">${esc(shortCls(s.class) || '-')}</span><span class="c-type">${TYPE[s.type]}</span>
+          <span class="c-status">${badge(s)}</span><span class="c-round">${s.round ? s.round : '—'}</span></button>`; }).join('')
         : '<div class="empty">ไม่พบใบสมัครตามเงื่อนไข</div>'}
     </div>`};
 };
