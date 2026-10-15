@@ -398,10 +398,10 @@ App.views['staff-app'] = function (p) {
           : `<p class="small muted">${s.group === 'bachelor' ? 'ระดับปริญญาตรีส่งตรงถึงมูลนิธิฯ ไม่ผ่านครู' : 'ครูยังไม่ได้ดำเนินการ'}</p>`}</section>
         <section class="card"><h3>7. ประวัติสถานะใบสมัคร</h3>${(s.history || []).length ? `<ol class="timeline">${s.history.map(h =>
           `<li class="done">${esc(h.text)}<small>${thDate(h.at, true)}</small></li>`).join('')}</ol>` : '<p class="small muted">ยังไม่มีประวัติ</p>'}</section>
-        <section class="card"><h3>8. เอกสารแนบ</h3><div>${docsFor(s).map(([code, name, , opt]) => { const fl = files[code] || [];
+        <section class="card" id="docs-card"><h3>8. เอกสารแนบ</h3><div id="doc-rows">${docsFor(s).map(([code, name, , opt]) => { const fl = files[code] || [];
           return `<div class="doc-row"><div><div>${code} — ${name}</div><div class="code">${fl.length ? esc(fl.length > 1 ? fl.length + ' ไฟล์' : fl[0]) : opt ? 'ไม่มี (ไม่บังคับ)' : 'ยังไม่ได้แนบ'}</div></div>
-            ${fl.length ? `<button class="btn sm" type="button" data-action="preview" data-k="${code}:0">Preview</button>` : ''}</div>`; }).join('')}</div></section>
-      </div>${pvViewer(s, files)}</div>
+            ${fl.length ? `<button class="btn sm" type="button" data-action="preview" data-k="${code}:0">Preview</button>` : ''}</div>`; }).join('')}</div>${pvViewer(s, files)}</section>
+      </div></div>
       <aside class="stack rv-side" id="rv-side"><section class="card"><div class="rv-sheet-head"><h3>${ROLE[role][0]}</h3><button class="btn sm rv-close" type="button" data-action="rv-sheet">ปิด</button></div>${panel}</section>${pvsFixCard.call(this, s, role)}</aside>
     </div>
     <div class="rv-bar"><span>${ROLE[role][0]}</span><button class="btn primary sm" type="button" data-action="rv-sheet">${role === 'admin' ? 'ดูสรุปผล' : role === 'manager' ? 'บันทึกผลพิจารณา' : 'เขียนความเห็น'}</button></div>
@@ -448,8 +448,8 @@ function pvMock(s, code, name, fname, i) {
 function pvViewer(s, files) {
   const docs = docsFor(s);
   const total = docs.reduce((n, [code]) => n + (files[code] || []).length, 0);
-  return `<section class="card pv" id="pv" hidden>
-    <div class="pv-top"><button class="btn sm" type="button" data-action="pv-close">${icon('back')} กลับไปดูข้อมูลใบสมัคร</button>
+  return `<div class="pv" id="pv" hidden>
+    <div class="pv-top"><button class="btn sm" type="button" data-action="pv-close">${icon('back')} ปิดตัวดูไฟล์</button>
       <span class="small muted">ดูแล้ว <b id="pv-seen">0</b> / ${total} ไฟล์</span></div>
     <div class="pv-body">
       <nav class="pv-list" aria-label="เอกสารแนบ">${docs.map(([code, name, , opt]) => { const fl = files[code] || [];
@@ -462,9 +462,9 @@ function pvViewer(s, files) {
         <div class="pv-stage" id="pv-stage"><img id="pv-img" alt=""></div>
         <div class="row pv-tools"><button class="btn sm" type="button" data-action="pv-zoom" data-d="-1">ซูม −</button><button class="btn sm" type="button" data-action="pv-zoom" data-d="1">ซูม +</button>
           <button class="btn sm" type="button" data-action="pv-rot">หมุน</button><button class="btn sm" type="button" data-action="pv-tab">เปิดแท็บใหม่</button></div></div>
-    </div></section>`;
+    </div></div>`;
 }
-const PV = {z: 1, r: 0, y: 0};
+const PV = {z: 1, r: 0};
 /* พอดีกรอบก่อน แล้วค่อยซูม */
 function pvApply() {
   const img = document.getElementById('pv-img'), st = document.getElementById('pv-stage'); if (!img || !img.naturalWidth) return;
@@ -476,11 +476,10 @@ function pvApply() {
 }
 App.on('preview', function (el) {
   const pv = document.getElementById('pv'); if (!pv) return;
-  PV.y = window.scrollY;
-  document.getElementById('rv-info').hidden = true; pv.hidden = false;
+  document.getElementById('doc-rows').hidden = true; pv.hidden = false;
   const th = pv.querySelector(`.pv-th[data-k="${el.dataset.k}"]`) || pv.querySelector('.pv-th');
   if (th) this.handlers['pv-pick'].call(this, th);
-  pvTop(pv);
+  pvTop(document.getElementById('docs-card'));
 });
 function pvTop(pv) {
   window.scrollTo(0, Math.max(0, pv.getBoundingClientRect().top + window.scrollY - (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tb-h')) || 0) - 12));
@@ -496,9 +495,9 @@ App.on('pv-pick', function (el) {
   PV.z = 1; PV.r = 0; const img = document.getElementById('pv-img'); img.onload = pvApply; if (img.complete) pvApply();
   document.getElementById('pv-stage').scrollTo(0, 0);
 });
-App.on('pv-grid', function () { const pv = document.getElementById('pv'); pv.classList.remove('pv-one'); pvTop(pv); });
+App.on('pv-grid', function () { const pv = document.getElementById('pv'); pv.classList.remove('pv-one'); pvTop(document.getElementById('docs-card')); });
 App.on('pv-close', function () {
-  document.getElementById('pv').hidden = true; document.getElementById('rv-info').hidden = false; window.scrollTo(0, PV.y);
+  document.getElementById('pv').hidden = true; document.getElementById('doc-rows').hidden = false; pvTop(document.getElementById('docs-card'));
 });
 App.on('pv-zoom', function (el) { PV.z = Math.min(3, Math.max(.5, PV.z + (+el.dataset.d) * .25)); pvApply(); });
 App.on('pv-rot', function () { PV.r = (PV.r + 90) % 360; pvApply(); });
