@@ -957,3 +957,14 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
 .home-tag.on{background:var(--brand-soft);color:var(--brand)}
 .home-tag.post{background:var(--warn-soft);color:var(--warn)}
 .roles-extra{margin-top:0}
+/* ย้ายสถานศึกษา: กว้างขึ้น · แยกช่องชั้นปีนี้ / ชั้นปีหน้า */
+.tr-list .tlist-head,.tr-list .trow{grid-template-columns:56px minmax(180px,1.1fr) minmax(220px,1.5fr) 120px minmax(220px,1.5fr) 140px 170px}
+.tr-list .c-cls .cls,.tr-list .c-ncls .cls{margin:0}
+@media (max-width:900px){
+  .tr-list .trow{grid-template-areas:"n name" "n from" "n cls" "n to" "n ncls" "n round"}
+  .tr-list .c-cls{grid-area:cls;font-size:13px}.tr-list .c-ncls{grid-area:ncls;font-size:13px}
+  .tr-list .c-cls::before{content:"ชั้นปีนี้ ";color:var(--muted)}
+  .tr-list .c-ncls::before{content:"ชั้นปีหน้า ";color:var(--muted)}
+  .tr-list .c-cls,.tr-list .c-ncls{display:flex;gap:6px;align-items:center}
+  .tr-list .c-ncls small{display:inline}
+}

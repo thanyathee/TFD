@@ -477,7 +477,7 @@ App.views['staff-transfer'] = function (p) {
     .sort((a, b) => th(side(a).province || '', side(b).province || '') || th(side(a).name || '', side(b).name || '') || th(a.code, b.code));
   const classes = Object.values(CLASS_GROUPS).flat().filter(c => base.some(s => s.class === c));
   const nDone = base.filter(s => lastTr(s.code)).length;
-  const sch = (x, cls, extra = '') => x ? `<b class="sch">${esc(x.name || '-')} <span class="cls">${esc(cls || '-')}</span></b><small>${esc(x.district || '')} · จ.${esc(x.province || '')}${extra}</small>` : '';
+  const sch = (x, extra = '') => x ? `<b class="sch">${esc(x.name || '-')}</b><small>${esc(x.district || '')} · จ.${esc(x.province || '')}${extra}</small>` : '';
   return {nav: this.staffNav(), html: `${this.roleBar()}
     <div class="page-head"><div><h1>ย้ายสถานศึกษา</h1><p class="sub">บันทึกว่านักเรียนย้ายไปเรียนที่ไหน หลังเจ้าหน้าที่ตรวจหลักฐานการย้ายภายนอกระบบแล้ว</p></div></div>
     <div class="stats">${[['todo', 'ยังไม่บันทึกที่เรียนใหม่', base.length - nDone], ['done', 'บันทึกแล้ว', nDone], ['all', 'แจ้งย้ายทั้งหมด', base.length]].map(([k, t, n]) =>
@@ -500,15 +500,17 @@ App.views['staff-transfer'] = function (p) {
       </div>
     </section>
     <div class="small muted">พบ <b>${list.length}</b> คน · กดที่รายชื่อเพื่อบันทึกหรือแก้ไข · นักเรียนที่ไม่ได้ติ๊กย้ายแต่ย้ายจริง พิมพ์รหัสผู้สมัครในช่องค้นหา</div>
-    <div class="tlist tr-list" role="table" aria-label="นักเรียนแจ้งย้ายสถานศึกษา">
-      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>ชื่อ–นามสกุล</span><span>สถานศึกษาเดิม</span><span>สถานศึกษาใหม่</span><span>รอบ</span></div>
+    <div class="tlist tr-list pf-widepage" role="table" aria-label="นักเรียนแจ้งย้ายสถานศึกษา">
+      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>ชื่อ–นามสกุล</span><span>สถานศึกษาเดิม</span><span>ชั้นปีนี้</span><span>สถานศึกษาใหม่</span><span>ชั้นปีหน้า</span><span>รอบ</span></div>
       ${list.length ? list.map((s, i) => { const t = lastTr(s.code), rd = transferRound.call(this, s, t);
         return `<button class="trow" role="row" data-go="staff-transfer" data-code="${s.code}">
           <span class="n">${i + 1}</span>
           <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}</small></span>
-          <span class="c-from">${sch(origin(s), s.class)}</span>
-          <span class="c-to">${t ? sch(dest(s), t.cls || s.next_class, ` · แจ้ง ${thDate(t.date)}`)
-            : `<span class="badge t-warn">ยังไม่บันทึก</span> <span class="cls">${esc(s.next_class || '-')}</span>${s.next_school_text ? `<small>นักเรียนแจ้ง: ${esc(s.next_school_text)}</small>` : ''}`}</span>
+          <span class="c-from">${sch(origin(s))}</span>
+          <span class="c-cls"><span class="cls">${esc(s.class || '-')}</span></span>
+          <span class="c-to">${t ? sch(dest(s), ` · แจ้ง ${thDate(t.date)}`)
+            : `<span class="badge t-warn">ยังไม่บันทึก</span>${s.next_school_text ? `<small>นักเรียนแจ้ง: ${esc(s.next_school_text)}</small>` : ''}`}</span>
+          <span class="c-ncls"><span class="cls">${esc((t && t.cls) || s.next_class || '-')}</span>${t ? '' : '<small>นักเรียนแจ้ง</small>'}</span>
           <span class="c-round"><span class="badge ${rd.r === 1 ? 't-info' : 't-violet'}">รอบ ${rd.r}${rd.pending ? '*' : ''}</span><small>${esc(rd.why)}</small></span></button>`; }).join('')
         : '<div class="empty">ไม่พบนักเรียนตามเงื่อนไขนี้</div>'}
     </div>
