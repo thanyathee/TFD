@@ -460,8 +460,8 @@ App.on('staff-decide', function (form) {
 /* ---------- ย้ายสถานศึกษา ---------- */
 /* รอบพิจารณาของนักเรียนที่ย้าย: ป.6 / ม.3 ที่ส่งหลักฐานภายในวันตัดรอบแรก → รอบ 1, นอกนั้น → รอบ 2 */
 function transferRound(s, t) {
-  if (!['ป.6', 'ม.3'].includes(s.class)) return {r: 2, why: 'ระดับชั้นนี้พิจารณารอบที่ 2'};
-  if (!t) return {r: 1, why: `ถ้าส่งหลักฐานภายใน ${thDate(this.db.cycle.first_cutoff)}`, pending: true};
+  if (!['ป.6', 'ม.3'].includes(s.class)) return {r: 2, why: ''};
+  if (!t) return {r: 1, why: '', pending: true};
   return t.date <= this.db.cycle.first_cutoff ? {r: 1, why: `ส่งหลักฐาน ${thDate(t.date)}`} : {r: 2, why: `ส่งหลักฐานหลัง ${thDate(this.db.cycle.first_cutoff)}`};
 }
 App.views['staff-transfer'] = function (p) {
@@ -522,7 +522,7 @@ App.views['staff-transfer'] = function (p) {
           <span class="c-to">${t ? sch(dest(s), ` · แจ้ง ${thDate(t.date)}`)
             : `<span class="badge t-warn">ยังไม่บันทึก</span>${s.next_school_text ? `<small>นักเรียนแจ้ง: ${esc(s.next_school_text)}</small>` : ''}`}</span>
           <span class="c-ncls"><span class="cls">${esc((t && t.cls) || s.next_class || '-')}</span>${t ? '' : '<small>นักเรียนแจ้ง</small>'}</span>
-          <span class="c-round"><span class="badge ${rd.r === 1 ? 't-info' : 't-violet'}">รอบ ${rd.r}${rd.pending ? '*' : ''}</span><small>${esc(rd.why)}</small></span></button>`; }).join('')
+          <span class="c-round"><span class="badge ${rd.r === 1 ? 't-info' : 't-violet'}">รอบ ${rd.r}${rd.pending ? '*' : ''}</span>${rd.why ? `<small>${esc(rd.why)}</small>` : ''}</span></button>`; }).join('')
         : '<div class="empty">ไม่พบนักเรียนตามเงื่อนไขนี้</div>'}
     </div>
     <p class="tiny muted">* ป.6 / ม.3 ที่ยังไม่บันทึก: ได้รอบ 1 ถ้าส่งหลักฐานภายใน ${thDate(this.db.cycle.first_cutoff)} ถ้าส่งหลังจากนั้นถึง ${thDate(this.db.cycle.transfer_close)} เป็นรอบ 2</p>`,
