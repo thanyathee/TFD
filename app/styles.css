@@ -970,3 +970,4 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
 }
 .app-list .tlist-head,.app-list .trow{grid-template-columns:56px minmax(200px,1.5fr) minmax(220px,1.7fr) 90px 100px minmax(190px,1fr) 56px}
 .app-list .c-class{white-space:nowrap}
+.app-list .loan-self{color:var(--bad);font-weight:700}

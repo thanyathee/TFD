@@ -31,6 +31,17 @@ const ACTIVITY = [
 ];
 const SCHOOL_TYPES = [['school', 'โรงเรียน'], ['college', 'วิทยาลัย'], ['university', 'มหาวิทยาลัย'], ['other', 'อื่น ๆ']];
 
+/* กู้ยืม กยศ./กรอ. (หน้าใบสมัคร): แยกผู้ขอทุนกู้เอง กับ พี่น้องกู้ */
+function loanKind(s) {
+  if (s.loan !== 'yes') return 'no';
+  return (s.loans || []).some(x => x.who === 'self') ? 'self' : 'sibling';
+}
+function loanLabel(s) {
+  const k = loanKind(s);
+  if (k === 'no') return '';
+  const funds = [...new Set((s.loans || []).filter(x => k === 'self' ? x.who === 'self' : true).map(x => x.fund || 'กยศ.'))].join('/') || 'กยศ.';
+  return k === 'self' ? ` · <b class="loan-self">ผู้ขอทุนกู้ ${esc(funds)}</b>` : ` · พี่น้องกู้ ${esc(funds)}`;
+}
 App.staffNav = function () {
   return [['staff-dash', 'Dashboard'],
     ['staff-apps', 'ใบสมัคร', ['staff-app']], ['staff-transfer', 'ย้ายสถานศึกษา']]
@@ -268,7 +279,7 @@ App.appFilter = function (f) {
   return this.db.students.filter(s => {
     const sc = this.schoolById[s.school] || {};
     return WORK_TEST[f.work || 'all'](s) && (!f.result || (s.decision && s.decision.result === f.result))
-      && (!f.round || String(s.round || '') === f.round) && (!f.loan || s.loan === f.loan) && (!f.type || s.type === f.type)
+      && (!f.round || String(s.round || '') === f.round) && (!f.loan || loanKind(s) === f.loan) && (!f.type || s.type === f.type)
       && (!f.move || s.school_next === f.move) && (!f.rate || (f.rate === 'special') === this.stdRate(s).special)
       && (!f.region || sc.region === f.region) && (!f.province || sc.province === f.province) && (!f.district || sc.district === f.district)
       && (!f.school || s.school === f.school) && (!f.classes || !f.classes.length || f.classes.includes(s.class))
@@ -293,7 +304,7 @@ App.views['staff-apps'] = function (p) {
       <details class="af-more" ${nAdv ? 'open' : ''}><summary>ตัวกรองเพิ่มเติม${nAdv ? ` <span class="badge t-info">${nAdv}</span>` : ''}</summary>
       <div class="af-grid">
         ${field('f_round', 'รอบพิจารณา', select('f_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], f.round, 'ทั้งหมด'))}
-        ${field('f_loan', 'กยศ./กรอ.', select('f_loan', [['no', 'ไม่กู้'], ['yes', 'กู้ / ไม่เข้าเกณฑ์']], f.loan, 'ทั้งหมด'))}
+        ${field('f_loan', 'กยศ./กรอ.', select('f_loan', [['no', 'ไม่กู้'], ['self', 'ผู้ขอทุนกู้'], ['sibling', 'พี่น้องกู้ (ผู้ขอทุนไม่กู้)']], f.loan, 'ทั้งหมด'))}
         ${field('f_type', 'ประเภททุน', select('f_type', [['NEW', 'ทุนใหม่'], ['CONT', 'ทุนต่อเนื่อง']], f.type, 'ทั้งหมด'))}
         ${field('f_rate', 'อัตราทุน', select('f_rate', [['normal', 'อัตราปกติ'], ['special', 'อัตราพิเศษ']], f.rate, 'ทั้งหมด'))}
         ${field('f_move', 'สถานศึกษาปีหน้า', select('f_move', [['transfer', 'ย้ายสถานศึกษา'], ['same', 'เรียนต่อที่เดิม']], f.move, 'ทั้งหมด'))}
@@ -315,7 +326,7 @@ App.views['staff-apps'] = function (p) {
       ${rows.length ? rows.map((s, i) => { const sc = this.schoolById[s.school] || {};
         return `<button class="trow" role="row" data-go="staff-app" data-code="${s.code}">
           <span class="n">${i + 1}</span>
-          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}${s.loan === 'yes' ? ' · กู้ กยศ.' : ''}${s.school_next === 'transfer' ? ' · ย้ายสถานศึกษา' : ''}<span class="m-only"> · ${esc(shortCls(s.class) || '-')} · ${TYPE[s.type]}${s.round ? ' · รอบ ' + s.round : ''}</span></small></span>
+          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}${loanLabel(s)}${s.school_next === 'transfer' ? ' · ย้ายสถานศึกษา' : ''}<span class="m-only"> · ${esc(shortCls(s.class) || '-')} · ${TYPE[s.type]}${s.round ? ' · รอบ ' + s.round : ''}</span></small></span>
           <span class="c-school">${esc(sc.name || '-')}<small>จ.${esc(sc.province || '')} · ${esc(this.regionName(sc.region))}</small></span>
           <span class="c-class">${esc(shortCls(s.class) || '-')}</span><span class="c-type">${TYPE[s.type]}</span>
           <span class="c-status">${badge(s)}</span><span class="c-round">${s.round ? s.round : '—'}</span></button>`; }).join('')
