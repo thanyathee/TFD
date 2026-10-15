@@ -111,10 +111,10 @@ function applicantSections(s, o = {}) {
     if (!p) return '—';
     const head = `<b>${esc(p.name || '-')}</b>${p.age ? ` · ${esc(p.age)} ปี` : ''}${p.relation ? ` · ${esc(p.relation)}` : ''}${p.status ? ` · ${p.status === 'dead' ? 'ถึงแก่กรรม' : 'ยังมีชีวิตอยู่'}` : ''}`;
     if (p.status === 'dead') return head;
-    const occ = p.no_occ ? '<div class="small muted">ไม่มีอาชีพ / ไม่มีรายได้ / ไม่ทราบ</div>'
-      : (p.occs || []).map(x => `<div class="small">• ${esc(occText(x))}</div>`).join('');
-    return `${head}${occ}${p.workplace || p.work_province ? `<div class="small muted">ที่ทำงาน: ${esc(p.workplace || '')} ${p.work_province ? 'จ.' + esc(p.work_province) : ''}</div>` : ''}
-      ${p.no_occ ? '' : `<div class="small"><b>รวมประมาณ ${baht(personMonthly(p))} / เดือน</b></div>`}`;
+    const occ = p.no_occ ? '<div class="p-occ">ไม่มีอาชีพ / ไม่มีรายได้ / ไม่ทราบ</div>'
+      : (p.occs || []).map(x => `<div class="p-occ">• ${esc(occText(x))}</div>`).join('');
+    return `${head}${occ}${p.workplace || p.work_province ? `<div class="p-occ"><span class="muted">ที่ทำงาน:</span> ${esc(p.workplace || '')} ${p.work_province ? 'จ.' + esc(p.work_province) : ''}</div>` : ''}
+      ${p.no_occ ? '' : `<div class="p-occ"><b>รวมประมาณ ${baht(personMonthly(p))} / เดือน</b></div>`}`;
   };
   const total = personMonthly(f.father) + personMonthly(f.mother) + (f.live_with === 'guardian' ? personMonthly(f.guardian) : 0);
   const housing = lab(HOUSING_P, f.housing) + (f.housing_land_owner ? ` (ที่ดินของ ${f.housing_land_owner})` : '') + (f.housing_cost ? ` · ${baht(f.housing_cost)}/เดือน` : '') + (f.housing_other ? ` · ${f.housing_other}` : '');
@@ -143,16 +143,18 @@ function applicantSections(s, o = {}) {
     </dl></section>
     <section class="card"><h3>${n(3)}ข้อมูลครอบครัว</h3>
       <div class="note info small">รายได้รวมของผู้ปกครองประมาณ <b>${baht(total)} / เดือน</b> (ระบบคำนวณจากข้อมูลที่กรอก)</div>
-      <dl class="kv fam-kv${f.live_with === 'guardian' ? ' g6' : ''}">
+      <dl class="kv fam-kv">
         <div><dt>ความสัมพันธ์ในครอบครัว</dt><dd>${esc((f.relations || []).map(relLabel).join(', ') || '—')}</dd></div>
-        <div><dt>บิดา</dt><dd>${person('father', f.father)}</dd></div><div><dt>มารดา</dt><dd>${person('mother', f.mother)}</dd></div>
         <div><dt>อาศัยอยู่กับ</dt><dd>${esc(lab(LIVE_WITH, f.live_with))}</dd></div>
-        ${f.live_with === 'guardian' ? `<div><dt>ญาติ / ผู้อุปการะ</dt><dd>${person('guardian', f.guardian)}</dd></div>` : ''}
-        <div><dt>พี่น้อง</dt><dd>${sibs.length} คน${sibs.length ? ` (อยู่บ้านเดียวกัน ${sibs.length - movedCount(sibs) - outCount(sibs)} · แยกไปอยู่ข้างนอก ${outCount(sibs)} · แยกไปมีครอบครัว ${movedCount(sibs)})` : ''}</dd></div>
-        <div class="fam-sep" aria-hidden="true"></div><div><dt>สภาพที่อยู่ปัจจุบัน</dt><dd>${esc(housing)}</dd></div><div><dt>อุปกรณ์ในบ้าน</dt><dd>${esc(equip)}${f.equipment_note ? `<div class="muted small">${esc(f.equipment_note)}</div>` : ''}</dd></div>
+        <div class="fam-full"><dt>บิดา</dt><dd>${person('father', f.father)}</dd></div>
+        <div class="fam-full"><dt>มารดา</dt><dd>${person('mother', f.mother)}</dd></div>
+        ${f.live_with === 'guardian' ? `<div class="fam-full"><dt>ญาติ / ผู้อุปการะ</dt><dd>${person('guardian', f.guardian)}</dd></div>` : ''}
+        <div class="fam-full"><dt>พี่น้อง</dt><dd>${sibs.length} คน${sibs.length ? ` (อยู่บ้านเดียวกัน ${sibs.length - movedCount(sibs) - outCount(sibs)} · แยกไปอยู่ข้างนอก ${outCount(sibs)} · แยกไปมีครอบครัว ${movedCount(sibs)})` : ''}
+          ${sibs.length ? `<ol class="sib-list">${sibs.map(x => `<li><b>${esc(x.name || '-')}</b> ${esc(x.gender || '')} ${esc(sibAge(x))}
+            <div class="muted">${esc([(SIB_RES.find(r => r[0] === x.residence) || [, ''])[1], x.edu, x.occupation, x.place, x.note && `หมายเหตุ: ${x.note}`].filter(Boolean).join(' · ') || '—')}</div></li>`).join('')}</ol>` : ''}</dd></div>
+        <div class="fam-sep" aria-hidden="true"></div>
+        <div><dt>สภาพที่อยู่ปัจจุบัน</dt><dd>${esc(housing)}</dd></div><div><dt>อุปกรณ์ในบ้าน</dt><dd>${esc(equip)}${f.equipment_note ? `<div class="muted small">${esc(f.equipment_note)}</div>` : ''}</dd></div>
         <div><dt>ที่ดินทำกิน</dt><dd>${esc(land)}</dd></div></dl>
-      ${sibs.length ? `<details class="more"><summary>รายละเอียดพี่น้อง (${sibs.length})</summary><div>${sibs.map((x, i) => `<div class="small"><b>${i + 1}. ${esc(x.name || '-')}</b> ${esc(x.gender || '')} ${esc(sibAge(x))}
-        <div class="muted">${esc([(SIB_RES.find(r => r[0] === x.residence) || [, ''])[1], x.edu, x.occupation, x.place, x.note && `หมายเหตุ: ${x.note}`].filter(Boolean).join(' · ') || '—')}</div></div>`).join('')}</div></details>` : ''}
     </section>
     <section class="card"><h3>${n(4)}ข้อมูลเพิ่มเติม</h3><dl class="kv">
       <div><dt>ได้เงินมาใช้จ่ายวันละ</dt><dd>${baht(s.allowance)}</dd></div>
