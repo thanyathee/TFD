@@ -79,6 +79,7 @@ App.views['staff-entry'] = function (p) {
         ${this.staffList().filter(s => s.active !== false).map(s => `<button class="btn" data-action="staff-sample" data-u="${s.username}">${s.username} · ${ROLE[s.role][0]}</button>`).join('')}</aside>
     </div>`, after: focusFirstError};
 };
+App.on('rv-sheet', function () { document.body.classList.toggle('rv-open'); });
 App.on('staff-sample', function (el) { this.go('staff-entry', {values: {username: el.dataset.u, password: 'Demo@1234'}}); });
 App.on('staff-login', function (form) {
   const v = formData(form);
@@ -401,8 +402,10 @@ App.views['staff-app'] = function (p) {
           return `<div class="doc-row"><div><div>${code} — ${name}</div><div class="code">${fl.length ? esc(fl.length > 1 ? fl.length + ' ไฟล์' : fl[0]) : opt ? 'ไม่มี (ไม่บังคับ)' : 'ยังไม่ได้แนบ'}</div></div>
             ${fl.length ? `<button class="btn sm" type="button" data-action="preview">Preview</button>` : ''}</div>`; }).join('')}</div></section>
       </div>
-      <aside class="stack"><section class="card"><h3>${ROLE[role][0]}</h3>${panel}</section>${pvsFixCard.call(this, s, role)}</aside>
-    </div>`, after: focusFirstError};
+      <aside class="stack rv-side" id="rv-side"><section class="card"><div class="rv-sheet-head"><h3>${ROLE[role][0]}</h3><button class="btn sm rv-close" type="button" data-action="rv-sheet">ปิด</button></div>${panel}</section>${pvsFixCard.call(this, s, role)}</aside>
+    </div>
+    <div class="rv-bar"><span>${ROLE[role][0]}</span><button class="btn primary sm" type="button" data-action="rv-sheet">${role === 'admin' ? 'ดูสรุปผล' : role === 'manager' ? 'บันทึกผลพิจารณา' : 'เขียนความเห็น'}</button></div>
+    <div class="rv-dim" data-action="rv-sheet"></div>`, after: focusFirstError};
 };
 function reviewSummary(s) {
   const sr = s.staff_review, d = s.decision;

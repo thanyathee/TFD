@@ -201,6 +201,11 @@ const App = {
         <p class="small muted">${esc(err.message)}</p><div class="row"><button class="btn primary" data-action="reset">ล้างข้อมูลทดลอง</button><button class="btn" data-action="home">กลับหน้าแรก</button></div></section>`};
     }
     document.getElementById('topbar').innerHTML = this.topbar(out.nav);
+    /* แผ่นรีวิวบนมือถือ: เปิดค้างไว้ถ้ายังอยู่ใบสมัครเดิม (เช่น กดบันทึกแล้วมีช่องผิด) */
+    const rvKey = this.view.name + ':' + ((this.view.params || {}).code || '');
+    if (rvKey !== this._rvKey) document.body.classList.remove('rv-open');
+    this._rvKey = rvKey;
+    document.documentElement.style.setProperty('--tb-h', document.getElementById('topbar').offsetHeight + 'px');
     const duo = document.querySelector('.tabs.duo');
     if (duo) {
       /* แถบสีเริ่มที่ปุ่มเดิม แล้วเลื่อนไปปุ่มใหม่ */

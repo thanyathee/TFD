@@ -972,3 +972,20 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
 .app-list .c-class{white-space:nowrap}
 .app-list .loan-self{color:var(--bad);font-weight:700}
 .stories{display:grid;gap:12px}
+
+/* ---------- กล่อง จนท.รีวิว / ผจก. ลอยตามการเลื่อน ---------- */
+.rv-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rv-sheet-head h3{margin:0}
+.rv-close,.rv-bar,.rv-dim{display:none}
+@media (min-width:901px){
+  .rv-side{position:sticky;top:calc(var(--tb-h,64px) + 12px);max-height:calc(100vh - var(--tb-h,64px) - 24px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:2px 4px 8px;margin:-2px -4px 0}
+}
+@media (max-width:900px){
+  main:has(.rv-side){padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .rv-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 16px rgba(0,0,0,.08);font-weight:700}
+  .rv-side{position:fixed;left:0;right:0;bottom:0;z-index:50;max-height:85vh;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);padding:12px 12px calc(12px + env(safe-area-inset-bottom,0px));border-radius:20px 20px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18);transform:translateY(105%);transition:transform .25s ease;visibility:hidden}
+  .rv-open .rv-side{transform:none;visibility:visible}
+  .rv-open .rv-close{display:inline-flex}
+  .rv-open .rv-dim{display:block;position:fixed;inset:0;z-index:45;background:rgba(0,0,0,.35)}
+  .rv-open{overflow:hidden}
+}
