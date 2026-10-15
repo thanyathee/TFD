@@ -327,7 +327,7 @@ App.views['staff-apps'] = function (p) {
       ${rows.length ? rows.map((s, i) => { const sc = this.schoolById[s.school] || {};
         return `<button class="trow" role="row" data-go="staff-app" data-code="${s.code}">
           <span class="n">${i + 1}</span>
-          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}${loanLabel(s)}${s.school_next === 'transfer' ? ' · ย้ายสถานศึกษา' : ''}<span class="m-only"> · ${esc(shortCls(s.class) || '-')} · ${TYPE[s.type]}${s.round ? ' · รอบ ' + s.round : ''}</span></small></span>
+          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}${loanLabel(s)}${s.school_next === 'transfer' ? ' <span class="tag-move">ย้ายสถานศึกษา</span>' : ''}<span class="m-only"> · ${esc(shortCls(s.class) || '-')} · ${TYPE[s.type]}${s.round ? ' · รอบ ' + s.round : ''}</span></small></span>
           <span class="c-school">${esc(sc.name || '-')}<small>จ.${esc(sc.province || '')} · ${esc(this.regionName(sc.region))}</small></span>
           <span class="c-class">${esc(shortCls(s.class) || '-')}</span><span class="c-type">${TYPE[s.type]}</span>
           <span class="c-status">${badge(s)}</span><span class="c-round">${s.round ? s.round : '—'}</span></button>`; }).join('')
