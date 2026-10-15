@@ -1,5 +1,5 @@
 /* ระบบทุนการศึกษา — ชุดรูปแบบเดียวกันทุกบทบาท แนวแอปมือถือ: เรียบ อ่านง่าย ปุ่มใหญ่
-   Layout: แถบบน (แบรนด์ + ผู้ใช้) → เมนูแท็บเลื่อนได้ → เนื้อหากว้างสุด 1080px
+   Layout: แถบบน (แบรนด์ + ผู้ใช้) → เมนูแท็บเลื่อนได้ → เนื้อหากว้างสุด 1440px
    องค์ประกอบ: การ์ดขาวมุมมน ไม่มีเส้นขอบ, ช่องกรอกพื้นเทา, รายการแบบแถว (list row) */
 :root{
   --bg:#f3f4f7;
@@ -66,7 +66,7 @@ svg.ic{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-wid
 
 /* ---------- โครงหน้า ---------- */
 .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg)}
-.topbar-in{max-width:1080px;margin:0 auto;padding:12px 16px 8px;display:flex;align-items:center;gap:12px}
+.topbar-in{max-width:1440px;margin:0 auto;padding:12px 16px 8px;display:flex;align-items:center;gap:12px}
 .brand{display:flex;align-items:center;gap:10px;min-width:0;background:none;border:0;padding:0;cursor:pointer;color:inherit}
 .logo{flex:none;width:36px;height:36px;border-radius:11px;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-weight:700;font-size:14px;letter-spacing:.04em}
 .brand-text{display:grid;min-width:0;text-align:left;line-height:1.3}
@@ -75,11 +75,11 @@ svg.ic{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-wid
 .topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex:none}
 .whoami{text-align:right;line-height:1.3;max-width:220px;font-size:12.5px;color:var(--muted)}
 .whoami b{display:block;color:var(--ink);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tabs{max-width:1080px;margin:0 auto;padding:4px 16px 12px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.tabs{max-width:1440px;margin:0 auto;padding:4px 16px 12px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{flex:none;display:inline-flex;align-items:center;gap:6px;border:0;background:var(--surface);color:var(--ink-2);padding:8px 14px;border-radius:999px;font-weight:600;font-size:14.5px;cursor:pointer;white-space:nowrap;box-shadow:var(--shadow)}
 .tabs button[aria-current="page"]{background:var(--ink);color:var(--surface)}
-main{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:8px 80px;display:grid;gap:16px}
+main{max-width:1440px;margin:0 auto;padding-inline:16px;padding-block:8px 80px;display:grid;gap:16px}
 .page-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 16px;padding-top:8px}
 .page-head .sub{color:var(--muted);margin-top:4px}
 .back{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--brand);font-weight:600;padding:6px 0;cursor:pointer;justify-self:start}
@@ -356,7 +356,7 @@ details.more > div{padding-bottom:16px;display:grid;gap:10px}
 .tabs button:active{transform:translateY(0)}
 /* เมนูครู 2 ปุ่ม: กว้างเท่ากัน แถบสีวิ่งจากปุ่มหนึ่งไปอีกปุ่ม (รายชื่อ = ดำ, ใบสรุป ผอ. = แดง) */
 /* เมนู 2 ปุ่ม (นักเรียน / ครู): ปุ่มใหญ่ 2 ปุ่ม มีไอคอน — ปุ่มที่เลือก = พื้นน้ำเงิน, ปุ่มที่กดไปได้ = ขอบน้ำเงิน มีเงา */
-.tabs.duo{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:1080px;margin:0 auto;padding:4px 16px 14px;overflow:visible}
+.tabs.duo{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:1440px;margin:0 auto;padding:4px 16px 14px;overflow:visible}
 .tabs.duo .ind{display:none}
 .tabs.duo button{justify-content:center;gap:10px;min-height:52px;padding:10px 14px;border-radius:14px;font-size:16px;font-weight:700;
   background:var(--surface);color:var(--brand);border:2px solid var(--brand);box-shadow:0 2px 6px rgba(0,85,184,.15);transition:transform .15s,background-color .15s,box-shadow .15s}
