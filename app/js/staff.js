@@ -393,15 +393,15 @@ App.views['staff-app'] = function (p) {
       <div class="row">${badge(s)}${s.school_next === 'transfer' || this.db.transfers.some(t => t.code === s.code)
         ? `<button class="btn sm" data-go="staff-transfer" data-code="${s.code}">${this.db.transfers.some(t => t.code === s.code) ? 'ดู / แก้ไขการย้ายสถานศึกษา' : 'บันทึกการย้ายสถานศึกษา'}</button>` : ''}</div></div>
     <div class="split">
-      <div class="stack">${applicantSections.call(this, s, {numbered: true})}
+      <div class="rv-left"><div class="stack" id="rv-info">${applicantSections.call(this, s, {numbered: true})}
         <section class="card"><h3>6. ความคิดเห็นของครูผู้ดูแลทุน</h3>${tr ? `<p>${esc(tr.comment)}</p><p class="small">ผลการเรียน: ${gradeText(tr)}</p><p class="small muted">ส่งเมื่อ ${thDate(tr.sent_at, true)}</p>`
           : `<p class="small muted">${s.group === 'bachelor' ? 'ระดับปริญญาตรีส่งตรงถึงมูลนิธิฯ ไม่ผ่านครู' : 'ครูยังไม่ได้ดำเนินการ'}</p>`}</section>
         <section class="card"><h3>7. ประวัติสถานะใบสมัคร</h3>${(s.history || []).length ? `<ol class="timeline">${s.history.map(h =>
           `<li class="done">${esc(h.text)}<small>${thDate(h.at, true)}</small></li>`).join('')}</ol>` : '<p class="small muted">ยังไม่มีประวัติ</p>'}</section>
         <section class="card"><h3>8. เอกสารแนบ</h3><div>${docsFor(s).map(([code, name, , opt]) => { const fl = files[code] || [];
           return `<div class="doc-row"><div><div>${code} — ${name}</div><div class="code">${fl.length ? esc(fl.length > 1 ? fl.length + ' ไฟล์' : fl[0]) : opt ? 'ไม่มี (ไม่บังคับ)' : 'ยังไม่ได้แนบ'}</div></div>
-            ${fl.length ? `<button class="btn sm" type="button" data-action="preview">Preview</button>` : ''}</div>`; }).join('')}</div></section>
-      </div>
+            ${fl.length ? `<button class="btn sm" type="button" data-action="preview" data-k="${code}:0">Preview</button>` : ''}</div>`; }).join('')}</div></section>
+      </div>${pvViewer(s, files)}</div>
       <aside class="stack rv-side" id="rv-side"><section class="card"><div class="rv-sheet-head"><h3>${ROLE[role][0]}</h3><button class="btn sm rv-close" type="button" data-action="rv-sheet">ปิด</button></div>${panel}</section>${pvsFixCard.call(this, s, role)}</aside>
     </div>
     <div class="rv-bar"><span>${ROLE[role][0]}</span><button class="btn primary sm" type="button" data-action="rv-sheet">${role === 'admin' ? 'ดูสรุปผล' : role === 'manager' ? 'บันทึกผลพิจารณา' : 'เขียนความเห็น'}</button></div>
@@ -414,7 +414,101 @@ function reviewSummary(s) {
     ${d ? `<div><dt>ผลการพิจารณา</dt><dd>${badge(s)}</dd></div>${d.approved_amount ? `<div><dt>จำนวนเงินทุน</dt><dd>${baht(d.approved_amount)}${d.standard_amount && d.standard_amount !== d.approved_amount ? ` (มาตรฐาน ${baht(d.standard_amount)})` : ''}</dd></div>` : ''}
     ${d.reason ? `<div><dt>เหตุผล</dt><dd>${esc(d.reason)}</dd></div>` : ''}${d.note ? `<div><dt>หมายเหตุผู้จัดการ</dt><dd>${esc(d.note)}</dd></div>` : ''}` : ''}</dl>`;
 }
-App.on('preview', function () { this.toast('ต้นแบบ: ระบบจริงจะเปิดดูไฟล์เอกสารในหน้าต่างใหม่'); });
+/* ---------- ดูไฟล์เอกสารแนบ: รายการไฟล์ทั้งหมดด้านซ้าย จิ้มแล้วเปิดดู (กล่องรีวิวทางขวายังพิมพ์ได้) ---------- */
+function pvMock(s, code, name, fname, i) {
+  const t = x => String(x).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+  const font = `font-family="Google Sans,Tahoma,sans-serif"`;
+  let w = 600, h = 848, body;
+  if (code === '01_IDCARD') {
+    w = 856; h = 540;
+    body = `<rect x="20" y="20" width="816" height="500" rx="28" fill="#eef4fb" stroke="#9fb6d3" stroke-width="3"/>
+      <text x="60" y="90" ${font} font-size="30" font-weight="700" fill="#1d3b63">บัตรประจำตัวประชาชน</text>
+      <rect x="610" y="140" width="180" height="220" rx="10" fill="#cfd9e6"/><circle cx="700" cy="215" r="45" fill="#aebdd0"/><rect x="640" y="275" width="120" height="70" rx="35" fill="#aebdd0"/>
+      <text x="60" y="160" ${font} font-size="24" fill="#334">เลขประจำตัว ${t(s.cid || '-')}</text>
+      <text x="60" y="215" ${font} font-size="28" font-weight="700" fill="#111">${t(fullName(s))}</text>
+      ${[260, 300, 340, 380].map(y => `<rect x="60" y="${y}" width="${300 + (y % 7) * 20}" height="14" rx="7" fill="#c9d4e2"/>`).join('')}`;
+  } else if (code === '05_HOUSEPHOTO') {
+    w = 800; h = 600;
+    const sky = ['#cfe6f7', '#d9ecf3', '#e4eef8'][i % 3];
+    body = `<rect width="800" height="600" fill="${sky}"/><rect y="420" width="800" height="180" fill="#9cc58a"/>
+      <polygon points="${200 + i * 30},250 ${400 + i * 30},120 ${600 + i * 30},250" fill="#a5644b"/><rect x="${230 + i * 30}" y="250" width="340" height="190" fill="#e9d8b9"/>
+      <rect x="${370 + i * 30}" y="320" width="60" height="120" fill="#7b5137"/><rect x="${260 + i * 30}" y="290" width="70" height="60" fill="#8fb6d8"/><rect x="${470 + i * 30}" y="290" width="70" height="60" fill="#8fb6d8"/>
+      <text x="24" y="580" ${font} font-size="20" fill="#234">รูปถ่ายสภาพบ้าน ${i + 1}</text>`;
+  } else {
+    const lines = Array.from({length: 16}, (_, k) => `<rect x="60" y="${250 + k * 32}" width="${480 - ((k * 37 + i * 11) % 160)}" height="12" rx="6" fill="#d7dde6"/>`).join('');
+    body = `<rect width="600" height="848" fill="#fff"/><rect x="250" y="40" width="100" height="100" rx="50" fill="#e3e8ef"/>
+      <text x="300" y="185" text-anchor="middle" ${font} font-size="22" font-weight="700" fill="#222">${t(name.length > 34 ? name.slice(0, 34) + '…' : name)}</text>
+      <text x="300" y="218" text-anchor="middle" ${font} font-size="16" fill="#666">${t(fullName(s))}</text>${lines}
+      <rect x="380" y="770" width="160" height="2" fill="#999"/><text x="460" y="800" text-anchor="middle" ${font} font-size="14" fill="#666">ลงชื่อ / ตราประทับ</text>`;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><rect width="${w}" height="${h}" fill="#f4f6f9"/>${body}
+    <text x="${w - 14}" y="24" text-anchor="end" font-family="monospace" font-size="13" fill="#99a">${t(fname)}</text></svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+function pvViewer(s, files) {
+  const docs = docsFor(s);
+  const total = docs.reduce((n, [code]) => n + (files[code] || []).length, 0);
+  return `<section class="card pv" id="pv" hidden>
+    <div class="pv-top"><button class="btn sm" type="button" data-action="pv-close">${icon('back')} กลับไปดูข้อมูลใบสมัคร</button>
+      <span class="small muted">ดูแล้ว <b id="pv-seen">0</b> / ${total} ไฟล์</span></div>
+    <div class="pv-body">
+      <nav class="pv-list" aria-label="เอกสารแนบ">${docs.map(([code, name, , opt]) => { const fl = files[code] || [];
+        return `<div class="pv-doc${fl.length ? '' : ' missing'}"><div class="pv-dname"><b>${code.slice(0, 2)}</b> ${esc(name)}</div>
+          ${fl.length ? `<div class="pv-thumbs">${fl.map((f, i) => { const src = pvMock(s, code, name, f, i);
+            return `<button type="button" class="pv-th" data-action="pv-pick" data-k="${code}:${i}" data-src="${src}" data-title="${esc(code.slice(0, 2) + ' ' + name + (fl.length > 1 ? ` (${i + 1}/${fl.length})` : ''))}" data-f="${esc(f)}" title="${esc(f)}"><img src="${src}" alt="" loading="lazy"><span class="pv-ok" aria-hidden="true">✓</span></button>`; }).join('')}</div>`
+            : `<div class="small muted">${opt ? 'ไม่มี (ไม่บังคับ)' : 'ยังไม่ได้แนบ'}</div>`}</div>`; }).join('')}</nav>
+      <div class="pv-main"><button class="btn sm pv-back" type="button" data-action="pv-grid">${icon('back')} ไฟล์ทั้งหมด</button>
+        <div class="pv-title"><b id="pv-title"></b><span class="code" id="pv-f"></span></div>
+        <div class="pv-stage" id="pv-stage"><img id="pv-img" alt=""></div>
+        <div class="row pv-tools"><button class="btn sm" type="button" data-action="pv-zoom" data-d="-1">ซูม −</button><button class="btn sm" type="button" data-action="pv-zoom" data-d="1">ซูม +</button>
+          <button class="btn sm" type="button" data-action="pv-rot">หมุน</button><button class="btn sm" type="button" data-action="pv-tab">เปิดแท็บใหม่</button></div></div>
+    </div></section>`;
+}
+const PV = {z: 1, r: 0, y: 0};
+/* พอดีกรอบก่อน แล้วค่อยซูม */
+function pvApply() {
+  const img = document.getElementById('pv-img'), st = document.getElementById('pv-stage'); if (!img || !img.naturalWidth) return;
+  const side = PV.r % 180 !== 0, nw = side ? img.naturalHeight : img.naturalWidth, nh = side ? img.naturalWidth : img.naturalHeight;
+  const fit = Math.min((st.clientWidth - 24) / nw, st.clientHeight > 200 && innerWidth > 900 ? (st.clientHeight - 24) / nh : Infinity);
+  img.style.width = Math.round(img.naturalWidth * fit * PV.z) + 'px';
+  img.style.transform = PV.r ? `rotate(${PV.r}deg)` : '';
+  img.style.margin = side ? `${Math.max(0, (img.naturalWidth - img.naturalHeight) * fit * PV.z / 2)}px auto` : 'auto';
+}
+App.on('preview', function (el) {
+  const pv = document.getElementById('pv'); if (!pv) return;
+  PV.y = window.scrollY;
+  document.getElementById('rv-info').hidden = true; pv.hidden = false;
+  const th = pv.querySelector(`.pv-th[data-k="${el.dataset.k}"]`) || pv.querySelector('.pv-th');
+  if (th) this.handlers['pv-pick'].call(this, th);
+  pvTop(pv);
+});
+function pvTop(pv) {
+  window.scrollTo(0, Math.max(0, pv.getBoundingClientRect().top + window.scrollY - (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tb-h')) || 0) - 12));
+}
+App.on('pv-pick', function (el) {
+  const pv = document.getElementById('pv');
+  pv.querySelectorAll('.pv-th.on').forEach(b => b.classList.remove('on'));
+  el.classList.add('on', 'seen'); pv.classList.add('pv-one');
+  document.getElementById('pv-img').src = el.dataset.src;
+  document.getElementById('pv-title').textContent = el.dataset.title;
+  document.getElementById('pv-f').textContent = el.dataset.f;
+  document.getElementById('pv-seen').textContent = pv.querySelectorAll('.pv-th.seen').length;
+  PV.z = 1; PV.r = 0; const img = document.getElementById('pv-img'); img.onload = pvApply; if (img.complete) pvApply();
+  document.getElementById('pv-stage').scrollTo(0, 0);
+});
+App.on('pv-grid', function () { const pv = document.getElementById('pv'); pv.classList.remove('pv-one'); pvTop(pv); });
+App.on('pv-close', function () {
+  document.getElementById('pv').hidden = true; document.getElementById('rv-info').hidden = false; window.scrollTo(0, PV.y);
+});
+App.on('pv-zoom', function (el) { PV.z = Math.min(3, Math.max(.5, PV.z + (+el.dataset.d) * .25)); pvApply(); });
+App.on('pv-rot', function () { PV.r = (PV.r + 90) % 360; pvApply(); });
+App.on('pv-tab', function () {
+  const img = document.getElementById('pv-img'), w = window.open('', '_blank');
+  if (!w) { this.toast('เบราว์เซอร์บล็อกการเปิดแท็บใหม่'); return; }
+  w.document.title = document.getElementById('pv-f').textContent;
+  w.document.body.style.cssText = 'margin:0;background:#333;display:flex;justify-content:center';
+  const im = w.document.createElement('img'); im.src = img.src; im.style.cssText = 'max-width:100%;height:auto'; w.document.body.appendChild(im);
+});
 App.on('manager-ui', function () {
   const dec = (document.querySelector('[name=m_decision]:checked') || {}).value;
   const amt = (document.querySelector('[name=m_amount]:checked') || {}).value;
