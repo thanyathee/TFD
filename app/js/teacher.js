@@ -143,14 +143,14 @@ function applicantSections(s, o = {}) {
     </dl></section>
     <section class="card"><h3>${n(3)}ข้อมูลครอบครัว</h3>
       <div class="note info small">รายได้รวมของผู้ปกครองประมาณ <b>${baht(total)} / เดือน</b> (ระบบคำนวณจากข้อมูลที่กรอก)</div>
-      <dl class="kv">
+      <dl class="kv fam-kv${f.live_with === 'guardian' ? ' g6' : ''}">
+        <div><dt>ความสัมพันธ์ในครอบครัว</dt><dd>${esc((f.relations || []).map(relLabel).join(', ') || '—')}</dd></div>
         <div><dt>บิดา</dt><dd>${person('father', f.father)}</dd></div><div><dt>มารดา</dt><dd>${person('mother', f.mother)}</dd></div>
         <div><dt>อาศัยอยู่กับ</dt><dd>${esc(lab(LIVE_WITH, f.live_with))}</dd></div>
         ${f.live_with === 'guardian' ? `<div><dt>ญาติ / ผู้อุปการะ</dt><dd>${person('guardian', f.guardian)}</dd></div>` : ''}
-        <div><dt>สภาพที่อยู่ปัจจุบัน</dt><dd>${esc(housing)}</dd></div><div><dt>อุปกรณ์ในบ้าน</dt><dd>${esc(equip)}${f.equipment_note ? `<div class="muted small">${esc(f.equipment_note)}</div>` : ''}</dd></div>
-        <div><dt>ที่ดินทำกิน</dt><dd>${esc(land)}</dd></div>
-        <div><dt>ความสัมพันธ์ในครอบครัว</dt><dd>${esc((f.relations || []).map(relLabel).join(', ') || '—')}</dd></div>
-        <div><dt>พี่น้อง</dt><dd>${sibs.length} คน${sibs.length ? ` (อยู่บ้านเดียวกัน ${sibs.length - movedCount(sibs) - outCount(sibs)} · แยกไปอยู่ข้างนอก ${outCount(sibs)} · แยกไปมีครอบครัว ${movedCount(sibs)})` : ''}</dd></div></dl>
+        <div><dt>พี่น้อง</dt><dd>${sibs.length} คน${sibs.length ? ` (อยู่บ้านเดียวกัน ${sibs.length - movedCount(sibs) - outCount(sibs)} · แยกไปอยู่ข้างนอก ${outCount(sibs)} · แยกไปมีครอบครัว ${movedCount(sibs)})` : ''}</dd></div>
+        <div class="fam-sep" aria-hidden="true"></div><div><dt>สภาพที่อยู่ปัจจุบัน</dt><dd>${esc(housing)}</dd></div><div><dt>อุปกรณ์ในบ้าน</dt><dd>${esc(equip)}${f.equipment_note ? `<div class="muted small">${esc(f.equipment_note)}</div>` : ''}</dd></div>
+        <div><dt>ที่ดินทำกิน</dt><dd>${esc(land)}</dd></div></dl>
       ${sibs.length ? `<details class="more"><summary>รายละเอียดพี่น้อง (${sibs.length})</summary><div>${sibs.map((x, i) => `<div class="small"><b>${i + 1}. ${esc(x.name || '-')}</b> ${esc(x.gender || '')} ${esc(sibAge(x))}
         <div class="muted">${esc([(SIB_RES.find(r => r[0] === x.residence) || [, ''])[1], x.edu, x.occupation, x.place, x.note && `หมายเหตุ: ${x.note}`].filter(Boolean).join(' · ') || '—')}</div></div>`).join('')}</div></details>` : ''}
     </section>
