@@ -8,9 +8,10 @@ const TP_BAD = [['blur', 'ภาพไม่ชัด / อ่านไม่อ
 const TP_STATE = {todo: ['ยังไม่ส่ง', 'idle'], pending: ['รอตรวจ', 'info'], rejected: ['ไม่ผ่าน', 'bad'], done: ['ผ่านแล้ว', 'ok'], closed: ['หมดเขต ยังไม่ผ่าน', 'bad']};
 const TP_BY = {student: 'นักเรียน', teacher: 'ครู', staff: 'เจ้าหน้าที่'};
 const TP_MAX_MB = 10;
+const TP_MAX_FILES = 5;
+const tpFiles = sub => sub ? sub.files || (sub.file ? [sub.file] : []) : [];
 const TP_EXT = ['jpg', 'jpeg', 'png', 'pdf', 'heic', 'heif'];
 const tpBadge = st => `<span class="badge t-${TP_STATE[st][1]}">${TP_STATE[st][0]}</span>`;
-const tpProofName = k => (TP_PROOF.find(x => x[0] === k) || [, '-'])[1];
 
 Object.assign(App, {
   /* ครูผู้ดูแลในปีที่ย้าย = โรงเรียนเดิม (ครูโรงเรียนใหม่ยังไม่เห็นข้อมูล) */
@@ -49,7 +50,7 @@ Object.assign(App, {
   },
   tpRoundHint(s) {
     const c = this.db.cycle;
-    return ['ป.6', 'ม.3'].includes(s.class) ? `ส่งครั้งแรกภายใน ${thDate(c.first_cutoff)} → พิจารณารอบที่ 1 · หลังจากนั้นถึง ${thDate(c.transfer_close)} → รอบที่ 2`
+    return ['ป.6', 'ม.3'].includes(s.class) ? `ส่งภายใน ${thDate(c.first_cutoff)} → พิจารณารอบแรก · ส่งภายใน ${thDate(c.transfer_close)} → พิจารณารอบรอฟังผล`
       : `ส่งได้ถึง ${thDate(c.transfer_close)}`;
   },
   /* สถานศึกษาที่ชื่อคล้ายกัน (สำหรับแอดมินจับคู่ชื่อที่นักเรียนพิมพ์เอง) */
@@ -70,9 +71,9 @@ function tpForm(s, who, p) {
   const last = this.tpLast(s);
   const ls = last && last.school ? this.schoolById[last.school] : null;
   const v = p.tpv || (last ? {region: ls ? ls.region : last.region, province: ls ? ls.province : last.province, district: ls ? ls.district : last.district,
-    school: last.school || '', none: !last.school, text: last.school_text || '', cls: last.cls, proof: '', email: last.email}
+    school: last.school || '', none: !last.school, text: last.school_text || '', cls: last.cls, email: last.email}
     : {cls: s.next_class, email: who === 'student' ? s.email : s.email || ''});
-  const file = this._tpFile && this._tpFile.code === s.code ? this._tpFile : null;
+  const files = this._tpFiles && this._tpFiles.code === s.code ? this._tpFiles.list : [];
   const allClasses = Object.values(CLASS_GROUPS).flat();
   return `${errNote(e)}<form class="stack tp-form" data-submit="tp-submit" data-code="${s.code}" data-who="${who}" novalidate>
     <h4 class="tp-h">1. สถานศึกษาใหม่</h4>
@@ -81,14 +82,19 @@ function tpForm(s, who, p) {
     <div id="tp_none_box" ${v.none ? '' : 'hidden'}>${field('tp_text', 'ชื่อสถานศึกษาใหม่ (พิมพ์เอง)', input('tp_text', v.text, 'placeholder="เช่น โรงเรียน…วิทยาคม"'),
       {req: 1, err: e.text, hint: 'เลือกภาค / จังหวัด / อำเภอด้านบนด้วย · เจ้าหน้าที่จะตรวจสอบก่อนเพิ่มเข้าระบบ'})}</div>
     ${field('tp_cls', 'ระดับชั้นที่เรียนในสถานศึกษาใหม่', select('tp_cls', allClasses, v.cls, 'เลือกระดับชั้น'), {req: 1, err: e.cls, hint: `แจ้งไว้ในใบสมัคร: ${esc(s.next_class || '-')}`})}
-    <h4 class="tp-h">2. หลักฐานการย้าย (อย่างใดอย่างหนึ่ง)</h4>
-    ${radioField('tp_proof', '', TP_PROOF, v.proof, {col: 1, err: e.proof})}
-    <div class="note info small">เอกสารต้องเห็นชัด 4 อย่าง: <b>ชื่อผู้ขอทุน · ชื่อสถานศึกษา · ระดับชั้น · ปีการศึกษา</b></div>
-    <div class="field ${e.file ? 'invalid' : ''}"><span class="label">ไฟล์หลักฐาน <span class="req">*</span></span>
-      <div class="row tp-file"><label class="btn"><input type="file" id="tp_file" accept="image/*,.pdf,.heic,.heif" data-onchange="tp-file" data-code="${s.code}" hidden>${icon('upload')} เลือกไฟล์</label>
-        <button class="btn ghost sm" type="button" data-action="tp-sample" data-code="${s.code}">ใช้ไฟล์ตัวอย่าง (ทดลอง)</button></div>
-      <div class="small" id="tp_file_name">${file ? `📎 ${esc(file.name)}${file.note ? ` <span class="muted">· ${esc(file.note)}</span>` : ''}` : '<span class="muted">ยังไม่ได้เลือกไฟล์</span>'}</div>
-      <div class="hint">JPG / PNG / PDF / HEIC ไม่เกิน ${TP_MAX_MB} MB · ไฟล์ HEIC จาก iPhone ระบบแปลงเป็น JPG ให้อัตโนมัติ · รูปใหญ่ระบบย่อให้</div>
+    <h4 class="tp-h">2. หลักฐานการย้าย</h4>
+    <div class="note info tp-info"><b>เอกสารที่ใช้ยืนยันการย้ายได้ มีเพียง 3 อย่างนี้ (อย่างใดอย่างหนึ่ง)</b>
+      <ul>${TP_PROOF.map(([, t]) => `<li>${t}</li>`).join('')}</ul>
+      <b>เอกสารต้องเห็นข้อมูลชัดเจนครบ 4 อย่าง:</b> ชื่อผู้ขอทุน · ชื่อสถานศึกษา · ระดับชั้น · ปีการศึกษา
+      <div class="small">ถ้าข้อมูลอยู่คนละใบ เช่น ใบแจ้งยอดค่าเทอมกับใบเสร็จ ถ่ายแยกแล้วแนบรวมกันได้ สูงสุด ${TP_MAX_FILES} ไฟล์</div></div>
+    <label class="choice ${e.ack ? 'tp-ack-err' : ''}"><input type="checkbox" name="tp_ack" value="1" ${v.ack ? 'checked' : ''}> รับทราบ — เอกสารที่แนบเป็นหนึ่งใน 3 อย่างข้างต้น และเห็นข้อมูลครบ 4 อย่าง</label>
+    ${e.ack ? `<div class="err">${esc(e.ack)}</div>` : ''}
+    <div class="field ${e.file ? 'invalid' : ''}"><span class="label">ไฟล์หลักฐาน <span class="req">*</span> <span class="muted small">(${files.length} / ${TP_MAX_FILES} ไฟล์)</span></span>
+      <div class="tp-flist">${files.map((f, i) => `<div class="tp-fitem"><span>📎 ${esc(f.name)}${f.note ? ` <span class="muted small">· ${esc(f.note)}</span>` : ''}</span>
+        <button class="btn ghost sm" type="button" data-action="tp-file-rm" data-code="${s.code}" data-i="${i}" aria-label="ลบไฟล์">ลบ</button></div>`).join('') || '<span class="small muted">ยังไม่ได้เลือกไฟล์</span>'}</div>
+      ${files.length < TP_MAX_FILES ? `<div class="row tp-file"><label class="btn"><input type="file" id="tp_file" multiple accept="image/*,.pdf,.heic,.heif" data-onchange="tp-file" data-code="${s.code}" hidden>${icon('upload')} ${files.length ? 'เพิ่มไฟล์' : 'เลือกไฟล์'}</label>
+        <button class="btn ghost sm" type="button" data-action="tp-sample" data-code="${s.code}">ใช้ไฟล์ตัวอย่าง (ทดลอง)</button></div>` : ''}
+      <div class="hint">JPG / PNG / PDF / HEIC ไฟล์ละไม่เกิน ${TP_MAX_MB} MB · ไฟล์ HEIC จาก iPhone ระบบแปลงเป็น JPG ให้อัตโนมัติ · รูปใหญ่ระบบย่อให้</div>
       ${e.file ? `<div class="err">${esc(e.file)}</div>` : ''}</div>
     <h4 class="tp-h">3. อีเมลสำหรับแจ้งผล</h4>
     ${field('tp_email', who === 'student' ? 'อีเมลของนักเรียน' : 'อีเมลของนักเรียน (ถ้ามี)', input('tp_email', v.email, 'type="email" inputmode="email" autocomplete="email" placeholder="ไม่มี เว้นว่างได้"'),
@@ -107,7 +113,7 @@ function tpCard(s, who, p = {}) {
   const dl = `<div class="tp-deadline">หมดเขตส่งหลักฐาน <b>${thDate(this.db.cycle.transfer_close)}</b>${this.tpOpen() ? ` · เหลืออีก <b>${this.tpDaysLeft()}</b> วัน` : ''}${['ป.6', 'ม.3'].includes(s.class) ? `<div class="small muted">${esc(this.tpRoundHint(s))}</div>` : ''}</div>`;
   const sum = sub => { const sc = this.tpSchoolOf(sub);
     return `<dl class="kv tp-kv"><div><dt>สถานศึกษาใหม่</dt><dd>${esc(sc.name)}${sc.typed ? ' <span class="badge t-warn">พิมพ์เอง</span>' : ''}<div class="small muted">${esc(sc.district || '')} จ.${esc(sc.province || '')}</div></dd></div>
-      <div><dt>ระดับชั้น</dt><dd>${esc(sub.cls)}</dd></div><div><dt>หลักฐาน</dt><dd>${esc(tpProofName(sub.proof))}<div class="small muted">📎 ${esc(sub.file)}</div></dd></div>
+      <div><dt>ระดับชั้น</dt><dd>${esc(sub.cls)}</dd></div><div><dt>หลักฐาน</dt><dd>${tpFiles(sub).length} ไฟล์${tpFiles(sub).map(f => `<div class="small muted">📎 ${esc(f)}</div>`).join('')}</dd></div>
       <div><dt>ส่งโดย</dt><dd>${TP_BY[sub.by]}${sub.by_name ? ` (${esc(sub.by_name)})` : ''}<div class="small muted">${thDate(sub.at, true)} · ครั้งที่ ${sub.n}</div></dd></div></dl>`; };
   let body;
   if (!sentToFdn) body = `<div class="note info">ส่งหลักฐานการย้ายได้หลังใบสมัครถึงมูลนิธิฯ แล้ว</div>`;
@@ -130,25 +136,48 @@ App.on('tp-none', function (el) {
   if (box) box.hidden = !el.checked;
   if (el.checked) { const t = document.getElementById('tp_text'); if (t) t.focus(); }
 });
-/* ไฟล์: จำกัดขนาด · HEIC → JPG · ย่อรูปใหญ่ (ต้นแบบ: เปลี่ยนชื่อ/แจ้งผล ไม่ได้แปลงจริง) */
+/* ไฟล์ (สูงสุด 5): จำกัดขนาด · HEIC → JPG · ย่อรูปใหญ่ (ต้นแบบ: เปลี่ยนชื่อ/แจ้งผล ไม่ได้แปลงจริง) */
+function tpKeepForm() {
+  /* เก็บค่าที่กรอกไว้ก่อนวาดใหม่ */
+  const form = document.querySelector('.tp-form'); if (!form) return {};
+  const v = formData(form), a = App.readArea('tp');
+  return {...a, none: !!v.tp_none, text: v.tp_text, cls: v.tp_cls, ack: !!v.tp_ack, email: v.tp_email};
+}
+function tpFilesOf(code) {
+  if (!App._tpFiles || App._tpFiles.code !== code) App._tpFiles = {code, list: []};
+  return App._tpFiles.list;
+}
+function tpRedraw() {
+  const y = window.scrollY;
+  App.go(App.view.name, {...App.view.params, tpv: tpKeepForm(), tpe: null});
+  window.scrollTo(0, y);
+}
 App.on('tp-file', function (el) {
-  const f = el.files && el.files[0];
-  if (!f) return;
-  const ext = (f.name.split('.').pop() || '').toLowerCase();
-  if (!TP_EXT.includes(ext)) { this.toast('รองรับเฉพาะ JPG / PNG / PDF / HEIC'); el.value = ''; return; }
-  if (f.size > TP_MAX_MB * 1048576) { this.toast(`ไฟล์ใหญ่เกิน ${TP_MAX_MB} MB`); el.value = ''; return; }
-  const heic = ['heic', 'heif'].includes(ext);
-  const notes = [];
-  if (heic) notes.push('แปลง HEIC เป็น JPG แล้ว');
-  if (ext !== 'pdf' && f.size > 2 * 1048576) notes.push('ย่อขนาดรูปอัตโนมัติ');
-  this._tpFile = {code: el.dataset.code, name: heic ? f.name.replace(/\.[^.]+$/, '.jpg') : f.name, ext: heic ? 'jpg' : ext === 'jpeg' ? 'jpg' : ext, note: notes.join(' · ')};
-  const out = document.getElementById('tp_file_name');
-  if (out) out.innerHTML = `📎 ${esc(this._tpFile.name)}${this._tpFile.note ? ` <span class="muted">· ${esc(this._tpFile.note)}</span>` : ''}`;
+  const list = tpFilesOf(el.dataset.code);
+  const msgs = [];
+  [...(el.files || [])].forEach(f => {
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    if (list.length >= TP_MAX_FILES) { msgs.push(`แนบได้สูงสุด ${TP_MAX_FILES} ไฟล์`); return; }
+    if (!TP_EXT.includes(ext)) { msgs.push(`${f.name}: รองรับเฉพาะ JPG / PNG / PDF / HEIC`); return; }
+    if (f.size > TP_MAX_MB * 1048576) { msgs.push(`${f.name}: ใหญ่เกิน ${TP_MAX_MB} MB`); return; }
+    const heic = ['heic', 'heif'].includes(ext);
+    const notes = [];
+    if (heic) notes.push('แปลง HEIC เป็น JPG แล้ว');
+    if (ext !== 'pdf' && f.size > 2 * 1048576) notes.push('ย่อขนาดรูปอัตโนมัติ');
+    list.push({name: heic ? f.name.replace(/\.[^.]+$/, '.jpg') : f.name, ext: heic ? 'jpg' : ext === 'jpeg' ? 'jpg' : ext, note: notes.join(' · ')});
+  });
+  tpRedraw.call(this);
+  if (msgs.length) this.toast([...new Set(msgs)].join(' · '));
+});
+App.on('tp-file-rm', function (el) {
+  tpFilesOf(el.dataset.code).splice(Number(el.dataset.i), 1);
+  tpRedraw.call(this);
 });
 App.on('tp-sample', function (el) {
-  this._tpFile = {code: el.dataset.code, name: 'IMG_2041.HEIC → IMG_2041.jpg', ext: 'jpg', note: 'แปลง HEIC เป็น JPG แล้ว · ย่อขนาดรูปอัตโนมัติ'};
-  const out = document.getElementById('tp_file_name');
-  if (out) out.innerHTML = `📎 IMG_2041.jpg <span class="muted">· ${esc(this._tpFile.note)}</span>`;
+  const list = tpFilesOf(el.dataset.code);
+  if (list.length >= TP_MAX_FILES) return;
+  list.push(list.length % 2 ? {name: `ใบเสร็จค่าเทอม_${list.length + 1}.pdf`, ext: 'pdf', note: ''} : {name: `IMG_20${41 + list.length}.jpg`, ext: 'jpg', note: 'แปลง HEIC เป็น JPG แล้ว · ย่อขนาดรูปอัตโนมัติ'});
+  tpRedraw.call(this);
 });
 App.on('tp-submit', function (form) {
   const s = this.studentByCode[form.dataset.code];
@@ -157,16 +186,16 @@ App.on('tp-submit', function (form) {
   const v = formData(form);
   const a = this.readArea('tp');
   const none = !!v.tp_none;
-  const file = this._tpFile && this._tpFile.code === s.code ? this._tpFile : null;
+  const files = tpFilesOf(s.code);
   const e = {};
   if (none) { if (!v.tp_text) e.text = 'กรุณาพิมพ์ชื่อสถานศึกษาใหม่'; if (!a.province) e.school = 'กรุณาเลือกภาค / จังหวัด / อำเภอของสถานศึกษาใหม่'; }
   else if (!a.school) e.school = 'กรุณาเลือกสถานศึกษาใหม่ หรือติ๊ก “ไม่พบสถานศึกษาในรายชื่อ”';
   if (!v.tp_cls) e.cls = 'กรุณาเลือกระดับชั้น';
-  if (!v.tp_proof) e.proof = 'กรุณาเลือกประเภทหลักฐาน';
-  if (!file) e.file = 'กรุณาแนบไฟล์หลักฐาน';
+  if (!v.tp_ack) e.ack = 'กรุณาติ๊กรับทราบเงื่อนไขเอกสาร';
+  if (!files.length) e.file = 'กรุณาแนบไฟล์หลักฐานอย่างน้อย 1 ไฟล์';
   if (v.tp_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.tp_email)) e.email = 'รูปแบบอีเมลไม่ถูกต้อง';
   if (Object.keys(e).length) {
-    this.go(this.view.name, {...this.view.params, tpe: e, tpv: {...a, none, text: v.tp_text, cls: v.tp_cls, proof: v.tp_proof, email: v.tp_email}});
+    this.go(this.view.name, {...this.view.params, tpe: e, tpv: {...a, none, text: v.tp_text, cls: v.tp_cls, ack: !!v.tp_ack, email: v.tp_email}});
     setTimeout(() => { const c = document.getElementById('tp-card'); if (c) c.scrollIntoView({block: 'start'}); }, 0);
     return;
   }
@@ -174,9 +203,10 @@ App.on('tp-submit', function (form) {
   const n = s.tp.subs.length + 1;
   s.tp.subs.push({n, at: nowIso(), by: who, by_name: who === 'teacher' ? (this.teacherOf(this.careSchool(s)) || {}).name || '' : '',
     school: none ? '' : a.school, school_text: none ? v.tp_text : '', region: a.region, province: a.province, district: a.district,
-    cls: v.tp_cls, proof: v.tp_proof, file: `${s.code}_14_TRANSFER_${n}.${file.ext}`, file_note: file.note, email: v.tp_email || ''});
+    cls: v.tp_cls, files: files.map((f, i) => `${s.code}_14_TRANSFER_${n}${files.length > 1 ? '-' + (i + 1) : ''}.${f.ext}`),
+    file_note: [...new Set(files.map(f => f.note).filter(Boolean))].join(' · '), email: v.tp_email || ''});
   s.tp.state = 'pending';
-  this._tpFile = null;
+  this._tpFiles = null;
   addHistory(s, `${who === 'teacher' ? 'ครูโรงเรียนเดิม' : 'นักเรียน'}ส่งหลักฐานการย้ายสถานศึกษา (ครั้งที่ ${n}) — รอเจ้าหน้าที่ตรวจ`, 'transfer_submit');
   const m = this.tpMail(s, 'ได้รับหลักฐานการย้ายสถานศึกษาแล้ว — รอเจ้าหน้าที่ตรวจ', `${fullName(s)} (${s.code}) ส่งหลักฐานครั้งที่ ${n} แล้ว`);
   this.save();
@@ -232,8 +262,9 @@ App.views['staff-tp'] = function (p) {
   const t = this.teacherOf(this.careSchool(s));
   const admin = role === 'admin';
   const e = p.errors || {};
-  const groups = tp.subs.slice().reverse().map(x => ({title: `ครั้งที่ ${x.n} · ${tpProofName(x.proof)} · ${x.result === 'approved' ? 'ผ่าน' : x.result === 'rejected' ? 'ไม่ผ่าน' : 'รอตรวจ'}`,
-    files: [{k: 'tp' + x.n, f: x.file, title: `ครั้งที่ ${x.n} — ${tpProofName(x.proof)}`, src: pvMock(s, x.proof === 'studentcard' ? '01_IDCARD' : 'TP', tpProofName(x.proof), x.file, x.n)}]}));
+  const groups = tp.subs.slice().reverse().map(x => { const fl = tpFiles(x);
+    return {title: `ครั้งที่ ${x.n} · ${fl.length} ไฟล์ · ${x.result === 'approved' ? 'ผ่าน' : x.result === 'rejected' ? 'ไม่ผ่าน' : 'รอตรวจ'}`,
+      files: fl.map((f, i) => ({k: `tp${x.n}-${i}`, f, title: `ครั้งที่ ${x.n} — ไฟล์ ${i + 1}/${fl.length}`, src: pvMock(s, 'TP', 'หลักฐานการย้ายสถานศึกษา', f, i)}))}; });
   const mails = (this.db.mails || []).filter(m => m.code === s.code).slice().reverse();
   const ac = s.amount_check;
   /* แผงขวา */
@@ -244,7 +275,7 @@ App.views['staff-tp'] = function (p) {
       <button class="btn primary block" type="button" data-action="tp-reopen" data-code="${s.code}">เปิดสิทธิ์แจ้งย้ายสถานศึกษา</button>`}`;
   } else if (st === 'pending') {
     const noSchool = !last.school;
-    panel = `<div class="subcard"><span class="label">ตรวจหลักฐาน: ${esc(tpProofName(last.proof))}</span><span class="small">เอกสารต้องเห็นชัดและตรงกับข้อมูล</span></div>
+    panel = `<div class="subcard"><span class="label">ตรวจหลักฐาน ครั้งที่ ${last.n} · ${tpFiles(last).length} ไฟล์</span><span class="small">ต้องเป็นบัตรนักเรียน / ใบเสร็จค่าเทอม / หนังสือรับรอง ของสถานศึกษาใหม่ และเห็นข้อมูลครบ 4 อย่าง (ดูรวมทุกไฟล์ได้)</span></div>
       <div class="tp-checks">${TP_CHECK.map(([k, l]) => `<label class="choice"><input type="checkbox" name="ck" value="${k}"> <span>${l}${k === 'school' ? ` <span class="small muted">(${esc(sc.name)})</span>` : k === 'cls' ? ` <span class="small muted">(${esc(last.cls)})</span>` : k === 'year' ? ` <span class="small muted">(${this.db.cycle.year})</span>` : ''}</span></label>`).join('')}</div>
       <div class="tp-checks bad">${TP_BAD.map(([k, l]) => `<label class="choice"><input type="checkbox" name="bad" value="${k}"> ${l}</label>`).join('')}</div>
       ${field('tp_reason', 'เหตุผลเพิ่มเติม (ถ้าไม่ผ่าน)', textarea('tp_reason', '', 'rows="2" placeholder="ระบบใส่เหตุผลจากข้อที่ไม่ได้ติ๊กให้อัตโนมัติ"'), {err: e.reason})}
@@ -314,7 +345,7 @@ function tpApply(s, sub) {
   const before = this.stdRate(s), beforeName = this.rateName(s.rate);
   const from = s.school;
   this.db.transfers.push({code: s.code, from, to: sub.school, cls: sub.cls, date: s.tp.subs[0].at.slice(0, 10),
-    note: `ตรวจหลักฐานผ่าน (${tpProofName(sub.proof)} · ส่งโดย${TP_BY[sub.by]})`, by: this.session.name, at: nowIso(), via: 'proof'});
+    note: `ตรวจหลักฐานผ่าน (${tpFiles(sub).length} ไฟล์ · ส่งโดย${TP_BY[sub.by]})`, by: this.session.name, at: nowIso(), via: 'proof'});
   s.home_school = s.home_school || from;
   s.school = sub.school;
   const clsChanged = sub.cls !== s.next_class;

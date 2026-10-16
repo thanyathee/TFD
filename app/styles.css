@@ -1080,3 +1080,8 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
   .tp-trow .c-name{grid-area:name}.tp-trow .c-st{grid-area:st;text-align:right}.tp-trow .c-to{grid-area:to;font-size:14px}
   .tp-trow .c-by{grid-area:by}.tp-trow .c-act{grid-area:act}
 }
+.tp-info ul{margin:6px 0 8px;padding-left:20px}
+.tp-ack-err{outline:2px solid var(--bad)}
+.tp-flist{display:grid;gap:6px;margin:4px 0 8px}
+.tp-fitem{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--fill);border-radius:10px;font-size:14px;min-width:0}
+.tp-fitem>span{min-width:0;overflow-wrap:anywhere}

@@ -838,7 +838,9 @@ App.views['student-status'] = function (p = {}) {
       pos = ['pending', 'done'].includes(tst) ? flow.length : flow.length - 2;
       if (tst === 'rejected') nowLabel = 'หลักฐานไม่ผ่าน กรุณาอัปโหลดใหม่';
       else if (tst === 'closed') nowLabel = 'หมดเขตส่งหลักฐานแล้ว';
-      else if (tst === 'todo') nowLabel = `ส่งภายใน ${thDate(this.db.cycle.transfer_close)}`;
+      else if (tst === 'todo') nowLabel = ['ป.6', 'ม.3'].includes(s.class)
+        ? `ส่งภายใน ${thDate(this.db.cycle.first_cutoff)} → พิจารณารอบแรก<br>ส่งภายใน ${thDate(this.db.cycle.transfer_close)} → พิจารณารอบรอฟังผล`
+        : `ส่งภายใน ${thDate(this.db.cycle.transfer_close)}`;
     }
   }
   const editable = ['draft', 'returned_to_student'].includes(s.status);
