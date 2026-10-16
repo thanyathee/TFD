@@ -843,16 +843,14 @@ App.views['student-status'] = function (p = {}) {
   }
   const editable = ['draft', 'returned_to_student'].includes(s.status);
   const t = this.teacherOf(this.careSchool(s));
-  const d = s.decision;
   const docs = docsFor(s);
   const files = s.docFiles || {};
   return {nav: this.studentNav(), html: `
-    <div class="page-head"><div><h1>${editable ? 'สถานะใบสมัคร' : 'ส่งใบสมัครเรียบร้อยแล้ว'}</h1><p class="sub"><span class="num">${s.code}</span> · ${TYPE[s.type]}</p></div>${sent && s.status !== 'decided' ? '<span class="badge t-ok">ส่งมูลนิธิฯ สำเร็จ</span>' : s.status === 'draft' ? '<span class="badge t-idle">กำลังกรอกใบสมัคร</span>' : badge(s)}</div>
+    <div class="page-head"><div><h1>${editable ? 'สถานะใบสมัคร' : 'ส่งใบสมัครเรียบร้อยแล้ว'}</h1><p class="sub"><span class="num">${s.code}</span> · ${TYPE[s.type]}</p></div>${sent ? '<span class="badge t-ok">ส่งมูลนิธิฯ สำเร็จ</span>' : s.status === 'draft' ? '<span class="badge t-idle">กำลังกรอกใบสมัคร</span>' : badge(s)}</div>
     ${editable ? `<div class="note ${s.status === 'returned_to_student' ? 'warn' : 'info'} row between"><span>${s.status === 'returned_to_student'
       ? '<b>ครูเปิดสิทธิ์ให้แก้ไข:</b> ' + esc(s.return_reason || '') : 'ใบสมัครยังไม่ได้ส่ง กรอกต่อให้ครบแล้วกดส่ง'}</span>
       <button class="btn primary" data-go="student-form" data-step="${s.step || 1}">กรอกใบสมัครต่อ</button></div>`
       : `<div class="note info"><b>สถานะหลังส่ง:</b> เมื่อผู้สมัครกดส่งแล้ว ข้อมูลจะถูกล็อกไม่ให้แก้ไขเอง หากจำเป็นต้องแก้ไข ให้ครูผู้ดูแลทุนหรือเจ้าหน้าที่เป็นผู้เปิดสิทธิ์ให้แก้ไข</div>`}
-    ${d && d.result === 'ineligible' ? `<div class="note bad"><b>ไม่เข้าเกณฑ์การพิจารณาทุน</b>${d.reason ? ' — ' + esc(d.reason) : ''}</div>` : ''}
     <div class="split">
       <div class="stack">
         ${s.school_next === 'transfer' ? tpCard.call(this, s, 'student', p) : ''}
