@@ -614,14 +614,14 @@ App.views['staff-transfer'] = function (p) {
     <div class="note ${this.tpOpen() ? 'info' : 'bad'} row between tp-remind"><span>หมดเขตส่งหลักฐาน <b>${thDate(this.db.cycle.transfer_close)}</b>${this.tpOpen() ? ` · เหลืออีก <b>${this.tpDaysLeft()}</b> วัน` : ' · หมดเขตแล้ว ไม่รับเอกสาร'}
       <br><span class="small">อีเมลเตือนอัตโนมัติ ${(this.db.cycle.remind_days || [30, 14, 7, 3]).join(' · ')} วันก่อนหมดเขต ถึงคนที่ยังไม่ส่ง / ไม่ผ่าน${admin ? ' (ตั้งค่าได้ที่ “รอบรับสมัคร”)' : ''}</span></span>
       ${this.tpOpen() ? `<button class="btn sm" data-action="tp-remind">ส่งเตือนตอนนี้ (${base.filter(s => ['todo', 'rejected'].includes(stOf(s))).length} คน)</button>` : ''}</div>
-    <div class="stats tp-stats">${[['pending', 'รอตรวจ'], ['rejected', 'ไม่ผ่าน · รอแก้'], ['done', 'ผ่านแล้ว'], ['todo', 'ยังไม่ส่ง']].concat(this.tpOpen() ? [] : [['closed', 'หมดเขต ยังไม่ผ่าน']]).map(([k, t]) => [k, t, nOf(k)])
+    <div class="stats tp-stats">${[['pending', 'รอตรวจ'], ['rejected', 'หลักฐานไม่ผ่าน · รอแก้'], ['done', 'หลักฐานถูกต้อง'], ['todo', 'ยังไม่ส่ง']].concat(this.tpOpen() ? [] : [['closed', 'หมดเขต ยังไม่ผ่าน']]).map(([k, t]) => [k, t, nOf(k)])
       .concat(admin ? [['school', 'รอยืนยันสถานศึกษา', base.filter(needSchool).length], ['amount', 'ยอดเงินเปลี่ยน รอยืนยัน', base.filter(needAmt).length]] : [])
       .concat([['all', 'ทั้งหมด', base.length]]).map(([k, t, n]) =>
       `<button class="stat${k === 'pending' && n ? ' hot' : ''}" data-action="transfer-state" data-state="${k}" aria-pressed="${f.state === k}"><span>${t}</span><b>${n}</b></button>`).join('')}</div>
     <section class="card stack">
       <div class="filters tr-filters">
         ${field('tq', 'ค้นหา', input('tq', f.q || '', 'autocomplete="off" placeholder="รหัส / ชื่อ–นามสกุล / ชื่อสถานศึกษา" data-oninput="transfer-search"'))}
-        ${field('t_state', 'สถานะหลักฐาน', select('t_state', [['pending', 'รอตรวจ'], ['rejected', 'ไม่ผ่าน'], ['done', 'ผ่านแล้ว'], ['todo', 'ยังไม่ส่ง'], ['closed', 'หมดเขต ยังไม่ผ่าน']].concat(admin ? [['school', 'รอยืนยันสถานศึกษา'], ['amount', 'ยอดเงินเปลี่ยน']] : []).concat([['all', 'ทั้งหมด']]), f.state, null, 'data-onchange="transfer-filter"'))}
+        ${field('t_state', 'สถานะหลักฐาน', select('t_state', [['pending', 'รอตรวจ'], ['rejected', 'หลักฐานไม่ผ่าน'], ['done', 'หลักฐานถูกต้อง'], ['todo', 'ยังไม่ส่ง'], ['closed', 'หมดเขต ยังไม่ผ่าน']].concat(admin ? [['school', 'รอยืนยันสถานศึกษา'], ['amount', 'ยอดเงินเปลี่ยน']] : []).concat([['all', 'ทั้งหมด']]), f.state, null, 'data-onchange="transfer-filter"'))}
         ${field('t_round', 'รอบพิจารณา', select('t_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], f.round, 'ทุกรอบ', 'data-onchange="transfer-filter"'))}
         ${field('t_cls', 'ชั้นปัจจุบัน', select('t_cls', classes, f.cls, 'ทุกชั้น', 'data-onchange="transfer-filter"'))}
       </div>

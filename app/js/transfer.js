@@ -5,7 +5,7 @@ const TP_PROOF = [['studentcard', 'บัตรประจำตัวนัก
   ['cert', 'หนังสือรับรองสถานภาพการเป็นนักเรียน/นักศึกษาจากสถานศึกษาใหม่']];
 const TP_CHECK = [['name', 'ชื่อผู้ขอทุน'], ['school', 'ชื่อสถานศึกษา'], ['cls', 'ระดับชั้น'], ['year', 'ปีการศึกษา']];
 const TP_BAD = [['blur', 'ภาพไม่ชัด / อ่านไม่ออก'], ['type', 'ไม่ใช่เอกสาร 3 ประเภทที่กำหนด']];
-const TP_STATE = {todo: ['ยังไม่ส่ง', 'idle'], pending: ['รอตรวจ', 'info'], rejected: ['ไม่ผ่าน', 'bad'], done: ['ผ่านแล้ว', 'ok'], closed: ['หมดเขต ยังไม่ผ่าน', 'bad']};
+const TP_STATE = {todo: ['ยังไม่ส่ง', 'idle'], pending: ['รอตรวจ', 'info'], rejected: ['หลักฐานไม่ผ่าน', 'bad'], done: ['หลักฐานถูกต้อง', 'ok'], closed: ['หมดเขต ยังไม่ผ่าน', 'bad']};
 const TP_BY = {student: 'นักเรียน', teacher: 'ครู', staff: 'เจ้าหน้าที่'};
 const TP_MAX_MB = 10;
 const TP_MAX_FILES = 5;
@@ -263,8 +263,11 @@ function tpTeacherSection() {
   const cnt = k => list.filter(s => this.tpState(s) === k).length;
   const bad = cnt('rejected');
   const c = this.db.cycle;
-  return `<section class="card tp-tcard"><div class="card-head"><div><h3>นักเรียนที่ต้องส่งหลักฐานยืนยันการย้ายสถานศึกษา (${list.length} คน)</h3>
-      <div class="small muted">${this.tpOpen() ? `เหลืออีก ${this.tpDaysLeft()} วัน (ถึง ${thDate(c.transfer_close)})` : 'หมดเขตแล้ว'} · ครูอัปโหลดแทนนักเรียนได้</div></div>
+  return `<div class="tp-sec-head" id="tp-sec"><span class="tp-sec-ic">${icon('upload')}</span><div>
+      <h2>นักเรียนที่ต้องส่งหลักฐานยืนยันการย้ายสถานศึกษา <span class="tp-sec-n">${list.length} คน</span></h2>
+      <p class="sub">เฉพาะนักเรียนที่ครูส่งข้อมูลถึงมูลนิธิฯ แล้ว และแจ้งว่าจะย้ายสถานศึกษา · ครูอัปโหลดแทนนักเรียนได้</p></div></div>
+    <section class="card tp-tcard"><div class="card-head"><div>
+      <div class="small"><b>${this.tpOpen() ? `เหลืออีก ${this.tpDaysLeft()} วัน` : 'หมดเขตแล้ว'}</b> <span class="muted">(หมดเขต ${thDate(c.transfer_close)})</span></div></div>
       <div class="row tp-chips">${['todo', 'pending', 'rejected', 'done'].map(k => `<span class="tp-chip">${TP_STATE[k][0]} <b>${cnt(k)}</b></span>`).join('')}</div></div>
     <div class="tp-rounds">
       <div class="tp-round"><b>ระดับชั้น ป.6 / ม.3</b><span>ส่งหลักฐานภายใน <b>${thDate(c.first_cutoff)}</b></span><span>→ พิจารณา<b>รอบแรก</b></span><span>→ ประกาศรายชื่อเดือน<b>มิถุนายน</b></span></div>
