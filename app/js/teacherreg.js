@@ -14,6 +14,11 @@ const trOpen = () => nowIso() <= trClose();
 const maskEmail = m => { const [a, d] = String(m || '').split('@'); return a ? `${a.slice(0, 3)}•••@${d || ''}` : '-'; };
 /* อีเมลแจ้งรหัสเข้าใช้งาน (รูปแบบเดียวกับที่มูลนิธิฯ ใช้อยู่) */
 const TR_PHONE = '02-633-7506';
+const TR_FROM = 'มูลนิธิทิสโก้ เพื่อการกุศล';
+const TR_DOWNLOADS = [
+  ['เอกสารและระเบียบการขอรับทุนการศึกษา', 'https://drive.google.com/file/d/1DsMsFn4TKd3lUZMInmIQO0CRpaFYQeRN/view?usp=sharing'],
+  ['คู่มือการขอรับทุนการศึกษา', 'https://drive.google.com/file/d/1Eh7IVGGXflfFRvsGBvrXpZ1KtkLg_oGH/view?usp=sharing'],
+  ['คู่มือการสมัครขอทุนระบบออนไลน์-คุณครูผู้ดูแลทุน', 'https://drive.google.com/file/d/1FZuMpXMTOwpyMYkO6OIwxv6o2oXHiOPT/view?usp=sharing']];
 function trMailApprove(name, school, username, pw) {
   return `เรียน ${name}
 
@@ -31,9 +36,7 @@ Password: ${pw}
 หากมีข้อสงสัย กรุณาติดต่อมูลนิธิทิสโก้ เพื่อการกุศล
 โทร. ${TR_PHONE} หรือ E-mail : tiscofoundation@tiscofoundation.org
 
-ดาวน์โหลด: เอกสารและระเบียบการขอรับทุนการศึกษา
-ดาวน์โหลด: คู่มือการขอรับทุนการศึกษา
-ดาวน์โหลด: คู่มือการสมัครขอทุนระบบออนไลน์-คุณครูผู้ดูแลทุน`;
+${TR_DOWNLOADS.map(([t, u]) => `ดาวน์โหลด: [${t}](${u})`).join('\n')}`;
 }
 function trMailReject(name, school, reason) {
   return `เรียน ${name}
@@ -44,10 +47,10 @@ function trMailReject(name, school, reason) {
 กรุณาลงทะเบียนใหม่อีกครั้งพร้อมหลักฐานที่ถูกต้อง ที่ scholarship.tiscofoundation.org
 หากมีข้อสงสัย โทร. ${TR_PHONE} หรือ E-mail : tiscofoundation@tiscofoundation.org`;
 }
-const trMailSubject = school => `รหัสเข้าใช้งาน ระบบใบสมัครทุนการศึกษาแบบออนไลน์ / ${school}`;
+const trMailSubject = school => `${TR_FROM} รหัสเข้าใช้งานระบบทุนการศึกษาแบบออนไลน์ / ${school}`;
 function trMailCard(m) {
   return `<div class="tr-mail"><div class="tr-mail-h"><b>${esc(m.subject)}</b><span class="small muted">TISCO Foundation &lt;tiscofoundation@tiscofoundation.org&gt; · ถึง ${esc(m.to)} · ${thDate(m.at, true)}</span></div>
-    <div class="tr-mailbody">${esc(m.body)}</div></div>`;
+    <div class="tr-mailbody">${esc(m.body).replace(/\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')}</div></div>`;
 }
 const schUser = id => 'sch' + String(id).replace(/^SCH-?/i, '').toLowerCase();
 
@@ -345,7 +348,7 @@ App.on('rg-decide', function (el) {
     if (!why.length) { this.go('staff-reg', {id: r.id, errors: {reason: 'ติ๊กครบทุกข้อแล้ว — ถ้าไม่อนุมัติ กรุณาระบุเหตุผล'}}); return; }
     Object.assign(r, {state: 'rejected', reject_reason: why.join(', '), by: this.session.name, done_at: nowIso()});
     const sn = r.school ? this.schoolName(r.school) : r.school_text;
-    (this.db.mails = this.db.mails || []).push({at: nowIso(), code: r.id, to: r.email, who: 'ครู ' + r.name, subject: `คำขอลงทะเบียนครูผู้ดูแลทุนไม่ได้รับการอนุมัติ / ${sn}`, body: trMailReject(r.name, sn, r.reject_reason)});
+    (this.db.mails = this.db.mails || []).push({at: nowIso(), code: r.id, to: r.email, who: 'ครู ' + r.name, subject: `${TR_FROM} คำขอลงทะเบียนครูผู้ดูแลทุนไม่ได้รับการอนุมัติ / ${sn}`, body: trMailReject(r.name, sn, r.reject_reason)});
     this.save(); this.toast('ไม่อนุมัติ · ส่งอีเมลแจ้งครูแล้ว'); this.go('staff-regs'); return;
   }
   if (ck.length < TR_CHECK.length) { this.go('staff-reg', {id: r.id, errors: {ok: 'อนุมัติได้เมื่อติ๊กครบทุกข้อ'}}); return; }
@@ -377,7 +380,7 @@ App.on('rg-decide', function (el) {
   Object.assign(r, {state: 'approved', school: sid, username, by: this.session.name, done_at: nowIso()});
   const sname = (sc && sc.name) || this.schoolName(sid);
   (this.db.mails = this.db.mails || []).push({at: nowIso(), code: r.id, to: r.email, who: 'ครู ' + r.name, subject: trMailSubject(sname), body: trMailApprove(r.name, sname, username, pw)});
-  if (r.kind === 'replace' && t) this.db.mails.push({at: nowIso(), code: r.id, to: t.email, who: 'ครู ' + t.name, subject: `แจ้งเปลี่ยนครูผู้ดูแลทุน / ${sname}`,
+  if (r.kind === 'replace' && t) this.db.mails.push({at: nowIso(), code: r.id, to: t.email, who: 'ครู ' + t.name, subject: `${TR_FROM} แจ้งเปลี่ยนครูผู้ดูแลทุน / ${sname}`,
     body: `เรียน ${t.name}\n\nมูลนิธิฯ ได้เปลี่ยนครูผู้ดูแลทุนของ ${sname} เป็น ${r.name} ตามคำขอของสถานศึกษา\nบัญชีเดิมของคุณครูถูกปิดการใช้งานแล้ว\n\nหากไม่ถูกต้อง กรุณาติดต่อ โทร. ${TR_PHONE}`});
   this.save();
   this.toast(`อนุมัติแล้ว · Username ${username} · รหัสชั่วคราว ${pw} (ส่งทางอีเมลแล้ว)`);
