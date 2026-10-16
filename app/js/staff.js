@@ -46,7 +46,7 @@ App.staffNav = function () {
   return [['staff-dash', 'Dashboard'],
     ['staff-apps', 'ใบสมัคร', ['staff-app']], ['staff-transfer', 'ย้ายสถานศึกษา']]
     /* สถานศึกษา/ครู, รอบรับสมัคร, รายงาน/Export, PDPA และผู้ใช้งาน: เฉพาะแอดมินระบบ */
-    .concat(this.session.staffRole === 'admin' ? [['staff-regs', 'คำขอครู', ['staff-reg']], ['staff-schools', 'สถานศึกษา/ครู', ['staff-school']], ['staff-cycle', 'รอบรับสมัคร'], ['staff-announce', 'ประกาศรายชื่อ'], ['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA'], ['staff-users', 'ผู้ใช้งาน', ['staff-user']]] : []);
+    .concat(this.session.staffRole === 'admin' ? [['staff-regs', 'คำขอเพิ่มครูผู้ดูแลทุน' + ((n => n ? ` (${n})` : '')((this.db.teacherRegs || []).filter(r => r.state === 'pending').length)), ['staff-reg']], ['staff-schools', 'สถานศึกษา/ครู', ['staff-school']], ['staff-cycle', 'รอบรับสมัคร'], ['staff-announce', 'ประกาศรายชื่อ'], ['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA'], ['staff-users', 'ผู้ใช้งาน', ['staff-user']]] : []);
 };
 /* สลับบทบาทสำหรับทดลอง (เหมือนปุ่มบทบาทใน v14) */
 App.roleBar = function () {

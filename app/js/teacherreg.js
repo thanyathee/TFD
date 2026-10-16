@@ -12,6 +12,43 @@ const trBadge = st => `<span class="badge t-${TR_STATE[st][1]}">${TR_STATE[st][0
 const trClose = () => App.db.cycle.teacher_reg_close || '2027-01-29T17:00';
 const trOpen = () => nowIso() <= trClose();
 const maskEmail = m => { const [a, d] = String(m || '').split('@'); return a ? `${a.slice(0, 3)}•••@${d || ''}` : '-'; };
+/* อีเมลแจ้งรหัสเข้าใช้งาน (รูปแบบเดียวกับที่มูลนิธิฯ ใช้อยู่) */
+const TR_PHONE = '02-633-7506';
+function trMailApprove(name, school, username, pw) {
+  return `เรียน ${name}
+
+Username และ Password สำหรับครู/อาจารย์ผู้ดูแลทุนโครงการทุนการศึกษาของมูลนิธิทิสโก้ เพื่อการกุศล
+เข้าสู่ระบบ: scholarship.tiscofoundation.org
+
+สถานศึกษา: ${school}
+Username: ${username}
+Password: ${pw}
+⚠ เข้าระบบครั้งแรก ระบบจะให้ตั้งรหัสผ่านใหม่ของคุณครูเอง
+
+เปิดรับสมัครขอทุน ระหว่างวันที่ 1 พฤศจิกายน – 31 มกราคม ของทุกปี
+(รหัสเข้าใช้งานไม่มีวันหมดอายุ สามารถใช้รหัสเดิมได้ทุกปี · หากลืมรหัสผ่าน กด “ลืมรหัสผ่าน” ที่หน้าเข้าสู่ระบบ)
+
+หากมีข้อสงสัย กรุณาติดต่อมูลนิธิทิสโก้ เพื่อการกุศล
+โทร. ${TR_PHONE} หรือ E-mail : tiscofoundation@tiscofoundation.org
+
+ดาวน์โหลด: เอกสารและระเบียบการขอรับทุนการศึกษา
+ดาวน์โหลด: คู่มือการขอรับทุนการศึกษา
+ดาวน์โหลด: คู่มือการสมัครขอทุนระบบออนไลน์-คุณครูผู้ดูแลทุน`;
+}
+function trMailReject(name, school, reason) {
+  return `เรียน ${name}
+
+คำขอลงทะเบียนครูผู้ดูแลทุนของ ${school} ยังไม่ได้รับการอนุมัติ
+เหตุผล: ${reason}
+
+กรุณาลงทะเบียนใหม่อีกครั้งพร้อมหลักฐานที่ถูกต้อง ที่ scholarship.tiscofoundation.org
+หากมีข้อสงสัย โทร. ${TR_PHONE} หรือ E-mail : tiscofoundation@tiscofoundation.org`;
+}
+const trMailSubject = school => `รหัสเข้าใช้งาน ระบบใบสมัครทุนการศึกษาแบบออนไลน์ / ${school}`;
+function trMailCard(m) {
+  return `<div class="tr-mail"><div class="tr-mail-h"><b>${esc(m.subject)}</b><span class="small muted">TISCO Foundation &lt;tiscofoundation@tiscofoundation.org&gt; · ถึง ${esc(m.to)} · ${thDate(m.at, true)}</span></div>
+    <div class="tr-mailbody">${esc(m.body)}</div></div>`;
+}
 const schUser = id => 'sch' + String(id).replace(/^SCH-?/i, '').toLowerCase();
 
 /* ---------- เงื่อนไข (ใช้ทั้งหน้าเข้าสู่ระบบและฟอร์ม) ---------- */
@@ -235,11 +272,11 @@ App.views['staff-regs'] = function (p) {
   const list = regs.filter(r => f === 'all' || r.state === f).slice().sort((a, b) => a.at.localeCompare(b.at));
   const sch = r => r.school ? this.schoolName(r.school) : r.school_text;
   return {nav: this.staffNav(), html: `${this.roleBar()}
-    <div class="page-head"><div><h1>คำขอลงทะเบียนครู</h1><p class="sub">ตรวจหลักฐาน → อนุมัติ: ระบบเพิ่มสถานศึกษา (ถ้ายังไม่มี) สร้าง Username/รหัสผ่าน และส่งอีเมลให้ครูอัตโนมัติ</p></div></div>
+    <div class="page-head"><div><h1>คำขอเพิ่มครูผู้ดูแลทุน</h1><p class="sub">ตรวจหลักฐาน → อนุมัติ: ระบบเพิ่มสถานศึกษา (ถ้ายังไม่มี) สร้าง Username/รหัสผ่าน และส่งอีเมลให้ครูอัตโนมัติ</p></div></div>
     <div class="note info small">เปิดรับลงทะเบียนถึง ${thDate(trClose().slice(0, 10))} ${trClose().slice(11, 16)} น. (แก้ได้ที่หน้า “รอบรับสมัคร”)</div>
     <div class="stats">${[['pending', 'รอตรวจ'], ['approved', 'อนุมัติแล้ว'], ['rejected', 'ไม่อนุมัติ'], ['all', 'ทั้งหมด']].map(([k, t]) =>
       `<button class="stat${k === 'pending' && regs.some(r => r.state === 'pending') ? ' hot' : ''}" data-go="staff-regs" data-f="${k}" aria-pressed="${f === k}"><span>${t}</span><b>${k === 'all' ? regs.length : regs.filter(r => r.state === k).length}</b></button>`).join('')}</div>
-    <div class="tlist rg-list" role="table" aria-label="คำขอลงทะเบียนครู">
+    <div class="tlist rg-list" role="table" aria-label="คำขอเพิ่มครูผู้ดูแลทุน">
       <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>เลขที่คำขอ</span><span>ชื่อครู</span><span>สถานศึกษา</span><span>ประเภทคำขอ</span><span>ส่งเมื่อ</span><span>สถานะ</span></div>
       ${list.length ? list.map((r, i) => `<button class="trow" role="row" data-go="staff-reg" data-id="${r.id}">
         <span class="n">${i + 1}</span><span class="num">${r.id}</span><span class="c-name">${esc(r.name)}<small>${esc(r.email)}</small></span>
@@ -255,10 +292,12 @@ App.views['staff-reg'] = function (p) {
   const lv = r.levels.map(k => (TR_LEVELS.find(x => x[0] === k) || [, k])[1]).concat(r.levels_other ? [r.levels_other] : []).join(', ');
   const md = r.modes.map(k => (TR_MODES.find(x => x[0] === k) || [, k])[1].replace(/ \(.*/, '')).concat(r.modes_other ? [r.modes_other] : []).join(', ');
   const fileSrc = pvMock({first_name: '', last_name: '', title: '', ...r}, 'TP', 'หนังสือแต่งตั้ง / บัตรเจ้าหน้าที่', r.file, 0);
+  const mails = (this.db.mails || []).filter(m => m.code === r.id).slice().reverse();
   const sug = !r.school ? this.tpSuggest({school_text: r.school_text, province: r.province}) : [];
   let panel;
   if (r.state !== 'pending') panel = `<div class="note ${r.state === 'approved' ? 'ok' : 'bad'} small"><b>${TR_STATE[r.state][0]}</b> โดย ${esc(r.by || '')} · ${thDate(r.done_at, true)}
-      ${r.username ? `<br>Username: <b>${esc(r.username)}</b> · ส่งรหัสผ่านทางอีเมลแล้ว` : ''}${r.reject_reason ? `<br>เหตุผล: ${esc(r.reject_reason)}` : ''}</div>`;
+      ${r.username ? `<br>Username: <b>${esc(r.username)}</b> · ส่งรหัสผ่านทางอีเมลแล้ว` : ''}${r.reject_reason ? `<br>เหตุผล: ${esc(r.reject_reason)}` : ''}</div>
+    ${r.state === 'approved' && r.school ? `<button class="btn block" type="button" data-go="staff-school" data-id="${esc(r.school)}">ดูสถานศึกษา / บัญชีครู →</button>` : ''}`;
   else panel = `<div class="tp-checks">${TR_CHECK.map(([k, l]) => `<label class="choice"><input type="checkbox" name="rck" value="${k}"> <span>${l}</span></label>`).join('')}</div>
     ${!r.school ? `<div class="subcard stack"><span class="label">สถานศึกษาที่พิมพ์เอง: ${esc(r.school_text)}</span>
         ${sug.length ? radioField('rg_match', 'มีอยู่แล้วในระบบ? (ชื่อคล้ายกัน)', sug.map(x => [x.id, x.name, `${x.district} จ.${x.province}`]).concat([['__new', 'ไม่ตรง — เพิ่มเป็นสถานศึกษาใหม่', '']]), '__new', {col: 1}) : '<p class="small muted">ไม่พบชื่อคล้ายกัน — จะเพิ่มเป็นสถานศึกษาใหม่</p>'}
@@ -271,7 +310,7 @@ App.views['staff-reg'] = function (p) {
       <button class="btn danger" type="button" data-action="rg-decide" data-ok="0" data-id="${r.id}">✕ ไม่อนุมัติ</button></div>
     <p class="tiny muted">อนุมัติ → ระบบสร้างบัญชี + รหัสผ่านชั่วคราว และส่งอีเมลให้ครูอัตโนมัติ · เข้าครั้งแรกต้องเปลี่ยนรหัสผ่าน</p>`;
   return {nav: this.staffNav(), html: `${this.roleBar()}
-    <button class="back" data-go="staff-regs">${icon('back')} คำขอลงทะเบียนครู</button>
+    <button class="back" data-go="staff-regs">${icon('back')} คำขอเพิ่มครูผู้ดูแลทุน</button>
     <div class="page-head"><div><h1><span class="num">${r.id}</span> — ${esc(r.name)}</h1><p class="sub">${TR_KIND[r.kind]} · ส่งเมื่อ ${thDate(r.at, true)}</p></div>${trBadge(r.state)}</div>
     <div class="split">
       <div class="rv-left"><div class="stack">
@@ -284,6 +323,9 @@ App.views['staff-reg'] = function (p) {
           <div><dt>บัญชีครูเดิม</dt><dd>${old ? `${esc(old.name)} <span class="small muted">(${esc(old.username)} · ${esc(old.email)})</span>` : '<span class="muted">ไม่มี</span>'}</dd></div>
           <div><dt>ที่อยู่</dt><dd>${esc(r.addr)}</dd></div><div><dt>จำนวนนักเรียน</dt><dd>${Number(r.count).toLocaleString()} คน</dd></div>
           <div><dt>ระดับชั้นที่เปิดสอน</dt><dd>${esc(lv)}</dd></div><div><dt>รูปแบบการเรียนการสอน</dt><dd>${esc(md)}</dd></div></dl></section>
+        <section class="card stack"><h3>${mails.length ? `อีเมลที่ระบบส่ง (${mails.length})` : 'ตัวอย่างอีเมลที่จะส่งเมื่ออนุมัติ'}</h3>
+          ${mails.length ? mails.map(trMailCard).join('') : trMailCard({subject: trMailSubject(sc ? sc.name : r.school_text), to: r.email, at: nowIso(),
+            body: trMailApprove(r.name, sc ? sc.name : r.school_text, old ? old.username : (sc ? schUser(sc.id) : '(ระบบตั้งให้เมื่ออนุมัติ)'), '(รหัสผ่านชั่วคราว — ระบบสร้างเมื่ออนุมัติ)')})}</section>
         <section class="card"><h3>หลักฐานยืนยันตัวตน</h3>${pvViewerG([{title: esc(r.file_name || r.file), files: [{k: 'rg', f: r.file, title: 'หลักฐานยืนยันตัวตน', src: fileSrc}]}], {open: true})}</section>
       </div></div>
       <aside class="stack rv-side" id="rv-side"><section class="card"><div class="rv-sheet-head"><h3>ตรวจคำขอ</h3><button class="btn sm rv-close" type="button" data-action="rv-sheet">ปิด</button></div>
@@ -302,7 +344,8 @@ App.on('rg-decide', function (el) {
     const why = TR_CHECK.filter(([k]) => !ck.includes(k)).map(([, l]) => 'ไม่ผ่าน: ' + l).concat(reason ? [reason] : []);
     if (!why.length) { this.go('staff-reg', {id: r.id, errors: {reason: 'ติ๊กครบทุกข้อแล้ว — ถ้าไม่อนุมัติ กรุณาระบุเหตุผล'}}); return; }
     Object.assign(r, {state: 'rejected', reject_reason: why.join(', '), by: this.session.name, done_at: nowIso()});
-    (this.db.mails = this.db.mails || []).push({at: nowIso(), code: r.id, to: r.email, who: 'ครู ' + r.name, subject: 'คำขอลงทะเบียนครูผู้ดูแลทุนไม่ได้รับการอนุมัติ', body: r.reject_reason});
+    const sn = r.school ? this.schoolName(r.school) : r.school_text;
+    (this.db.mails = this.db.mails || []).push({at: nowIso(), code: r.id, to: r.email, who: 'ครู ' + r.name, subject: `คำขอลงทะเบียนครูผู้ดูแลทุนไม่ได้รับการอนุมัติ / ${sn}`, body: trMailReject(r.name, sn, r.reject_reason)});
     this.save(); this.toast('ไม่อนุมัติ · ส่งอีเมลแจ้งครูแล้ว'); this.go('staff-regs'); return;
   }
   if (ck.length < TR_CHECK.length) { this.go('staff-reg', {id: r.id, errors: {ok: 'อนุมัติได้เมื่อติ๊กครบทุกข้อ'}}); return; }
@@ -332,8 +375,10 @@ App.on('rg-decide', function (el) {
     this.db.teachers.push({username, name: r.name, position: r.pos || 'ครู', department: '', school: sid, phone: r.phone, email: r.email, active: true, password: pw, must_change: true, reg: r.id, created_at: nowIso()});
   }
   Object.assign(r, {state: 'approved', school: sid, username, by: this.session.name, done_at: nowIso()});
-  (this.db.mails = this.db.mails || []).push({at: nowIso(), code: r.id, to: r.email, who: 'ครู ' + r.name, subject: 'Username และ Password สำหรับครูผู้ดูแลทุน', body: `Username: ${username} · รหัสผ่านชั่วคราว: ${pw}`});
-  if (r.kind === 'replace' && t) this.db.mails.push({at: nowIso(), code: r.id, to: t.email, who: 'ครู ' + t.name, subject: 'แจ้งเปลี่ยนครูผู้ดูแลทุน', body: `บัญชีของ ${this.schoolName(sid)} เปลี่ยนเป็น ${r.name}`});
+  const sname = (sc && sc.name) || this.schoolName(sid);
+  (this.db.mails = this.db.mails || []).push({at: nowIso(), code: r.id, to: r.email, who: 'ครู ' + r.name, subject: trMailSubject(sname), body: trMailApprove(r.name, sname, username, pw)});
+  if (r.kind === 'replace' && t) this.db.mails.push({at: nowIso(), code: r.id, to: t.email, who: 'ครู ' + t.name, subject: `แจ้งเปลี่ยนครูผู้ดูแลทุน / ${sname}`,
+    body: `เรียน ${t.name}\n\nมูลนิธิฯ ได้เปลี่ยนครูผู้ดูแลทุนของ ${sname} เป็น ${r.name} ตามคำขอของสถานศึกษา\nบัญชีเดิมของคุณครูถูกปิดการใช้งานแล้ว\n\nหากไม่ถูกต้อง กรุณาติดต่อ โทร. ${TR_PHONE}`});
   this.save();
   this.toast(`อนุมัติแล้ว · Username ${username} · รหัสชั่วคราว ${pw} (ส่งทางอีเมลแล้ว)`);
   this.go('staff-reg', {id: r.id});
