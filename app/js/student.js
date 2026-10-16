@@ -844,6 +844,7 @@ App.views['student-status'] = function (p = {}) {
     steps.push({t: 'รอหลักฐานยืนยันการย้ายสถานศึกษา', cls: !sent ? '' : subs.length || ok ? 'done' : 'now', sub: sent && !ok && !rej.length && tst !== 'closed' ? hint : ''});
     rej.forEach((x, i) => steps.push({t: 'หลักฐานไม่ผ่าน กรุณาอัปโหลดใหม่', cls: 'bad',
       sub: `ส่งครั้งที่ ${x.n} · ${thDate(x.at)}${tst === 'rejected' && i === rej.length - 1 ? '<br>' + hint : ''}`}));
+    if (tst === 'todo' && s.tp && s.tp.reopen_until) steps.push({t: 'เปิดสิทธิ์ให้ส่งหลักฐานใหม่', cls: 'now', sub: `ส่งภายใน ${thDate(s.tp.reopen_until)}`});
     if (tst === 'closed') steps.push({t: 'หมดเขตส่งหลักฐานแล้ว', cls: 'bad', sub: ''});
     steps.push({t: 'ส่งหลักฐานยืนยันการย้ายสถานศึกษาสำเร็จ', cls: ok ? 'done' : '', sub: ''});
   }
@@ -856,7 +857,7 @@ App.views['student-status'] = function (p = {}) {
     ${editable ? `<div class="note ${s.status === 'returned_to_student' ? 'warn' : 'info'} row between"><span>${s.status === 'returned_to_student'
       ? '<b>ครูเปิดสิทธิ์ให้แก้ไข:</b> ' + esc(s.return_reason || '') : 'ใบสมัครยังไม่ได้ส่ง กรอกต่อให้ครบแล้วกดส่ง'}</span>
       <button class="btn primary" data-go="student-form" data-step="${s.step || 1}">กรอกใบสมัครต่อ</button></div>`
-      : `<div class="note info"><b>สถานะหลังส่ง:</b> เมื่อผู้สมัครกดส่งแล้ว ข้อมูลจะถูกล็อกไม่ให้แก้ไขเอง หากจำเป็นต้องแก้ไข ให้ครูผู้ดูแลทุนเปิดสิทธิ์</div>`}
+      : s.status !== 'waiting_teacher' ? '' : `<div class="note info"><b>สถานะหลังส่ง:</b> เมื่อผู้สมัครกดส่งแล้ว ข้อมูลจะถูกล็อกไม่ให้แก้ไขเอง หากจำเป็นต้องแก้ไข ให้ครูผู้ดูแลทุนเปิดสิทธิ์</div>`}
     <div class="split">
       <div class="stack">
         ${s.school_next === 'transfer' ? tpCard.call(this, s, 'student', p) : ''}

@@ -11,26 +11,34 @@ const TP_MAX_MB = 10;
 const TP_MAX_FILES = 5;
 const tpFiles = sub => sub ? sub.files || (sub.file ? [sub.file] : []) : [];
 const TP_EXT = ['jpg', 'jpeg', 'png', 'pdf', 'heic', 'heif'];
+/* บวกวันทำการ (ข้ามเสาร์–อาทิตย์) */
+function addBizDays(d, n) {
+  const x = new Date(d + 'T12:00');
+  while (n > 0) { x.setDate(x.getDate() + 1); const w = x.getDay(); if (w && w < 6) n--; }
+  return x.toISOString().slice(0, 10);
+}
 const tpBadge = st => `<span class="badge t-${TP_STATE[st][1]}">${TP_STATE[st][0]}</span>`;
 
 Object.assign(App, {
   /* ครูผู้ดูแลในปีที่ย้าย = โรงเรียนเดิม (ครูโรงเรียนใหม่ยังไม่เห็นข้อมูล) */
   careSchool(s) { return s.home_school || s.school; },
-  tpOpen() { return nowIso().slice(0, 10) <= this.db.cycle.transfer_close; },
-  tpDaysLeft() { return Math.max(0, Math.ceil((new Date(this.db.cycle.transfer_close + 'T23:59') - new Date()) / 864e5)); },
+  /* กำหนดส่ง: ปกติ 31 ก.ค. · ถ้า จนท. เปิดสิทธิ์ให้ส่งใหม่ → ภายในกี่วันทำการที่เลือก */
+  tpDeadline(s) { return (s && s.tp && s.tp.reopen_until) || this.db.cycle.transfer_close; },
+  tpOpen(s) { return nowIso().slice(0, 10) <= this.tpDeadline(s); },
+  tpDaysLeft(s) { return Math.max(0, Math.ceil((new Date(this.tpDeadline(s) + 'T23:59') - new Date()) / 864e5)); },
   tpLast(s) { return ((s.tp || {}).subs || []).slice(-1)[0]; },
   tpState(s) {
     const tp = s.tp || {};
     if (tp.state === 'pending') return 'pending';
     if (tp.state === 'approved') return 'done';
     if (tp.state !== 'reopened' && this.db.transfers.some(t => t.code === s.code)) return 'done';
-    if (!this.tpOpen()) return 'closed';
+    if (!this.tpOpen(s)) return 'closed';
     return tp.state === 'rejected' ? 'rejected' : 'todo';
   },
-  /* ส่งได้เมื่อใบสมัครถึงมูลนิธิฯ แล้ว และยังไม่ผ่าน / ยังไม่หมดเขต */
+  /* ส่ง / แก้ไขได้เมื่อใบสมัครถึงมูลนิธิฯ แล้ว และ จนท. ยังไม่ตรวจผ่าน / ยังไม่หมดเขต */
   tpCanSend(s) {
     return s.school_next === 'transfer' && ['waiting_transfer_proof', 'waiting_staff', 'need_more_info', 'waiting_manager'].includes(s.status)
-      && ['todo', 'rejected'].includes(this.tpState(s));
+      && ['todo', 'rejected', 'pending'].includes(this.tpState(s));
   },
   tpSchoolOf(sub) {
     if (!sub) return null;
@@ -73,6 +81,11 @@ function tpForm(s, who, p) {
   const v = p.tpv || (last ? {region: ls ? ls.region : last.region, province: ls ? ls.province : last.province, district: ls ? ls.district : last.district,
     school: last.school || '', none: !last.school, text: last.school_text || '', cls: last.cls, email: last.email}
     : {cls: s.next_class, email: who === 'student' ? s.email : s.email || ''});
+  const edit = this.tpState(s) === 'pending';
+  /* แก้ไขระหว่างรอตรวจ: เริ่มจากไฟล์ที่ส่งไว้ */
+  if (edit && (!this._tpFiles || this._tpFiles.code !== s.code)) this._tpFiles = {code: s.code, pre: true, list: tpFiles(last).map(f => ({name: f, ext: f.split('.').pop(), note: ''}))};
+  if (!edit && this._tpFiles && this._tpFiles.pre) this._tpFiles = null;
+  if (edit && !p.tpv) v.ack = true;
   const files = this._tpFiles && this._tpFiles.code === s.code ? this._tpFiles.list : [];
   const allClasses = Object.values(CLASS_GROUPS).flat();
   return `${errNote(e)}<form class="stack tp-form" data-submit="tp-submit" data-code="${s.code}" data-who="${who}" novalidate>
@@ -100,7 +113,7 @@ function tpForm(s, who, p) {
     <h4 class="tp-h">3. อีเมลสำหรับแจ้งผล</h4>
     ${field('tp_email', who === 'student' ? 'อีเมลของนักเรียน' : 'อีเมลของนักเรียน (ถ้ามี)', input('tp_email', v.email, 'type="email" inputmode="email" autocomplete="email" placeholder="ไม่มี เว้นว่างได้"'),
       {err: e.email, hint: 'ใช้แจ้งผลการตรวจหลักฐานว่าใช้ได้หรือไม่ · หากไม่มีอีเมล ระบบจะแจ้งผ่านครูผู้ดูแลทุน และดูสถานะได้ในหน้านี้'})}
-    <button class="btn primary block" type="submit">ส่งหลักฐานการย้าย</button>
+    <button class="btn primary block" type="submit">${edit ? 'บันทึกการแก้ไข' : 'ส่งหลักฐานการย้าย'}</button>
   </form>`;
 }
 
@@ -111,19 +124,23 @@ function tpCard(s, who, p = {}) {
   const subs = (s.tp || {}).subs || [];
   const tr = this.db.transfers.filter(t => t.code === s.code).slice(-1)[0];
   const sentToFdn = ['waiting_transfer_proof', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'].includes(s.status);
-  const dl = `<div class="tp-deadline">หมดเขตส่งหลักฐาน <b>${thDate(this.db.cycle.transfer_close)}</b>${this.tpOpen() ? ` · เหลืออีก <b>${this.tpDaysLeft()}</b> วัน` : ''}${['ป.6', 'ม.3'].includes(s.class) ? `<div class="small muted">${esc(this.tpRoundHint(s))}</div>` : ''}</div>`;
+  const reo = s.tp && s.tp.reopen_until;
+  const dl = reo ? `<div class="tp-deadline">ส่งหลักฐานใหม่ได้ถึง <b>${thDate(reo)}</b>${this.tpOpen(s) ? ` · เหลืออีก <b>${this.tpDaysLeft(s)}</b> วัน` : ''}</div>`
+    : `<div class="tp-deadline">หมดเขตส่งหลักฐาน <b>${thDate(this.db.cycle.transfer_close)}</b>${this.tpOpen(s) ? ` · เหลืออีก <b>${this.tpDaysLeft(s)}</b> วัน` : ''}${['ป.6', 'ม.3'].includes(s.class) ? `<div class="small muted">${esc(this.tpRoundHint(s))}</div>` : ''}</div>`;
   const sum = sub => { const sc = this.tpSchoolOf(sub);
     return `<dl class="kv tp-kv"><div><dt>สถานศึกษาใหม่</dt><dd>${esc(sc.name)}${sc.typed ? ' <span class="badge t-warn">พิมพ์เอง</span>' : ''}<div class="small muted">${esc(sc.district || '')} จ.${esc(sc.province || '')}</div></dd></div>
       <div><dt>ระดับชั้น</dt><dd>${esc(sub.cls)}</dd></div><div><dt>หลักฐาน</dt><dd>${tpFiles(sub).length} ไฟล์${tpFiles(sub).map(f => `<div class="small muted">📎 ${esc(f)}</div>`).join('')}</dd></div>
       <div><dt>ส่งโดย</dt><dd>${TP_BY[sub.by]}${sub.by_name ? ` (${esc(sub.by_name)})` : ''}<div class="small muted">${thDate(sub.at, true)} · ครั้งที่ ${sub.n}</div></dd></div></dl>`; };
   let body;
   if (!sentToFdn) body = `<div class="note info">ส่งหลักฐานการย้ายได้หลังใบสมัครถึงมูลนิธิฯ แล้ว</div>`;
-  else if (st === 'pending') body = `<div class="note info"><b>ส่งหลักฐานแล้ว — รอเจ้าหน้าที่ตรวจ</b><br><span class="small">ระหว่างรอตรวจแก้ไขไม่ได้ หากต้องการแก้ไข ${who === 'teacher' ? 'ติดต่อเจ้าหน้าที่มูลนิธิฯ เพื่อเปิดสิทธิ์' : 'ติดต่อครูผู้ดูแลทุน'} · ผลการตรวจจะแจ้งทางอีเมลและแสดงในหน้านี้</span></div>${sum(last)}`;
+  else if (st === 'pending') body = `<div class="note info"><b>ส่งหลักฐานแล้ว — รอเจ้าหน้าที่ตรวจ</b><br><span class="small">ยังแก้ไขได้จนกว่าเจ้าหน้าที่จะตรวจผ่าน · ผลการตรวจจะแจ้งทางอีเมลและแสดงในหน้านี้</span></div>${sum(last)}
+    ${this.tpCanSend(s) ? `<details class="more tp-edit"${p.tpv || p.tpe ? ' open' : ''}><summary>แก้ไขหลักฐาน / แนบไฟล์เพิ่ม</summary>${dl}${tpForm.call(this, s, who, p)}</details>` : ''}`;
   else if (st === 'done') body = `<div class="note ok"><b>✓ เจ้าหน้าที่ตรวจหลักฐานแล้ว ถูกต้อง</b>${tr ? `<br><span class="small">ย้ายไป ${esc(this.schoolName(tr.to))} · ชั้น ${esc(tr.cls)}</span>` : ''}</div>
-    ${last && s.tp && s.tp.state === 'approved' ? sum(last) : ''}<p class="small muted">หากย้ายสถานศึกษาอีกครั้ง ${who === 'teacher' ? 'กรุณาโทรแจ้งเจ้าหน้าที่มูลนิธิฯ เพื่อเปิดสิทธิ์แจ้งย้ายใหม่' : 'กรุณาติดต่อครูผู้ดูแลทุน'}</p>`;
-  else if (st === 'closed') body = `<div class="note bad"><b>หมดเขตส่งหลักฐานแล้ว</b> (${thDate(this.db.cycle.transfer_close)}) — ไม่รับเอกสารเพิ่ม</div>${last ? sum(last) : ''}`;
+    ${last && s.tp && s.tp.state === 'approved' ? sum(last) : ''}<p class="small muted">แก้ไขไม่ได้แล้ว · หากย้ายสถานศึกษาอีกครั้ง ${who === 'teacher' ? 'ครูหรือนักเรียน' : 'นักเรียนหรือครู'}โทรแจ้งมูลนิธิฯ เพื่อขอเปิดสิทธิ์ส่งหลักฐานใหม่</p>`;
+  else if (st === 'closed') body = `<div class="note bad"><b>${reo ? 'หมดเวลาส่งหลักฐานที่เปิดสิทธิ์ให้แล้ว' : 'หมดเขตส่งหลักฐานแล้ว'}</b> (${thDate(this.tpDeadline(s))}) — ไม่รับเอกสารเพิ่ม</div>${last ? sum(last) : ''}`;
   else if (st === 'rejected') body = `<div class="note bad"><b>หลักฐานไม่ผ่าน — กรุณาอัปโหลดใหม่</b><ul class="tp-why">${(last.reasons || []).map(r => `<li>${esc(r)}</li>`).join('')}</ul>
 </div>${dl}${tpForm.call(this, s, who, p)}`;
+  else if (reo) body = `<div class="note warn"><b>มูลนิธิฯ เปิดสิทธิ์ให้ส่งหลักฐานการย้ายใหม่</b> — กรุณาส่งภายใน <b>${thDate(reo)}</b> (${s.tp.reopens.slice(-1)[0].days} วันทำการ)</div>${dl}${tpForm.call(this, s, who, p)}`;
   else body = `<div class="note warn">${who === 'student' ? 'คุณแจ้งว่าจะ <b>ย้ายสถานศึกษา</b>' : 'นักเรียนแจ้งว่าจะ <b>ย้ายสถานศึกษา</b>'}${s.next_school_text ? ` ไปที่ <b>${esc(s.next_school_text)}</b>` : ''}
       — กรุณาส่งหลักฐานการย้าย หากไม่ส่งภายในกำหนดถือว่าสละสิทธิ์</div>${dl}${tpForm.call(this, s, who, p)}`;
   const hist = subs.length ? `<details class="more tp-hist"${st === 'rejected' ? ' open' : ''}><summary>ประวัติการส่ง (${subs.length})</summary><ol class="timeline">${subs.slice().reverse().map(x =>
@@ -206,17 +223,27 @@ App.on('tp-submit', function (form) {
     return;
   }
   s.tp = s.tp || {subs: []};
-  const n = s.tp.subs.length + 1;
-  s.tp.subs.push({n, at: nowIso(), by: who, by_name: who === 'teacher' ? (this.teacherOf(this.careSchool(s)) || {}).name || '' : '',
+  const editing = s.tp.state === 'pending';
+  const n = editing ? this.tpLast(s).n : s.tp.subs.length + 1;
+  const rec = {n, at: editing ? this.tpLast(s).at : nowIso(), by: who, by_name: who === 'teacher' ? (this.teacherOf(this.careSchool(s)) || {}).name || '' : '',
     school: none ? '' : a.school, school_text: none ? v.tp_text : '', region: a.region, province: a.province, district: a.district,
     cls: v.tp_cls, files: files.map((f, i) => `${s.code}_14_TRANSFER_${n}${files.length > 1 ? '-' + (i + 1) : ''}.${f.ext}`),
-    file_note: [...new Set(files.map(f => f.note).filter(Boolean))].join(' · '), email: v.tp_email || ''});
+    file_note: [...new Set(files.map(f => f.note).filter(Boolean))].join(' · '), email: v.tp_email || ''};
+  if (editing) s.tp.subs[s.tp.subs.length - 1] = {...rec, edited_at: nowIso(), edited_by: who};
+  else s.tp.subs.push(rec);
   s.tp.state = 'pending';
   this._tpFiles = null;
-  addHistory(s, `${who === 'teacher' ? 'ครูโรงเรียนเดิม' : 'นักเรียน'}ส่งหลักฐานการย้ายสถานศึกษา (ครั้งที่ ${n}) — รอเจ้าหน้าที่ตรวจ`, 'transfer_submit');
-  const m = this.tpMail(s, 'ได้รับหลักฐานการย้ายสถานศึกษาแล้ว — รอเจ้าหน้าที่ตรวจ', `${fullName(s)} (${s.code}) ส่งหลักฐานครั้งที่ ${n} แล้ว`);
-  this.save();
-  this.toast(`ส่งหลักฐานแล้ว · แจ้งทางอีเมล ${m} ฉบับ`);
+  const whoTxt = who === 'teacher' ? 'ครูโรงเรียนเดิม' : 'นักเรียน';
+  if (editing) {
+    addHistory(s, `${whoTxt}แก้ไขหลักฐานการย้ายสถานศึกษา (ครั้งที่ ${n}) — รอเจ้าหน้าที่ตรวจ`, 'transfer_edit');
+    this.save();
+    this.toast('บันทึกการแก้ไขแล้ว');
+  } else {
+    addHistory(s, `${whoTxt}ส่งหลักฐานการย้ายสถานศึกษา (ครั้งที่ ${n}) — รอเจ้าหน้าที่ตรวจ`, 'transfer_submit');
+    const m = this.tpMail(s, 'ได้รับหลักฐานการย้ายสถานศึกษาแล้ว — รอเจ้าหน้าที่ตรวจ', `${fullName(s)} (${s.code}) ส่งหลักฐานครั้งที่ ${n} แล้ว`);
+    this.save();
+    this.toast(`ส่งหลักฐานแล้ว · แจ้งทางอีเมล ${m} ฉบับ`);
+  }
   this.go(this.view.name, {code: (this.view.params || {}).code});
 });
 
@@ -233,13 +260,13 @@ function tpTeacherSection() {
     <div class="tp-tlist">${list.map(s => { const st = this.tpState(s), last = this.tpLast(s);
       const tr = st === 'done' ? this.db.transfers.filter(t => t.code === s.code).slice(-1)[0] : null;
       const sc = tr ? {name: this.schoolName(tr.to)} : this.tpSchoolOf(last);
-      const act = this.tpCanSend(s) ? (st === 'rejected' ? 'อัปโหลดใหม่' : 'อัปโหลดแทน') : 'ดู';
+      const act = !this.tpCanSend(s) ? 'ดู' : st === 'rejected' ? 'อัปโหลดใหม่' : st === 'pending' ? 'ดู / แก้ไข' : 'อัปโหลดแทน';
       return `<button class="tp-trow" data-go="teacher-transfer" data-code="${s.code}">
         <span class="c-name">${esc(fullName(s))}<small class="num">${s.code} · ${esc(s.class || '-')} → ${esc((last && last.cls) || s.next_class || '-')}</small></span>
         <span class="c-to">${sc ? esc(sc.name) : `<span class="muted">${esc(s.next_school_text || 'ยังไม่ระบุ')}</span>`}</span>
         <span class="c-st">${tpBadge(st)}${st === 'rejected' && last ? `<small class="bad-t">${esc((last.reasons || [])[0] || '')}</small>` : ''}</span>
         <span class="c-by">${last ? `ส่งโดย${TP_BY[last.by]}` : '—'}</span>
-        <span class="c-act"><span class="btn sm ${act === 'ดู' ? '' : 'primary'}">${act}</span></span></button>`; }).join('')}</div></section>`;
+        <span class="c-act"><span class="btn sm ${act === 'ดู' || act === 'ดู / แก้ไข' ? '' : 'primary'}">${act}</span></span></button>`; }).join('')}</div></section>`;
 }
 App.views['teacher-transfer'] = function (p) {
   const s = this.studentByCode[p.code];
@@ -278,6 +305,7 @@ App.views['staff-tp'] = function (p) {
   if (s.school_next !== 'transfer') {
     panel = `<p class="small">นักเรียนแจ้งว่า <b>เรียนต่อที่เดิม</b> — ถ้านักเรียนโทรแจ้งว่าย้ายจริง เปิดสิทธิ์ให้นักเรียน / ครูส่งหลักฐานการย้ายได้</p>
       ${s.status === 'decided' ? '<div class="note warn small">พิจารณาผลแล้ว เปิดสิทธิ์ไม่ได้</div>' : `${field('tp_reopen', 'เหตุผล', textarea('tp_reopen', '', 'rows="2" placeholder="เช่น ผู้ปกครองโทรแจ้งวันที่ …"'), {req: 1, err: e.reopen})}
+      ${field('tp_days', 'ให้ส่งใหม่ภายใน', select('tp_days', [1, 2, 3, 5, 7].map(d => [d, d + ' วันทำการ']), 3), {hint: 'นับเฉพาะวันจันทร์–ศุกร์'})}
       <button class="btn primary block" type="button" data-action="tp-reopen" data-code="${s.code}">เปิดสิทธิ์แจ้งย้ายสถานศึกษา</button>`}`;
   } else if (st === 'pending') {
     const noSchool = !last.school;
@@ -292,8 +320,9 @@ App.views['staff-tp'] = function (p) {
       <p class="tiny muted">กดแล้วระบบแจ้งอีเมลครูโรงเรียนเดิม (และนักเรียนถ้ามีอีเมล) แล้วเปิดคนถัดไปที่รอตรวจ</p>`;
   } else if (st === 'done') {
     panel = `<div class="note ok small"><b>หลักฐานผ่านแล้ว</b> · นักเรียน / ครูแก้ไขไม่ได้</div>
-      ${s.status === 'decided' ? '' : `<details class="more"><summary>นักเรียนโทรแจ้งว่าย้ายอีก?</summary><div class="stack">
-        ${field('tp_reopen', 'เหตุผลที่เปิดสิทธิ์', textarea('tp_reopen', '', 'rows="2"'), {req: 1, err: e.reopen})}
+      ${s.status === 'decided' ? '' : `<details class="more"><summary>ครู / นักเรียนโทรแจ้งว่าย้ายอีก?</summary><div class="stack">
+        ${field('tp_reopen', 'เหตุผลที่เปิดสิทธิ์', textarea('tp_reopen', '', 'rows="2" placeholder="เช่น ครูโทรแจ้งว่านักเรียนย้ายอีกครั้ง"'), {req: 1, err: e.reopen})}
+        ${field('tp_days', 'ให้ส่งใหม่ภายใน', select('tp_days', [1, 2, 3, 5, 7].map(d => [d, d + ' วันทำการ']), 3), {hint: 'นับเฉพาะวันจันทร์–ศุกร์'})}
         <button class="btn block" type="button" data-action="tp-reopen" data-code="${s.code}">เปิดสิทธิ์แจ้งย้ายครั้งที่ ${(tp.reopens || []).length + 2}</button></div></details>`}`;
   } else {
     panel = `<div class="note ${st === 'rejected' || st === 'closed' ? 'bad' : 'warn'} small">${st === 'rejected' ? 'ตีกลับแล้ว รอนักเรียน / ครูอัปโหลดใหม่' : st === 'closed' ? 'หมดเขตแล้ว ยังไม่ผ่าน — เจ้าหน้าที่ตัดสินใจ' : 'ยังไม่ส่งหลักฐาน'}</div>
@@ -335,7 +364,7 @@ App.views['staff-tp'] = function (p) {
           <div class="row end"><button class="btn sm" type="button" data-action="tp-note" data-code="${s.code}">บันทึกหมายเหตุ</button></div></section>
         <section class="card"><h3>ประวัติ</h3>${tp.subs.length || (tp.reopens || []).length ? `<ol class="timeline">${[...tp.subs.map(x => ({at: x.reviewed_at || x.at,
           txt: `ครั้งที่ ${x.n} · ส่งโดย${TP_BY[x.by]} ${thDate(x.at, true)} · ${x.result === 'approved' ? `ผ่าน (${esc(x.reviewer)})` : x.result === 'rejected' ? `ไม่ผ่าน (${esc(x.reviewer)}): ${esc((x.reasons || []).join(', '))}` : 'รอตรวจ'}`})),
-          ...(tp.reopens || []).map(r => ({at: r.at, txt: `${esc(r.by)} เปิดสิทธิ์แจ้งย้าย: ${esc(r.reason)}`}))].sort((a, b) => b.at.localeCompare(a.at)).map(x => `<li class="done">${x.txt}<small>${thDate(x.at, true)}</small></li>`).join('')}</ol>` : '<p class="small muted">ยังไม่มีการส่งหลักฐาน</p>'}</section>
+          ...(tp.reopens || []).map(r => ({at: r.at, txt: `${esc(r.by)} เปิดสิทธิ์แจ้งย้าย: ${esc(r.reason)}${r.until ? ` · ส่งใหม่ภายใน ${thDate(r.until)} (${r.days} วันทำการ)` : ''}`}))].sort((a, b) => b.at.localeCompare(a.at)).map(x => `<li class="done">${x.txt}<small>${thDate(x.at, true)}</small></li>`).join('')}</ol>` : '<p class="small muted">ยังไม่มีการส่งหลักฐาน</p>'}</section>
         <section class="card"><h3>อีเมลที่ระบบส่ง (${mails.length})</h3>${mails.length ? `<div class="tp-mails">${mails.map(m => `<div class="tp-mail"><b>${esc(m.subject)}</b><span class="small muted">ถึง ${esc(m.who)} · ${esc(m.to)} · ${thDate(m.at, true)}</span></div>`).join('')}</div>` : '<p class="small muted">ยังไม่มี</p>'}</section>
       </div></div>
       <aside class="stack rv-side" id="rv-side"><section class="card"><div class="rv-sheet-head"><h3>ตรวจหลักฐาน</h3><button class="btn sm rv-close" type="button" data-action="rv-sheet">ปิด</button></div>
@@ -404,12 +433,15 @@ App.on('tp-reopen', function (el) {
   const reason = (document.getElementById('tp_reopen') || {}).value.trim();
   if (!reason) { this.go('staff-tp', {code: s.code, errors: {reopen: 'กรุณาระบุเหตุผล'}}); return; }
   s.tp = s.tp || {subs: []};
-  (s.tp.reopens = s.tp.reopens || []).push({at: nowIso(), by: this.session.name, reason});
+  const days = Number((document.getElementById('tp_days') || {}).value || 3);
+  const until = addBizDays(nowIso().slice(0, 10), days);
+  (s.tp.reopens = s.tp.reopens || []).push({at: nowIso(), by: this.session.name, reason, days, until});
   s.tp.state = 'reopened';
+  s.tp.reopen_until = until;
   s.school_next = 'transfer';
   if (s.status !== 'decided' && s.status !== 'waiting_transfer_proof') { s.status = 'waiting_transfer_proof'; }
-  addHistory(s, `${this.session.name} เปิดสิทธิ์แจ้งย้ายสถานศึกษา: ${reason} — รอหลักฐานการย้าย`, 'transfer_reopen');
-  this.tpMail(s, 'มูลนิธิฯ เปิดสิทธิ์แจ้งย้ายสถานศึกษา — กรุณาส่งหลักฐาน', `ส่งได้ถึง ${thDate(this.db.cycle.transfer_close)}`);
+  addHistory(s, `${this.session.name} เปิดสิทธิ์แจ้งย้ายสถานศึกษา: ${reason} — ส่งหลักฐานใหม่ภายใน ${thDate(until)} (${days} วันทำการ)`, 'transfer_reopen');
+  this.tpMail(s, 'มูลนิธิฯ เปิดสิทธิ์แจ้งย้ายสถานศึกษา — กรุณาส่งหลักฐานใหม่', `ส่งได้ถึง ${thDate(until)} (${days} วันทำการ)`);
   this.save();
   this.toast('เปิดสิทธิ์แจ้งย้ายแล้ว');
   this.go('staff-tp', {code: s.code});
