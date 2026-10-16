@@ -1147,3 +1147,4 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
   .t-list .trow .c-class,.t-list .trow .c-type{display:none}
   .t-list .trow .c-code::after{content:attr(data-meta)}
 }
+.t-list .tlist-head,.t-list .trow{grid-template-columns:56px minmax(140px,1fr) minmax(220px,1.7fr) minmax(70px,.6fr) minmax(110px,.9fr) minmax(110px,.8fr) minmax(170px,1.1fr)}
