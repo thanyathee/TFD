@@ -76,7 +76,6 @@ App.views['teacher-home'] = function (p) {
     <section class="card"><div class="card-head"><div><b>ครูผู้ดูแลทุน: ${esc(t ? t.name : '-')}</b>
       <div class="small muted">โทร. <span class="num">${esc(t ? t.phone : '-')}</span> · อีเมล ${esc(t ? t.email : '-')}</div></div></div>
       <p class="small muted">บัญชีผู้ดูแลทุนของโรงเรียน — โรงเรียนนี้ใช้ Username เดียวสำหรับตรวจสอบนักเรียนและส่งเอกสารมายังมูลนิธิฯ</p></section>
-    ${tpTeacherSection.call(this)}
     <div class="stats">${['draft', 'returned', 'waiting', 'sent'].map(k =>
       `<button class="stat" data-go="teacher-home" data-filter="${k}" aria-pressed="${k === f}"><span>${groups[k][0]}</span><b>${all.filter(groups[k][1]).length}</b></button>`).join('')}</div>
     <div class="filters" id="tfilters">
@@ -93,7 +92,8 @@ App.views['teacher-home'] = function (p) {
         <span class="c-name">${esc(fullName(s))}</span><span class="c-status">${teacherBadge(s)}</span><span class="br"></span><span class="c-code num">${s.code}</span><span class="c-class">${esc(s.class || '-')}</span>
         <span class="c-type">${TYPE[s.type]}</span><span class="c-docs">${docCell(s)}</span></button>`).join('')
         : '<div class="empty">ไม่มีนักเรียนตามเงื่อนไขนี้</div>'}
-    </div>`,
+    </div>
+    ${tpTeacherSection.call(this)}`,
     after() { const el = document.getElementById('tq'); if (p.q != null && p.focusQ && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }};
 };
 const teacherFilters = q => ({filter: document.getElementById('tf').value, cls: document.getElementById('tc').value, type: document.getElementById('tt').value,

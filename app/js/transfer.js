@@ -253,15 +253,21 @@ function tpTeacherSection() {
   if (!list.length) return '';
   const cnt = k => list.filter(s => this.tpState(s) === k).length;
   const bad = cnt('rejected');
-  return `<section class="card tp-tcard"><div class="card-head"><div><h3>นักเรียนที่แจ้งย้ายสถานศึกษา</h3>
-      <div class="small muted">หมดเขตส่งหลักฐาน ${thDate(this.db.cycle.transfer_close)}${this.tpOpen() ? ` · เหลืออีก ${this.tpDaysLeft()} วัน` : ''} · ครูอัปโหลดแทนนักเรียนได้</div></div>
+  const c = this.db.cycle;
+  return `<section class="card tp-tcard"><div class="card-head"><div><h3>นักเรียนที่ต้องส่งหลักฐานยืนยันการย้ายสถานศึกษา (${list.length} คน)</h3>
+      <div class="small muted">${this.tpOpen() ? `เหลืออีก ${this.tpDaysLeft()} วัน (ถึง ${thDate(c.transfer_close)})` : 'หมดเขตแล้ว'} · ครูอัปโหลดแทนนักเรียนได้</div></div>
       <div class="row tp-chips">${['todo', 'pending', 'rejected', 'done'].map(k => `<span class="tp-chip">${TP_STATE[k][0]} <b>${cnt(k)}</b></span>`).join('')}</div></div>
+    <div class="tp-rounds">
+      <div class="tp-round"><b>ระดับชั้น ป.6 / ม.3</b><span>ส่งหลักฐานภายใน <b>${thDate(c.first_cutoff)}</b></span><span>→ พิจารณา<b>รอบแรก</b></span><span>→ ประกาศรายชื่อเดือน<b>มิถุนายน</b></span></div>
+      <div class="tp-round"><b>ทุกระดับชั้น</b> <small>(รวม ป.6 / ม.3 ที่ส่งหลัง ${thDate(c.first_cutoff)})</small><span>ส่งหลักฐานภายใน <b>${thDate(c.transfer_close)}</b></span><span>→ พิจารณา<b>รอบรอฟังผล</b></span><span>→ ประกาศรายชื่อเดือน<b>พฤศจิกายน</b></span></div>
+    </div>
     ${bad ? `<div class="note bad small">มีนักเรียน <b>${bad} คน</b> ที่หลักฐานไม่ผ่าน ต้องอัปโหลดใหม่</div>` : ''}
-    <div class="tp-tlist">${list.map(s => { const st = this.tpState(s), last = this.tpLast(s);
+    <div class="tp-tlist">${list.map((s, i) => { const st = this.tpState(s), last = this.tpLast(s);
       const tr = st === 'done' ? this.db.transfers.filter(t => t.code === s.code).slice(-1)[0] : null;
       const sc = tr ? {name: this.schoolName(tr.to)} : this.tpSchoolOf(last);
       const act = !this.tpCanSend(s) ? 'ดู' : st === 'rejected' ? 'อัปโหลดใหม่' : st === 'pending' ? 'ดู / แก้ไข' : 'อัปโหลดแทน';
       return `<button class="tp-trow" data-go="teacher-transfer" data-code="${s.code}">
+        <span class="n">${i + 1}</span>
         <span class="c-name">${esc(fullName(s))}<small class="num">${s.code} · ${esc(s.class || '-')} → ${esc((last && last.cls) || s.next_class || '-')}</small></span>
         <span class="c-to">${sc ? esc(sc.name) : `<span class="muted">${esc(s.next_school_text || 'ยังไม่ระบุ')}</span>`}</span>
         <span class="c-st">${tpBadge(st)}${st === 'rejected' && last ? `<small class="bad-t">${esc((last.reasons || [])[0] || '')}</small>` : ''}</span>

@@ -1058,7 +1058,7 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
 .tp-chips{gap:6px;flex-wrap:wrap}
 .tp-chip{background:var(--fill);border-radius:999px;padding:3px 10px;font-size:13px}
 .tp-tlist{display:grid;margin-top:10px;border-top:1px solid var(--line)}
-.tp-trow{display:grid;grid-template-columns:minmax(180px,1.3fr) minmax(160px,1.4fr) minmax(150px,1fr) 110px 120px;gap:12px;align-items:center;text-align:left;
+.tp-trow{display:grid;grid-template-columns:36px minmax(180px,1.3fr) minmax(160px,1.4fr) minmax(150px,1fr) 110px 120px;gap:12px;align-items:center;text-align:left;
   padding:12px 4px;border:0;border-bottom:1px solid var(--line);background:none;color:inherit;font:inherit;cursor:pointer}
 .tp-trow:hover{background:var(--fill)}
 .tp-trow .c-name{font-weight:600}
@@ -1076,8 +1076,8 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
 .tp-stats{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
 .pv.pv-open .pv-top{margin-bottom:8px}
 @media (max-width:900px){
-  .tp-trow{grid-template-columns:1fr auto;grid-template-areas:"name st" "to to" "by act"}
-  .tp-trow .c-name{grid-area:name}.tp-trow .c-st{grid-area:st;text-align:right}.tp-trow .c-to{grid-area:to;font-size:14px}
+  .tp-trow{grid-template-columns:28px 1fr auto;grid-template-areas:"n name st" ". to to" ". by act"}
+  .tp-trow .n{grid-area:n}.tp-trow .c-name{grid-area:name}.tp-trow .c-st{grid-area:st;text-align:right}.tp-trow .c-to{grid-area:to;font-size:14px}
   .tp-trow .c-by{grid-area:by}.tp-trow .c-act{grid-area:act}
 }
 .tp-info ul{margin:6px 0 8px;padding-left:20px}
@@ -1087,3 +1087,9 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
 .tp-fitem>span{min-width:0;overflow-wrap:anywhere}
 .timeline li.bad{color:var(--bad);font-weight:700}
 .timeline li.bad small{font-weight:400}
+
+.tp-trow .n{color:var(--muted);font-variant-numeric:tabular-nums;text-align:center}
+.tp-rounds{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;margin:12px 0 4px}
+.tp-round{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;padding:12px 14px;background:var(--brand-soft);border-radius:12px;font-size:14.5px}
+.tp-round>b:first-child{width:100%;font-size:15px}
+.tp-round small{color:var(--muted);width:100%;margin-top:-4px}
