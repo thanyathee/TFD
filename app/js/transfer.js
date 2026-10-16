@@ -256,7 +256,9 @@ App.on('tp-submit', function (form) {
 
 /* ---------- หน้าครู: นักเรียนที่แจ้งย้าย ---------- */
 function tpTeacherSection() {
-  const list = this.myStudents().filter(s => s.school_next === 'transfer' || s.tp);
+  /* เฉพาะใบสมัครที่ครูส่งถึงมูลนิธิฯ แล้ว */
+  const sent = ['waiting_transfer_proof', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'];
+  const list = this.myStudents().filter(s => (s.school_next === 'transfer' || s.tp) && sent.includes(s.status));
   if (!list.length) return '';
   const cnt = k => list.filter(s => this.tpState(s) === k).length;
   const bad = cnt('rejected');
