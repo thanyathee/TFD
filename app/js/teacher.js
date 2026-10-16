@@ -86,10 +86,10 @@ App.views['teacher-home'] = function (p) {
       ${field('td', 'เอกสาร', select('td', [['ok', 'ครบ'], ['miss', 'ยังไม่ครบ']], p.docs, 'ทั้งหมด', 'data-onchange="teacher-filter"'))}
     </div>
     <div class="small muted">แสดง ${rows.length} จาก ${all.length} คน</div>
-    <div class="tlist" role="table" aria-label="รายชื่อนักเรียน">
-      <div class="tlist-head" role="row"><span>ชื่อ–นามสกุล</span><span>สถานะ</span><span>รหัสผู้สมัคร</span><span>ชั้น</span><span>ประเภท</span><span>เอกสาร</span></div>
-      ${rows.length ? rows.map(s => `<button class="trow" role="row" data-go="teacher-student" data-code="${s.code}">
-        <span class="c-name">${esc(fullName(s))}</span><span class="c-status">${teacherBadge(s)}</span><span class="br"></span><span class="c-code num">${s.code}</span><span class="c-class">${esc(s.class || '-')}</span>
+    <div class="tlist t-list" role="table" aria-label="รายชื่อนักเรียน">
+      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>ชื่อ–นามสกุล</span><span>สถานะ</span><span>รหัสผู้สมัคร</span><span>ชั้น</span><span>ประเภท</span><span>เอกสาร</span></div>
+      ${rows.length ? rows.map((s, i) => `<button class="trow" role="row" data-go="teacher-student" data-code="${s.code}">
+        <span class="n">${i + 1}</span><span class="c-name">${esc(fullName(s))}</span><span class="c-status">${teacherBadge(s)}</span><span class="br"></span><span class="c-code num">${s.code}</span><span class="c-class">${esc(s.class || '-')}</span>
         <span class="c-type">${TYPE[s.type]}</span><span class="c-docs">${docCell(s)}</span></button>`).join('')
         : '<div class="empty">ไม่มีนักเรียนตามเงื่อนไขนี้</div>'}
     </div>

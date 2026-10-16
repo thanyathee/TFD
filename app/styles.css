@@ -1093,3 +1093,8 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
 .tp-round{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;padding:12px 14px;background:var(--brand-soft);border-radius:12px;font-size:14.5px}
 .tp-round>b:first-child{width:100%;font-size:15px}
 .tp-round small{color:var(--muted);width:100%;margin-top:-4px}
+/* รายชื่อนักเรียน (ครู): มีลำดับ */
+.t-list .tlist-head,.t-list .trow{grid-template-columns:52px minmax(180px,2fr) minmax(170px,1.2fr) 130px 90px 110px 100px}
+.t-list .n{color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.t-list .tlist-head .n{color:var(--muted)}
+@media (max-width:900px){.t-list .trow .n{width:24px;text-align:left}}
