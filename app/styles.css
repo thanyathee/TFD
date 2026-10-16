@@ -1085,3 +1085,5 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
 .tp-flist{display:grid;gap:6px;margin:4px 0 8px}
 .tp-fitem{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--fill);border-radius:10px;font-size:14px;min-width:0}
 .tp-fitem>span{min-width:0;overflow-wrap:anywhere}
+.timeline li.bad{color:var(--bad);font-weight:700}
+.timeline li.bad small{font-weight:400}

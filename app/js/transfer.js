@@ -77,10 +77,11 @@ function tpForm(s, who, p) {
   const allClasses = Object.values(CLASS_GROUPS).flat();
   return `${errNote(e)}<form class="stack tp-form" data-submit="tp-submit" data-code="${s.code}" data-who="${who}" novalidate>
     <h4 class="tp-h">1. สถานศึกษาใหม่</h4>
-    <div class="grid-2" data-area='{"school":true,"schoolLabel":"ชื่อสถานศึกษาใหม่"}'>${this.areaPicker('tp', v, {school: true, schoolLabel: 'ชื่อสถานศึกษาใหม่', err: {school: e.school}})}</div>
+    <div class="grid-2" data-area='{"school":true,"required":true,"schoolLabel":"ชื่อสถานศึกษาใหม่"}'>${this.areaPicker('tp', v, {school: true, required: true, schoolLabel: 'ชื่อสถานศึกษาใหม่',
+      err: {region: e.region, province: e.province, district: e.district, school: e.school}})}</div>
     <label class="choice tp-none"><input type="checkbox" name="tp_none" value="1" ${v.none ? 'checked' : ''} data-onchange="tp-none"> ไม่พบสถานศึกษาในรายชื่อ — พิมพ์ชื่อเอง</label>
-    <div id="tp_none_box" ${v.none ? '' : 'hidden'}>${field('tp_text', 'ชื่อสถานศึกษาใหม่ (พิมพ์เอง)', input('tp_text', v.text, 'placeholder="เช่น โรงเรียน…วิทยาคม"'),
-      {req: 1, err: e.text, hint: 'เลือกภาค / จังหวัด / อำเภอด้านบนด้วย · เจ้าหน้าที่จะตรวจสอบก่อนเพิ่มเข้าระบบ'})}</div>
+    <div id="tp_none_box" ${v.none ? '' : 'hidden'}>${field('tp_text', 'ชื่อเต็มของสถานศึกษาใหม่ (พิมพ์เอง)', input('tp_text', v.text, 'placeholder="เช่น โรงเรียนเวียงเชียงรุ้งวิทยาคม"'),
+      {req: 1, err: e.text, hint: '<b>พิมพ์ชื่อเต็ม ไม่ใช้ตัวย่อ และสะกดให้ถูกต้อง</b> เพราะมีผลต่อการพิจารณา · ต้องเลือกภาค / จังหวัด / อำเภอด้านบนด้วย · เจ้าหน้าที่จะตรวจสอบก่อนเพิ่มเข้าระบบ'})}</div>
     ${field('tp_cls', 'ระดับชั้นที่เรียนในสถานศึกษาใหม่', select('tp_cls', allClasses, v.cls, 'เลือกระดับชั้น'), {req: 1, err: e.cls, hint: `แจ้งไว้ในใบสมัคร: ${esc(s.next_class || '-')}`})}
     <h4 class="tp-h">2. หลักฐานการย้าย</h4>
     <div class="note info tp-info"><b>เอกสารที่ใช้ยืนยันการย้ายได้ มีเพียง 3 อย่างนี้ (อย่างใดอย่างหนึ่ง)</b>
@@ -122,7 +123,7 @@ function tpCard(s, who, p = {}) {
     ${last && s.tp && s.tp.state === 'approved' ? sum(last) : ''}<p class="small muted">หากย้ายสถานศึกษาอีกครั้ง กรุณาโทรแจ้งเจ้าหน้าที่มูลนิธิฯ เพื่อเปิดสิทธิ์แจ้งย้ายใหม่</p>`;
   else if (st === 'closed') body = `<div class="note bad"><b>หมดเขตส่งหลักฐานแล้ว</b> (${thDate(this.db.cycle.transfer_close)}) — ไม่รับเอกสารเพิ่ม</div>${last ? sum(last) : ''}`;
   else if (st === 'rejected') body = `<div class="note bad"><b>หลักฐานไม่ผ่าน — กรุณาอัปโหลดใหม่</b><ul class="tp-why">${(last.reasons || []).map(r => `<li>${esc(r)}</li>`).join('')}</ul>
-      <span class="small">ตรวจโดย ${esc(last.reviewer || '')} · ${thDate(last.reviewed_at, true)}</span></div>${dl}${tpForm.call(this, s, who, p)}`;
+</div>${dl}${tpForm.call(this, s, who, p)}`;
   else body = `<div class="note warn">${who === 'student' ? 'คุณแจ้งว่าจะ <b>ย้ายสถานศึกษา</b>' : 'นักเรียนแจ้งว่าจะ <b>ย้ายสถานศึกษา</b>'}${s.next_school_text ? ` ไปที่ <b>${esc(s.next_school_text)}</b>` : ''}
       — กรุณาส่งหลักฐานการย้าย หากไม่ส่งภายในกำหนดถือว่าสละสิทธิ์</div>${dl}${tpForm.call(this, s, who, p)}`;
   const hist = subs.length ? `<details class="more tp-hist"${st === 'rejected' ? ' open' : ''}><summary>ประวัติการส่ง (${subs.length})</summary><ol class="timeline">${subs.slice().reverse().map(x =>
@@ -188,7 +189,12 @@ App.on('tp-submit', function (form) {
   const none = !!v.tp_none;
   const files = tpFilesOf(s.code);
   const e = {};
-  if (none) { if (!v.tp_text) e.text = 'กรุณาพิมพ์ชื่อสถานศึกษาใหม่'; if (!a.province) e.school = 'กรุณาเลือกภาค / จังหวัด / อำเภอของสถานศึกษาใหม่'; }
+  if (none) {
+    if (!v.tp_text) e.text = 'กรุณาพิมพ์ชื่อเต็มของสถานศึกษาใหม่';
+    if (!a.region) e.region = 'กรุณาเลือกภาค';
+    if (!a.province) e.province = 'กรุณาเลือกจังหวัด';
+    if (!a.district) e.district = 'กรุณาเลือกอำเภอ / เขต';
+  }
   else if (!a.school) e.school = 'กรุณาเลือกสถานศึกษาใหม่ หรือติ๊ก “ไม่พบสถานศึกษาในรายชื่อ”';
   if (!v.tp_cls) e.cls = 'กรุณาเลือกระดับชั้น';
   if (!v.tp_ack) e.ack = 'กรุณาติ๊กรับทราบเงื่อนไขเอกสาร';

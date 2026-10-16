@@ -829,20 +829,23 @@ App.views['student-status'] = function (p = {}) {
   /* ขั้นตอนที่นักเรียนเห็น: กรอก → ครูตรวจ → ส่งมูลนิธิฯ สำเร็จ (ขั้นของมูลนิธิฯ ไม่แสดง) */
   const sent = ['waiting_transfer_proof', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'].includes(s.status);
   const flow = bachelor ? ['กำลังกรอกใบสมัคร', 'ส่งมูลนิธิฯ สำเร็จ'] : ['กำลังกรอกใบสมัคร', 'ครูตรวจและแนบเอกสาร', 'ส่งมูลนิธิฯ สำเร็จ'];
-  let pos = sent ? flow.length : s.status === 'waiting_teacher' ? 1 : 0;
-  let nowLabel = {returned_to_student: 'เปิดสิทธิ์ให้แก้ไข', waiting_teacher: 'รอครูดำเนินการ'}[s.status] || '';
-  /* นักเรียนที่แจ้งย้าย: เพิ่มขั้นส่งหลักฐานการย้าย */
+  const pos = sent ? flow.length : s.status === 'waiting_teacher' ? 1 : 0;
+  const nowLabel = {returned_to_student: 'เปิดสิทธิ์ให้แก้ไข', waiting_teacher: 'รอครูดำเนินการ'}[s.status] || '';
+  const steps = flow.map((x, i) => ({t: x, cls: i < pos ? 'done' : i === pos ? 'now' : '', sub: i === pos ? nowLabel : ''}));
+  /* นักเรียนที่แจ้งย้าย: รอหลักฐาน → (ไม่ผ่าน กี่ครั้งก็แสดงทุกครั้ง สีแดง) → ส่งหลักฐานสำเร็จ */
   if (s.school_next === 'transfer') {
-    flow.push('รอหลักฐานยืนยันการย้ายสถานศึกษา', 'ส่งหลักฐานยืนยันการย้ายสถานศึกษาสำเร็จ');
     const tst = this.tpState(s);
-    if (sent) {
-      pos = ['pending', 'done'].includes(tst) ? flow.length : flow.length - 2;
-      if (tst === 'rejected') nowLabel = 'หลักฐานไม่ผ่าน กรุณาอัปโหลดใหม่';
-      else if (tst === 'closed') nowLabel = 'หมดเขตส่งหลักฐานแล้ว';
-      else if (tst === 'todo') nowLabel = ['ป.6', 'ม.3'].includes(s.class)
-        ? `ส่งภายใน ${thDate(this.db.cycle.first_cutoff)} → พิจารณารอบแรก<br>ส่งภายใน ${thDate(this.db.cycle.transfer_close)} → พิจารณารอบรอฟังผล`
-        : `ส่งภายใน ${thDate(this.db.cycle.transfer_close)}`;
-    }
+    const subs = (s.tp || {}).subs || [];
+    const rej = subs.filter(x => x.result === 'rejected');
+    const ok = sent && ['pending', 'done'].includes(tst);
+    const hint = ['ป.6', 'ม.3'].includes(s.class)
+      ? `ส่งภายใน ${thDate(this.db.cycle.first_cutoff)} → พิจารณารอบแรก<br>ส่งภายใน ${thDate(this.db.cycle.transfer_close)} → พิจารณารอบรอฟังผล`
+      : `ส่งภายใน ${thDate(this.db.cycle.transfer_close)}`;
+    steps.push({t: 'รอหลักฐานยืนยันการย้ายสถานศึกษา', cls: !sent ? '' : subs.length || ok ? 'done' : 'now', sub: sent && !ok && !rej.length && tst !== 'closed' ? hint : ''});
+    rej.forEach((x, i) => steps.push({t: 'หลักฐานไม่ผ่าน กรุณาอัปโหลดใหม่', cls: 'bad',
+      sub: `ส่งครั้งที่ ${x.n} · ${thDate(x.at)}${tst === 'rejected' && i === rej.length - 1 ? '<br>' + hint : ''}`}));
+    if (tst === 'closed') steps.push({t: 'หมดเขตส่งหลักฐานแล้ว', cls: 'bad', sub: ''});
+    steps.push({t: 'ส่งหลักฐานยืนยันการย้ายสถานศึกษาสำเร็จ', cls: ok ? 'done' : '', sub: ''});
   }
   const editable = ['draft', 'returned_to_student'].includes(s.status);
   const t = this.teacherOf(this.careSchool(s));
@@ -870,7 +873,7 @@ App.views['student-status'] = function (p = {}) {
       </div>
       <aside class="stack no-print">
         <section class="card"><h3>ขั้นตอน</h3>
-          <ol class="timeline">${flow.map((x, i) => `<li class="${i < pos ? 'done' : i === pos ? 'now' : ''}">${x}${i === pos && nowLabel ? `<small>${nowLabel}</small>` : ''}</li>`).join('')}</ol></section>
+          <ol class="timeline">${steps.map(x => `<li class="${x.cls}">${x.t}${x.sub ? `<small>${x.sub}</small>` : ''}</li>`).join('')}</ol></section>
         ${!bachelor ? `<section class="card"><h3>ครูผู้ดูแลทุน</h3><p class="small muted">${esc(this.schoolName(s.school))}</p>
           ${t ? `<div><b>${esc(t.name)}</b><div class="small"><span class="num">${esc(t.phone)}</span> · ${esc(t.email)}</div></div>` : '<p class="small muted">ระบบจะแสดงชื่อจากฐานข้อมูลสถานศึกษา</p>'}</section>` : ''}
       </aside>
