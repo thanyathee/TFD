@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v22';
+const STORE_KEY = 'tfd-scholarship-demo-v23';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -171,7 +171,79 @@ const App = {
     };
   },
   /* ข้อมูลตัวอย่างการส่งหลักฐานย้าย: รอตรวจ / ไม่ผ่าน / พิมพ์ชื่อโรงเรียนเอง / ยอดเงินเปลี่ยนรอแอดมิน */
+  /* เพิ่มนักเรียนตัวอย่างให้ SCH-001 ครบทุกสถานะ (หน้าครู + แจ้งย้าย) */
+  seedMore(db) {
+    const copy = o => JSON.parse(JSON.stringify(o));
+    const pool = db.students.filter(x => x.school === 'SCH-001');
+    const tpl = (st, res) => pool.find(x => x.status === st && (!res || (x.decision && x.decision.result === res)))
+      || db.students.find(x => x.status === st && (!res || (x.decision && x.decision.result === res)));
+    const cid = n => { const d = ('11017' + String(n).padStart(7, '0')).split('').map(Number);
+      return d.join('') + (11 - d.reduce((a, x, i) => a + x * (13 - i), 0) % 11) % 10; };
+    const nextOf = c => ({'ป.5': 'ป.6', 'ป.6': 'ม.1', 'ม.1': 'ม.2', 'ม.2': 'ม.3', 'ม.3': 'ม.4', 'ม.4': 'ม.5', 'ม.5': 'ม.6', 'ม.6': 'ปวส.1'})[c];
+    const people = [
+      ['เด็กหญิง', 'ณัฐธิดา', 'ใจดี', 'หญิง', 'ป.5', 'draft'],
+      ['เด็กชาย', 'ภูมิพัฒน์', 'แก้วกาศ', 'ชาย', 'ม.1', 'returned_to_student'],
+      ['นางสาว', 'อรอุมา', 'ทองมา', 'หญิง', 'ม.4', 'waiting_teacher'],
+      ['เด็กชาย', 'กฤษดา', 'บุญมา', 'ชาย', 'ป.6', 'waiting_teacher', 'transfer'],
+      ['เด็กหญิง', 'พิมพ์ลดา', 'สุขสม', 'หญิง', 'ม.2', 'waiting_staff'],
+      ['นาย', 'ธีรวัฒน์', 'คำปัน', 'ชาย', 'ม.5', 'need_more_info'],
+      ['นางสาว', 'สุภาวดี', 'อินทร์แก้ว', 'หญิง', 'ม.6', 'waiting_manager'],
+      ['เด็กหญิง', 'ศิริพร', 'วงศ์ใหญ่', 'หญิง', 'ม.1', 'decided', '', 'approved'],
+      ['นาย', 'อนุชา', 'ปัญญาดี', 'ชาย', 'ม.4', 'decided', '', 'reserve'],
+      ['เด็กชาย', 'ชยพล', 'ศรีบุญ', 'ชาย', 'ม.3', 'waiting_transfer_proof', 'transfer', '', 'todo'],
+      ['เด็กหญิง', 'กัญญาณัฐ', 'มาลัย', 'หญิง', 'ป.6', 'waiting_transfer_proof', 'transfer', '', 'todo'],
+      ['เด็กหญิง', 'วรรณภา', 'ใจงาม', 'หญิง', 'ม.3', 'waiting_transfer_proof', 'transfer', '', 'rejected2'],
+      ['เด็กชาย', 'ณัฐวุฒิ', 'คำมูล', 'ชาย', 'ป.6', 'waiting_transfer_proof', 'transfer', '', 'rejected'],
+      ['เด็กหญิง', 'ปาริชาติ', 'ทาแก้ว', 'หญิง', 'ป.6', 'waiting_transfer_proof', 'transfer', '', 'pending'],
+      ['เด็กชาย', 'วีรภัทร', 'สิทธิชัย', 'ชาย', 'ม.3', 'waiting_staff', 'transfer', '', 'approved'],
+    ];
+    let n = db.students.reduce((m, x) => Math.max(m, Number(x.code.slice(-6))), 0);
+    const sch = id => db.schools.find(x => x.id === id) || {};
+    const other = db.schools.filter(x => x.province === 'แพร่' && x.id !== 'SCH-001' && x.type === 'school');
+    people.forEach(([title, first, last, gender, cls, st, next, res, tp], i) => {
+      const t = tpl(st === 'waiting_transfer_proof' ? 'waiting_staff' : st, res);
+      if (!t) return;
+      const code = `TF${db.cycle.year}-${String(++n).padStart(6, '0')}`;
+      const x = copy(t);
+      const nc = nextOf(cls);
+      Object.assign(x, {code, citizen_id: cid(9000 + i), title, first_name: first, last_name: last, gender, school: 'SCH-001', class: cls, next_class: nc,
+        group: groupOfClass(cls), rate: rateOf(nc) || x.rate, status: st, school_next: next || 'same', next_school_text: next ? (other[i % other.length] || {}).name || 'โรงเรียนประจำอำเภอ' : '',
+        email: `student${n}@example.com`, demo_note: '', demo_tp: ''});
+      /* เอกสารตามระดับชั้น: ส่งแล้ว = ครบ · รอครู = ครึ่งหนึ่ง · กำลังกรอก = ยังไม่มี */
+      const docs = docsFor(x).filter(d => !d[3]);
+      const k = ['draft', 'returned_to_student'].includes(st) ? 0 : st === 'waiting_teacher' ? Math.ceil(docs.length / 2) : docs.length;
+      x.docFiles = Object.fromEntries(docs.slice(0, k).map(d => [d[0], [`${code}_${d[0]}.pdf`]]));
+      if (st !== 'decided') delete x.decision;
+      if (['draft', 'returned_to_student', 'waiting_teacher'].includes(st)) { delete x.teacher_review; delete x.staff_review; }
+      if (['waiting_staff', 'waiting_transfer_proof'].includes(st)) delete x.staff_review;
+      if (st === 'returned_to_student') x.return_reason = x.return_reason || 'แนบรูปบ้านไม่ชัด กรุณาถ่ายใหม่';
+      delete x.tp; delete x.amount_check; delete x.amount_lock; delete x.home_school;
+      x.seed_tp = tp || '';
+      db.students.push(x);
+    });
+    /* สถานะหลักฐานการย้ายของนักเรียนที่เพิ่ม */
+    const day = (d, h) => `2027-05-${String(d).padStart(2, '0')}T${h}`;
+    db.students.filter(x => x.seed_tp).forEach((x, i) => {
+      const to = other[(i + 1) % other.length] || sch('SCH-002');
+      const base = {by: 'student', by_name: '', school: to.id, school_text: '', region: to.region, province: to.province, district: to.district, cls: x.next_class, email: x.email, file_note: ''};
+      const rej = (k, d) => ({...base, n: k, at: day(d, '09:00'), files: [`${x.code}_14_TRANSFER_${k}.jpg`], result: 'rejected', reviewer: 'จนท. 01', reviewed_at: day(d + 1, '10:00'),
+        reasons: k === 1 ? ['ไม่เห็นปีการศึกษาชัดเจน หรือไม่ตรงกับข้อมูล'] : ['ภาพไม่ชัด / อ่านไม่ออก'], checks: ['name', 'school', 'cls']});
+      const hist = (at, text, kind) => (x.history = x.history || []).push({at, text, kind});
+      if (x.seed_tp === 'rejected') { x.tp = {state: 'rejected', subs: [rej(1, 3)]}; hist(day(4, '10:00'), 'จนท. 01 ตรวจหลักฐานการย้าย: ยืนยันไม่สำเร็จ', 'transfer_reject'); }
+      if (x.seed_tp === 'rejected2') { x.tp = {state: 'rejected', subs: [rej(1, 2), {...rej(2, 6), by: 'teacher'}]}; hist(day(7, '10:00'), 'จนท. 01 ตรวจหลักฐานการย้าย: ยืนยันไม่สำเร็จ (ครั้งที่ 2)', 'transfer_reject'); }
+      if (x.seed_tp === 'pending') x.tp = {state: 'pending', subs: [{...base, n: 1, by: 'teacher', at: day(9, '13:30'), files: [`${x.code}_14_TRANSFER_1-1.jpg`, `${x.code}_14_TRANSFER_1-2.pdf`]}]};
+      if (x.seed_tp === 'approved') {
+        x.tp = {state: 'approved', subs: [{...base, n: 1, at: day(5, '08:40'), files: [`${x.code}_14_TRANSFER_1.pdf`], result: 'approved', reviewer: 'จนท. 01', reviewed_at: day(6, '11:00'), checks: ['name', 'school', 'cls', 'year']}]};
+        db.transfers.push({code: x.code, from: x.school, to: to.id, cls: x.next_class, date: '2027-05-05', note: 'ตรวจหลักฐานผ่าน', by: 'จนท. 01', at: day(6, '11:00'), via: 'proof'});
+        x.home_school = x.school; x.school = to.id;
+        hist(day(6, '11:00'), 'จนท. 01 ตรวจหลักฐานการย้าย: ยืนยันสำเร็จ', 'transfer');
+      }
+      delete x.seed_tp;
+    });
+    return db;
+  },
   seedTransfers(db) {
+    this.seedMore(db);
     const by = c => db.students.find(x => x.code === c);
     const sub = (o) => ({n: 1, by: 'student', by_name: '', region: '', province: '', district: '', school_text: '', email: '', file_note: '', ...o});
     const sch = id => db.schools.find(x => x.id === id) || {};
