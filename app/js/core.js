@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v25';
+const STORE_KEY = 'tfd-scholarship-demo-v26';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -316,7 +316,7 @@ const App = {
     /* คำขอลงทะเบียนครูตัวอย่าง */
     const lv = ['primary', 'lowersec', 'uppersec'];
     const reg = (id, at, kind, o) => ({id, at, state: 'pending', kind, school: '', school_text: '', pos: 'ครู', addr: '', count: 450, levels: lv, levels_other: '', modes: ['regular'], modes_other: '',
-      reason: '', file: id + '_IDPROOF.pdf', file_name: 'หนังสือแต่งตั้ง.pdf', ...o});
+      reason: '', file_name: 'หนังสือแต่งตั้ง.pdf', ...o, file: `${id}_${o.school || 'NEW'}_IDPROOF.pdf`});
     db.teacherRegs = [
       reg('REG-0001', '2026-12-01T09:12', 'new', {school: 'SCH-B02', region: 'bkkmetro', province: 'กรุงเทพมหานคร', district: 'เขตปทุมวัน', name: 'นางสาว ศิริรัตน์ ทองดี', phone: '0812345601', email: 'siriratt@example.com', addr: '17 ถนนตัวอย่าง แขวงวังใหม่ เขตปทุมวัน กรุงเทพมหานคร 10330', count: 820, levels: ['lowersec', 'uppersec']}),
       reg('REG-0002', '2026-12-02T13:40', 'newschool', {school_text: 'โรงเรียนบ้านห้วยทรายวิทยา', region: 'north', province: 'แพร่', district: 'อำเภอเมืองแพร่', name: 'นาย ประเสริฐ ใจมั่น', phone: '0812345602', email: 'prasert.j@example.com', addr: '99 หมู่ 4 ตำบลห้วยม้า อำเภอเมืองแพร่ จังหวัดแพร่ 54000', count: 230, levels: ['primary', 'lowersec']}),

@@ -200,7 +200,7 @@ App.on('tr-submit', function () {
   const kind = v.school === '__other' ? 'newschool' : has ? v.kind : 'new';
   this.db.teacherRegs.push({id, at: nowIso(), state: 'pending', kind, school: v.school === '__other' ? '' : v.school, school_text: v.sname || '', region: v.region, province: v.province, district: v.district,
     name: v.name, pos: v.pos, phone: v.phone, email: v.email, addr: v.addr, count: Number(v.count), levels: v.levels, levels_other: v.levels_other, modes: v.modes, modes_other: v.modes_other,
-    reason: kind === 'replace' ? [(TR_REASON.find(r => r[0] === v.reason) || [])[1], v.reason_text].filter(Boolean).join(' — ') : '', file: `${id}_IDPROOF.${(this._trFile.split('.').pop() || 'pdf').toLowerCase()}`, file_name: this._trFile});
+    reason: kind === 'replace' ? [(TR_REASON.find(r => r[0] === v.reason) || [])[1], v.reason_text].filter(Boolean).join(' — ') : '', file: `${id}_${v.school === '__other' ? 'NEW' : v.school}_IDPROOF.${(this._trFile.split('.').pop() || 'pdf').toLowerCase()}`, file_name: this._trFile});
   this._trFile = null;
   this.save();
   this.go('teacher-reg-done', {id});
