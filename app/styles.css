@@ -1171,3 +1171,11 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
 @media (max-width:640px){.tr-actions{grid-template-columns:1fr}}
 .tr-mail-h{display:grid;gap:2px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .tr-mailbody{white-space:pre-wrap;font-size:14px;line-height:1.65;overflow-wrap:anywhere}
+/* ตั้งค่ารอบรับสมัคร: แยกเป็นเรื่อง */
+.cy-form{gap:18px}
+.cy-h{display:flex;gap:12px;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.cy-h h3{margin:0}
+.cy-h p{margin:2px 0 0}
+.cy-h .tr-n{flex:none;margin-top:2px}
+.cy-save{position:sticky;bottom:12px;z-index:5}
+.cy-save .btn{box-shadow:var(--shadow)}

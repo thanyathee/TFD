@@ -247,24 +247,34 @@ App.views['staff-cycle'] = function () {
   const c = this.db.cycle;
   return {nav: this.staffNav(), html: `${this.roleBar()}
     <div class="page-head"><div><h1>ตั้งค่ารอบรับสมัคร</h1></div></div>
-    <form class="stack" data-submit="cycle-save" novalidate>
-      <section class="card"><div class="grid-3">
+    <form class="stack cy-form" data-submit="cycle-save" novalidate>
+      <section class="card stack cy-sec"><div class="cy-h"><span class="tr-n">1</span><div><h3>ปีการศึกษาและสถานะรอบ</h3><p class="small muted">ปีการศึกษาที่เปิดรับ และสถานะของระบบโดยรวม</p></div></div>
+        <div class="grid-3">
         ${field('c_year', 'ปีการศึกษาที่เปิดรับ', input('c_year', c.year, 'type="number" inputmode="numeric"'))}
-        ${field('c_hist', 'ปีที่ใช้ในคำถามประวัติทุน', input('c_hist', c.history_year, 'type="number" inputmode="numeric"'))}
+        ${field('c_hist', 'ปีที่ใช้ในคำถามประวัติทุน', input('c_hist', c.history_year, 'type="number" inputmode="numeric"'), {hint: 'เช่น “ปีการศึกษา 2569 ได้รับทุนจากมูลนิธิฯ หรือไม่”'})}
         ${field('c_status', 'สถานะรอบ', select('c_status', [['open', 'เปิดรับสมัคร'], ['closed', 'ปิดรับสมัคร'], ['preparing', 'เตรียมระบบ']], c.status))}
-      </div><div class="grid-2">
+      </div></section>
+
+      <section class="card stack cy-sec"><div class="cy-h"><span class="tr-n">2</span><div><h3>รับสมัครนักเรียน</h3><p class="small muted">ช่วงที่นักเรียนกรอกใบสมัคร และครูส่งข้อมูลถึงมูลนิธิฯ</p></div></div>
+        <div class="grid-2">
         ${field('c_open', 'วันเปิดรับสมัคร', input('c_open', c.open, 'type="date"'))}
         ${field('c_close', 'วันปิดรับสมัคร', input('c_close', c.close, 'type="date"'))}
       </div></section>
-      <section class="card"><h3>กำหนดส่งหลักฐานการย้ายสถานศึกษา</h3>
-        <p class="small muted">วันที่ตั้งไว้ที่นี่จะแสดงในข้อความเตือนของนักเรียนและครูทุกจุด</p><div class="grid-3">
+
+      <section class="card stack cy-sec"><div class="cy-h"><span class="tr-n">3</span><div><h3>ลงทะเบียนครูผู้ดูแลทุน</h3><p class="small muted">หลังเวลานี้ ปุ่ม “ลงทะเบียนครูผู้ดูแลทุน” ในหน้าครูจะปิด (ลืมรหัสผ่านยังใช้ได้)</p></div></div>
+        <div class="grid-2">${field('c_treg', 'ปิดรับลงทะเบียน (วันและเวลา)', input('c_treg', c.teacher_reg_close || '2027-01-29T17:00', 'type="datetime-local"'))}</div></section>
+
+      <section class="card stack cy-sec"><div class="cy-h"><span class="tr-n">4</span><div><h3>หลักฐานการย้ายสถานศึกษา</h3><p class="small muted">วันที่ตั้งไว้ที่นี่จะแสดงในข้อความเตือนของนักเรียนและครูทุกจุด</p></div></div>
+        <div class="grid-3">
         ${field('c_topen', 'วันเปิดรับหลักฐานย้าย', input('c_topen', c.transfer_open, 'type="date"'))}
-        ${field('c_cut', 'วันตัดรอบแรก (เฉพาะ ป.6 / ม.3)', input('c_cut', c.first_cutoff, 'type="date"'), {hint: 'ป.6 / ม.3 ที่ส่งหลักฐานภายในวันนี้ → พิจารณารอบแรก'})}
-        ${field('c_tclose', 'วันสุดท้ายรับหลักฐาน (ทุกระดับชั้น)', input('c_tclose', c.transfer_close, 'type="date"'), {hint: 'ส่งหลังวันตัดรอบแรกแต่ไม่เกินวันนี้ → พิจารณารอบที่ 2 (รอบรอฟังผล) · เกินวันนี้ถือว่าสละสิทธิ์'})}
-      </div>
-      ${field('c_treg', 'ปิดรับลงทะเบียนครูผู้ดูแลทุน', input('c_treg', c.teacher_reg_close || '2027-01-29T17:00', 'type="datetime-local"'), {hint: 'หลังเวลานี้ ปุ่มลงทะเบียนในหน้าครูจะปิด'})}
-      ${field('c_remind', 'ส่งอีเมลเตือนก่อนหมดเขตส่งหลักฐาน (จำนวนวัน คั่นด้วยจุลภาค)', input('c_remind', (c.remind_days || [30, 14, 7, 3]).join(', '), 'inputmode="numeric"'), {hint: 'ระบบส่งอัตโนมัติถึงครูโรงเรียนเดิม (และนักเรียนที่ให้อีเมล) เฉพาะคนที่ยังไม่ส่งหรือหลักฐานไม่ผ่าน'})}</section>
-      <div class="row end"><button class="btn primary" type="submit">บันทึก</button></div>
+        ${field('c_cut', 'วันตัดรอบแรก (เฉพาะ ป.6 / ม.3)', input('c_cut', c.first_cutoff, 'type="date"'), {hint: 'ส่งภายในวันนี้ → พิจารณารอบแรก (ประกาศเดือนมิถุนายน)'})}
+        ${field('c_tclose', 'วันสุดท้ายรับหลักฐาน (ทุกระดับชั้น)', input('c_tclose', c.transfer_close, 'type="date"'), {hint: 'ส่งภายในวันนี้ → พิจารณารอบรอฟังผล (ประกาศเดือนพฤศจิกายน) · เกินวันนี้ไม่รับเอกสาร'})}
+      </div></section>
+
+      <section class="card stack cy-sec"><div class="cy-h"><span class="tr-n">5</span><div><h3>อีเมลเตือนส่งหลักฐานการย้าย</h3><p class="small muted">ระบบส่งอัตโนมัติถึงครูโรงเรียนเดิม (และนักเรียนที่ให้อีเมล) เฉพาะคนที่ยังไม่ส่งหรือยืนยันไม่สำเร็จ</p></div></div>
+        <div class="grid-2">${field('c_remind', 'ส่งก่อนหมดเขตกี่วัน (คั่นด้วยจุลภาค)', input('c_remind', (c.remind_days || [30, 14, 7, 3]).join(', '), 'inputmode="numeric"'), {hint: 'เช่น 30, 14, 7, 3'})}</div></section>
+
+      <div class="row end cy-save"><button class="btn primary" type="submit">บันทึกการตั้งค่า</button></div>
     </form>`};
 };
 App.on('cycle-save', function (form) {
