@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v23';
+const STORE_KEY = 'tfd-scholarship-demo-v24';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -174,6 +174,35 @@ const App = {
   /* เพิ่มนักเรียนตัวอย่างให้ SCH-001 ครบทุกสถานะ (หน้าครู + แจ้งย้าย) */
   seedMore(db) {
     const copy = o => JSON.parse(JSON.stringify(o));
+    /* สถานศึกษาตัวอย่างในกรุงเทพมหานคร */
+    const bkk = [
+      ['โรงเรียนวัดปทุมวนาราม (จำลอง)', 'school', 'เขตปทุมวัน', 'แขวงรองเมือง', '10330', ['primary', 'lowersec']],
+      ['โรงเรียนปทุมวันวิทยา (จำลอง)', 'school', 'เขตปทุมวัน', 'แขวงวังใหม่', '10330', ['lowersec', 'uppersec']],
+      ['โรงเรียนบางเขนวิทยาคม (จำลอง)', 'school', 'เขตบางเขน', 'แขวงอนุสาวรีย์', '10220', ['lowersec', 'uppersec']],
+      ['โรงเรียนวัดบางเขน (จำลอง)', 'school', 'เขตบางเขน', 'แขวงท่าแร้ง', '10220', ['primary']],
+      ['โรงเรียนจตุจักรศึกษา (จำลอง)', 'school', 'เขตจตุจักร', 'แขวงลาดยาว', '10900', ['lowersec', 'uppersec']],
+      ['โรงเรียนเสนานิคมพัฒนา (จำลอง)', 'school', 'เขตจตุจักร', 'แขวงเสนานิคม', '10900', ['primary', 'lowersec']],
+      ['โรงเรียนห้วยขวางวิทยา (จำลอง)', 'school', 'เขตห้วยขวาง', 'แขวงห้วยขวาง', '10310', ['lowersec', 'uppersec']],
+      ['โรงเรียนบางกะปิพิทยาคม (จำลอง)', 'school', 'เขตบางกะปิ', 'แขวงคลองจั่น', '10240', ['lowersec', 'uppersec']],
+      ['โรงเรียนวัดหัวหมาก (จำลอง)', 'school', 'เขตบางกะปิ', 'แขวงหัวหมาก', '10240', ['primary']],
+      ['โรงเรียนดินแดงวิทยา (จำลอง)', 'school', 'เขตดินแดง', 'แขวงดินแดง', '10400', ['primary', 'lowersec', 'uppersec']],
+      ['โรงเรียนลาดกระบังศึกษา (จำลอง)', 'school', 'เขตลาดกระบัง', 'แขวงลาดกระบัง', '10520', ['lowersec', 'uppersec']],
+      ['โรงเรียนหนองจอกพิทยา (จำลอง)', 'school', 'เขตหนองจอก', 'แขวงหนองจอก', '10530', ['primary', 'lowersec', 'uppersec']],
+      ['โรงเรียนมีนบุรีวิทยาลัย (จำลอง)', 'school', 'เขตมีนบุรี', 'แขวงมีนบุรี', '10510', ['lowersec', 'uppersec']],
+      ['โรงเรียนบางแคราษฎร์ (จำลอง)', 'school', 'เขตบางแค', 'แขวงบางแค', '10160', ['primary', 'lowersec']],
+      ['โรงเรียนคลองเตยศึกษา (จำลอง)', 'school', 'เขตคลองเตย', 'แขวงคลองเตย', '10110', ['primary', 'lowersec']],
+      ['วิทยาลัยเทคนิคกรุงเทพตัวอย่าง (จำลอง)', 'college', 'เขตดุสิต', 'แขวงดุสิต', '10300', ['voc', 'highvoc']],
+      ['วิทยาลัยอาชีวศึกษาพญาไท (จำลอง)', 'college', 'เขตพญาไท', 'แขวงพญาไท', '10400', ['voc', 'highvoc']],
+      ['วิทยาลัยพาณิชยการบางนา (จำลอง)', 'college', 'เขตบางนา', 'แขวงบางนาเหนือ', '10260', ['voc', 'highvoc']],
+      ['มหาวิทยาลัยตัวอย่างกรุงเทพ (จำลอง)', 'university', 'เขตราชเทวี', 'แขวงทุ่งพญาไท', '10400', ['bachelor']],
+      ['มหาวิทยาลัยราชภัฏตัวอย่างบางซื่อ (จำลอง)', 'university', 'เขตบางซื่อ', 'แขวงบางซื่อ', '10800', ['bachelor']],
+    ];
+    bkk.forEach(([name, type, district, sub, zip, levels], i) => {
+      const id = 'SCH-B' + String(i + 1).padStart(2, '0');
+      if (db.schools.some(x => x.id === id)) return;
+      db.schools.push({id, name, type, region: 'bkkmetro', province: 'กรุงเทพมหานคร', district, subdistrict: sub, address: `${10 + i * 7} ถนนตัวอย่าง`, postcode: zip, levels,
+        special_rate: false, modes: type === 'college' ? ['regular', 'dual'] : type === 'university' ? ['regular', 'special'] : ['regular']});
+    });
     const pool = db.students.filter(x => x.school === 'SCH-001');
     const tpl = (st, res) => pool.find(x => x.status === st && (!res || (x.decision && x.decision.result === res)))
       || db.students.find(x => x.status === st && (!res || (x.decision && x.decision.result === res)));
