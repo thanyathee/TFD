@@ -745,6 +745,9 @@ App.views['student-entry'] = function (p) {
         ${[['draft', 'NEW', 'ป.5'], ['draft', 'CONT'], ['draft', 'NEW', 'ปวช.1'], ['draft', 'NEW', 'ปริญญาตรี ปี 1'], ['returned_to_student'], ['waiting_teacher'], ['waiting_staff'], ['decided']].map(([st, ty, cl]) =>
           this.db.students.find(x => x.demo_note && x.status === st && (!ty || x.type === ty) && (!cl || x.class === cl))).filter(Boolean).map(x =>
           `<button class="btn sample" data-action="student-sample" data-code="${x.code}"><b>${esc(x.class)} ${TYPE[x.type]}</b><span>${esc(STATUS[x.status].label)}</span></button>`).join('')}
+        ${[['todo', 'แจ้งย้าย · รอส่งหลักฐาน'], ['pending', 'แจ้งย้าย · ส่งหลักฐานสำเร็จ']].map(([k, label]) =>
+          [this.db.students.find(x => x.demo_tp === k && this.tpState(x) === k) || this.db.students.find(x => x.school_next === 'transfer' && x.status === 'waiting_transfer_proof' && this.tpState(x) === k), label]).filter(x => x[0]).map(([x, label]) =>
+          `<button class="btn sample" data-action="student-sample" data-code="${x.code}"><b>${esc(x.class)} ${TYPE[x.type]}</b><span>${label}</span></button>`).join('')}
         <button class="btn" data-action="student-newid">สร้างเลขบัตรใหม่สำหรับทดลอง</button>
         <p class="tiny muted">บันทึกร่างอัตโนมัติทุกครั้งที่กดถัดไป กลับมากรอกต่อได้หากอินเทอร์เน็ตหลุดหรือปิดหน้าเว็บ</p>
       </aside>
@@ -825,8 +828,19 @@ App.views['student-status'] = function (p = {}) {
   /* ขั้นตอนที่นักเรียนเห็น: กรอก → ครูตรวจ → ส่งมูลนิธิฯ สำเร็จ (ขั้นของมูลนิธิฯ ไม่แสดง) */
   const sent = ['waiting_transfer_proof', 'waiting_staff', 'need_more_info', 'waiting_manager', 'decided'].includes(s.status);
   const flow = bachelor ? ['กำลังกรอกใบสมัคร', 'ส่งมูลนิธิฯ สำเร็จ'] : ['กำลังกรอกใบสมัคร', 'ครูตรวจและแนบเอกสาร', 'ส่งมูลนิธิฯ สำเร็จ'];
-  const pos = sent ? flow.length : s.status === 'waiting_teacher' ? 1 : 0;
-  const nowLabel = {returned_to_student: 'เปิดสิทธิ์ให้แก้ไข', waiting_teacher: 'รอครูดำเนินการ'}[s.status] || '';
+  let pos = sent ? flow.length : s.status === 'waiting_teacher' ? 1 : 0;
+  let nowLabel = {returned_to_student: 'เปิดสิทธิ์ให้แก้ไข', waiting_teacher: 'รอครูดำเนินการ'}[s.status] || '';
+  /* นักเรียนที่แจ้งย้าย: เพิ่มขั้นส่งหลักฐานการย้าย */
+  if (s.school_next === 'transfer') {
+    flow.push('รอหลักฐานยืนยันการย้ายสถานศึกษา', 'ส่งหลักฐานยืนยันการย้ายสถานศึกษาสำเร็จ');
+    const tst = this.tpState(s);
+    if (sent) {
+      pos = ['pending', 'done'].includes(tst) ? flow.length : flow.length - 2;
+      if (tst === 'rejected') nowLabel = 'หลักฐานไม่ผ่าน กรุณาอัปโหลดใหม่';
+      else if (tst === 'closed') nowLabel = 'หมดเขตส่งหลักฐานแล้ว';
+      else if (tst === 'todo') nowLabel = `ส่งภายใน ${thDate(this.db.cycle.transfer_close)}`;
+    }
+  }
   const editable = ['draft', 'returned_to_student'].includes(s.status);
   const t = this.teacherOf(this.careSchool(s));
   const d = s.decision;
@@ -838,7 +852,6 @@ App.views['student-status'] = function (p = {}) {
       ? '<b>ครูเปิดสิทธิ์ให้แก้ไข:</b> ' + esc(s.return_reason || '') : 'ใบสมัครยังไม่ได้ส่ง กรอกต่อให้ครบแล้วกดส่ง'}</span>
       <button class="btn primary" data-go="student-form" data-step="${s.step || 1}">กรอกใบสมัครต่อ</button></div>`
       : `<div class="note info"><b>สถานะหลังส่ง:</b> เมื่อผู้สมัครกดส่งแล้ว ข้อมูลจะถูกล็อกไม่ให้แก้ไขเอง หากจำเป็นต้องแก้ไข ให้ครูผู้ดูแลทุนหรือเจ้าหน้าที่เป็นผู้เปิดสิทธิ์ให้แก้ไข</div>`}
-    ${d && d.result !== 'ineligible' ? `<div class="note ${d.result === 'approved' ? 'ok' : 'warn'}"><b>ผลการพิจารณา: ${DECISION[d.result].label}</b>${d.result === 'approved' ? ` · จำนวนเงินทุน ${baht(d.approved_amount)}` : ''}</div>` : ''}
     ${d && d.result === 'ineligible' ? `<div class="note bad"><b>ไม่เข้าเกณฑ์การพิจารณาทุน</b>${d.reason ? ' — ' + esc(d.reason) : ''}</div>` : ''}
     <div class="split">
       <div class="stack">

@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v19';
+const STORE_KEY = 'tfd-scholarship-demo-v20';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -191,6 +191,10 @@ const App = {
       Object.assign(c, {school_next: 'transfer', status: 'waiting_transfer_proof', next_school_text: 'วิทยาลัยการอาชีพเวียงเชียงรุ้ง'});
       add(c, [sub({at: '2027-05-11T11:00', by: 'teacher', by_name: (db.teachers.find(t => t.school === c.school) || {}).name || '', school: '', school_text: 'วิทยาลัยการอาชีพเวียงเชียงรุ้ง',
         region: old.region, province: old.province, district: old.district, cls: c.next_class, proof: 'studentcard', file: c.code + '_14_TRANSFER_1.jpg', file_note: 'แปลง HEIC เป็น JPG แล้ว'})], 'pending'); }
+    /* นักเรียนตัวอย่าง: แจ้งย้าย ส่งใบสมัครแล้ว ยังไม่ส่งหลักฐาน */
+    const e = by('TF2570-000037');
+    if (e && e.status === 'waiting_staff') Object.assign(e, {school_next: 'transfer', status: 'waiting_transfer_proof', next_school_text: 'โรงเรียนประจำอำเภอ', demo_tp: 'todo'});
+    if (a) a.demo_tp = 'pending';
     /* ย้ายผ่านแล้ว แต่ไปโรงเรียนที่ได้อัตราพิเศษ ม.ต้น → ยอดเงินเปลี่ยน รอแอดมินยืนยัน */
     const d = by('TF2570-000012');
     if (d) { const amt = k => (db.rates.find(r => r.code === k) || {}).amount || 0;
