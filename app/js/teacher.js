@@ -87,10 +87,10 @@ App.views['teacher-home'] = function (p) {
     </div>
     <div class="small muted">แสดง ${rows.length} จาก ${all.length} คน</div>
     <div class="tlist t-list" role="table" aria-label="รายชื่อนักเรียน">
-      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>ชื่อ–นามสกุล</span><span>สถานะ</span><span>รหัสผู้สมัคร</span><span>ชั้น</span><span>ประเภท</span><span>เอกสาร</span></div>
+      <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>รหัสผู้สมัคร</span><span>ชื่อ–นามสกุล</span><span>ชั้น</span><span>ประเภท</span><span>เอกสาร</span><span>สถานะ</span></div>
       ${rows.length ? rows.map((s, i) => `<button class="trow" role="row" data-go="teacher-student" data-code="${s.code}">
-        <span class="n">${i + 1}</span><span class="c-name">${esc(fullName(s))}</span><span class="c-status">${teacherBadge(s)}</span><span class="br"></span><span class="c-code num">${s.code}</span><span class="c-class">${esc(s.class || '-')}</span>
-        <span class="c-type">${TYPE[s.type]}</span><span class="c-docs">${docCell(s)}</span></button>`).join('')
+        <span class="n">${i + 1}</span><span class="c-code num" data-meta=" · ${esc(s.class || '-')} · ${TYPE[s.type]}">${s.code}</span><span class="c-name">${esc(fullName(s))}</span><span class="c-class">${esc(s.class || '-')}</span>
+        <span class="c-type">${TYPE[s.type]}</span><span class="c-docs">${docCell(s)}</span><span class="c-status">${teacherBadge(s)}</span></button>`).join('')
         : '<div class="empty">ไม่มีนักเรียนตามเงื่อนไขนี้</div>'}
     </div>
     ${tpTeacherSection.call(this)}`,
