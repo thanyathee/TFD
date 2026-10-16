@@ -1118,3 +1118,10 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
 .tp-sec-n{background:var(--orange);color:#fff}
 .tp-tcard{border-top-color:var(--orange);margin-top:12px}
 @media (max-width:640px){.tp-sec-head{padding:14px 14px;align-items:flex-start}}
+/* แถบหัวข้อแจ้งย้าย: พื้นส้ม ตัวอักษรขาว */
+.tp-sec-head{background:var(--orange);border-left:0}
+.tp-sec-head h2,.tp-sec-head .sub{color:#fff;opacity:1}
+.tp-sec-ic{background:rgba(255,255,255,.22);color:#fff}
+.tp-sec-n{background:#fff;color:var(--orange)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tp-sec-head{background:#c2410c}}
+:root[data-theme="dark"] .tp-sec-head{background:#c2410c}
