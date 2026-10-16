@@ -1135,3 +1135,6 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
   .tp-trow{grid-template-columns:28px 1fr auto}
   .tp-trow .m-only{display:inline}
 }
+.tp-trow,.tp-thead{grid-template-columns:44px minmax(170px,1.2fr) 110px minmax(170px,1.4fr) 90px minmax(150px,1fr) 120px}
+.tp-trow .c-cls{font-size:14.5px;white-space:nowrap}
+@media (max-width:900px){.tp-trow{grid-template-columns:28px 1fr auto}.tp-trow .c-cls{display:none}}
