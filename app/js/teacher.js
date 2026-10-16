@@ -26,6 +26,13 @@ App.views['teacher-entry'] = function (p) {
         ${field('password', 'Password', input('password', v.password, 'type="password" autocomplete="current-password"'), {req: 1, err: e.password})}
         <div class="note info small">Username จะผูกกับ SchoolID ของสถานศึกษาโดยตรง เพื่อให้บัญชีนี้เห็นเฉพาะนักเรียนของโรงเรียนตนเอง</div>
         <div class="row end"><button class="btn primary" type="submit">เข้าสู่ระบบ</button></div>
+        <div class="row between tr-links"><button class="btn ghost sm" type="button" data-go="teacher-forgot">ลืมรหัสผ่าน?</button>
+          <button class="btn sm" type="button" data-go="teacher-register">ลงทะเบียนครูผู้ดูแลทุน</button></div>
+        <div class="note info small stack">
+          <span>• คุณครูที่มีรหัสผ่านเดิมอยู่แล้ว สามารถใช้รหัสผ่านเดิมเข้าระบบได้เลยค่ะ</span>
+          <span>• หากลืมรหัสผ่าน กด “ลืมรหัสผ่าน?” ระบบจะส่งลิงก์ตั้งรหัสผ่านใหม่ทางอีเมล</span>
+          <span>• สถานศึกษาที่ดูแลนักศึกษาระดับปริญญาตรี ไม่ต้องลงทะเบียน</span>
+          <span>• ลงทะเบียนได้ถึง ${thDate(trClose().slice(0, 10))} เวลา ${trClose().slice(11, 16).replace(':', '.')} น.</span></div>
       </form>
       <aside class="card"><h3>ทดลองใช้งาน</h3>
         <p class="small muted">Username <b>sch001</b> ถึง <b>sch100</b> · Password <b>Demo@1234</b></p>
@@ -48,6 +55,8 @@ App.on('teacher-login', function (form) {
   if (Object.keys(e).length) { this.go('teacher-entry', {values: {username: v.username}, errors: e}); return; }
   t.last_login = nowIso();
   this.save();
+  /* บัญชีที่แอดมินเพิ่งอนุมัติ: เข้าครั้งแรกต้องตั้งรหัสผ่านใหม่ */
+  if (t.must_change) { this.go('teacher-reset', {u: t.username, first: 1}); return; }
   this.session = {role: 'teacher', teacher: t.username, school: t.school, who: this.schoolName(t.school)};
   this.go('teacher-home');
 });

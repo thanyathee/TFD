@@ -46,7 +46,7 @@ App.staffNav = function () {
   return [['staff-dash', 'Dashboard'],
     ['staff-apps', 'ใบสมัคร', ['staff-app']], ['staff-transfer', 'ย้ายสถานศึกษา']]
     /* สถานศึกษา/ครู, รอบรับสมัคร, รายงาน/Export, PDPA และผู้ใช้งาน: เฉพาะแอดมินระบบ */
-    .concat(this.session.staffRole === 'admin' ? [['staff-schools', 'สถานศึกษา/ครู', ['staff-school']], ['staff-cycle', 'รอบรับสมัคร'], ['staff-announce', 'ประกาศรายชื่อ'], ['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA'], ['staff-users', 'ผู้ใช้งาน', ['staff-user']]] : []);
+    .concat(this.session.staffRole === 'admin' ? [['staff-regs', 'คำขอครู', ['staff-reg']], ['staff-schools', 'สถานศึกษา/ครู', ['staff-school']], ['staff-cycle', 'รอบรับสมัคร'], ['staff-announce', 'ประกาศรายชื่อ'], ['staff-reports', 'รายงาน/Export'], ['staff-pdpa', 'PDPA'], ['staff-users', 'ผู้ใช้งาน', ['staff-user']]] : []);
 };
 /* สลับบทบาทสำหรับทดลอง (เหมือนปุ่มบทบาทใน v14) */
 App.roleBar = function () {
@@ -262,16 +262,18 @@ App.views['staff-cycle'] = function () {
         ${field('c_cut', 'วันตัดรอบแรก (เฉพาะ ป.6 / ม.3)', input('c_cut', c.first_cutoff, 'type="date"'), {hint: 'ป.6 / ม.3 ที่ส่งหลักฐานภายในวันนี้ → พิจารณารอบแรก'})}
         ${field('c_tclose', 'วันสุดท้ายรับหลักฐาน (ทุกระดับชั้น)', input('c_tclose', c.transfer_close, 'type="date"'), {hint: 'ส่งหลังวันตัดรอบแรกแต่ไม่เกินวันนี้ → พิจารณารอบที่ 2 (รอบรอฟังผล) · เกินวันนี้ถือว่าสละสิทธิ์'})}
       </div>
+      ${field('c_treg', 'ปิดรับลงทะเบียนครูผู้ดูแลทุน', input('c_treg', c.teacher_reg_close || '2027-01-29T17:00', 'type="datetime-local"'), {hint: 'หลังเวลานี้ ปุ่มลงทะเบียนในหน้าครูจะปิด'})}
       ${field('c_remind', 'ส่งอีเมลเตือนก่อนหมดเขตส่งหลักฐาน (จำนวนวัน คั่นด้วยจุลภาค)', input('c_remind', (c.remind_days || [30, 14, 7, 3]).join(', '), 'inputmode="numeric"'), {hint: 'ระบบส่งอัตโนมัติถึงครูโรงเรียนเดิม (และนักเรียนที่ให้อีเมล) เฉพาะคนที่ยังไม่ส่งหรือหลักฐานไม่ผ่าน'})}</section>
       <div class="row end"><button class="btn primary" type="submit">บันทึก</button></div>
     </form>`};
 };
 App.on('cycle-save', function (form) {
   const v = formData(form);
+  const c0 = this.db.cycle;
   if (v.c_open && v.c_close && v.c_close <= v.c_open) { this.toast('วันปิดรับสมัครต้องอยู่หลังวันเปิดรับสมัคร'); return; }
   Object.assign(this.db.cycle, {year: Number(v.c_year), history_year: Number(v.c_hist), status: v.c_status, open: v.c_open, close: v.c_close,
     transfer_open: v.c_topen, first_cutoff: v.c_cut, transfer_close: v.c_tclose,
-    remind_days: String(v.c_remind || '').split(/[,\s]+/).map(Number).filter(n => n > 0).sort((a, b) => b - a)});
+    teacher_reg_close: v.c_treg || c0.teacher_reg_close, remind_days: String(v.c_remind || '').split(/[,\s]+/).map(Number).filter(n => n > 0).sort((a, b) => b - a)});
   this.save();
   this.toast('บันทึกการตั้งค่ารอบรับสมัครแล้ว');
   this.go('staff-cycle');

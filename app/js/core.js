@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v24';
+const STORE_KEY = 'tfd-scholarship-demo-v25';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -312,6 +312,20 @@ const App = {
       d.history.push({at: '2027-05-10T10:00', text: `ยอดเงินทุนเปลี่ยนจากการย้าย ${amt(d.rate).toLocaleString()} → ${amt('SPECIAL').toLocaleString()} บาท — รอแอดมินยืนยัน`, kind: 'amount_check'}); }
     db.mails = [];
     db.cycle.remind_days = [30, 14, 7, 3];
+    db.cycle.teacher_reg_close = '2027-01-29T17:00';
+    /* คำขอลงทะเบียนครูตัวอย่าง */
+    const lv = ['primary', 'lowersec', 'uppersec'];
+    const reg = (id, at, kind, o) => ({id, at, state: 'pending', kind, school: '', school_text: '', pos: 'ครู', addr: '', count: 450, levels: lv, levels_other: '', modes: ['regular'], modes_other: '',
+      reason: '', file: id + '_IDPROOF.pdf', file_name: 'หนังสือแต่งตั้ง.pdf', ...o});
+    db.teacherRegs = [
+      reg('REG-0001', '2026-12-01T09:12', 'new', {school: 'SCH-B02', region: 'bkkmetro', province: 'กรุงเทพมหานคร', district: 'เขตปทุมวัน', name: 'นางสาว ศิริรัตน์ ทองดี', phone: '0812345601', email: 'siriratt@example.com', addr: '17 ถนนตัวอย่าง แขวงวังใหม่ เขตปทุมวัน กรุงเทพมหานคร 10330', count: 820, levels: ['lowersec', 'uppersec']}),
+      reg('REG-0002', '2026-12-02T13:40', 'newschool', {school_text: 'โรงเรียนบ้านห้วยทรายวิทยา', region: 'north', province: 'แพร่', district: 'อำเภอเมืองแพร่', name: 'นาย ประเสริฐ ใจมั่น', phone: '0812345602', email: 'prasert.j@example.com', addr: '99 หมู่ 4 ตำบลห้วยม้า อำเภอเมืองแพร่ จังหวัดแพร่ 54000', count: 230, levels: ['primary', 'lowersec']}),
+      reg('REG-0003', '2026-12-03T10:05', 'replace', {school: 'SCH-010', region: 'north', province: 'เชียงราย', district: 'อำเภอแม่สาย', name: 'นาง อรพิน สายทอง', phone: '0812345603', email: 'orapin.s@example.com', addr: '6 หมู่ 3 ตำบลห้วยไคร้ อำเภอแม่สาย จังหวัดเชียงราย 57220', count: 1200, levels: ['voc', 'highvoc'], modes: ['regular', 'dual'], reason: 'ครูคนเดิมย้าย / ลาออก / เกษียณ — ครูคนเดิมเกษียณ ก.ย. 2569'}),
+      {...reg('REG-0004', '2026-11-20T08:30', 'new', {school: 'SCH-B05', region: 'bkkmetro', province: 'กรุงเทพมหานคร', district: 'เขตจตุจักร', name: 'นาย วิชัย ศรีสุข', phone: '0812345604', email: 'wichai.s@example.com', addr: '38 ถนนตัวอย่าง แขวงลาดยาว เขตจตุจักร กรุงเทพมหานคร 10900'}),
+        state: 'approved', username: 'schb05', by: 'ผู้ดูแลระบบ', done_at: '2026-11-21T10:00'},
+      {...reg('REG-0005', '2026-11-22T15:10', 'new', {school: 'SCH-B07', region: 'bkkmetro', province: 'กรุงเทพมหานคร', district: 'เขตห้วยขวาง', name: 'นางสาว ปวีณา มีสุข', phone: '0812345605', email: 'paweena.m@example.com', addr: '52 ถนนตัวอย่าง แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพมหานคร 10310', file_name: 'บัตรประชาชน.jpg'}),
+        state: 'rejected', reject_reason: 'ไม่ผ่าน: ไม่ใช่บัตรประชาชน / รูปเซลฟี่', by: 'ผู้ดูแลระบบ', done_at: '2026-11-23T09:00'}];
+    if (!db.teachers.some(t => t.username === 'schb05')) db.teachers.push({username: 'schb05', name: 'นาย วิชัย ศรีสุข', position: 'ครู', department: '', school: 'SCH-B05', phone: '0812345604', email: 'wichai.s@example.com', active: true, reg: 'REG-0004'});
     return db;
   },
   load() { try { const v = localStorage.getItem(STORE_KEY); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
@@ -417,7 +431,7 @@ const App = {
   },
   regionName(code) { return (this.data.geo.regions.find(r => r.code === code) || {}).name || ''; },
   schoolName(id) { return (this.schoolById[id] || {}).name || '—'; },
-  teacherOf(schoolId) { return this.db.teachers.find(t => t.school === schoolId); },
+  teacherOf(schoolId) { return this.db.teachers.find(t => t.school === schoolId && t.active !== false) || this.db.teachers.find(t => t.school === schoolId); },
   rateAmount(code) { return (this.db.rates.find(r => r.code === code) || {}).amount || 0; },
   /* อัตรามาตรฐานของนักเรียน: ม.ต้น ที่โรงเรียนปีหน้าได้อัตราพิเศษ → ใช้อัตราพิเศษ (โรงเรียนปีหน้า = หลังบันทึกย้ายแล้ว) */
   stdRate(s) {
