@@ -9,8 +9,9 @@ function teacherBadge(s) {
   return badge(s);
 }
 
-App.teacherNav = function () { return [['teacher-home', 'รายชื่อนักเรียน', ['teacher-student']], ['teacher-report', 'ใบสรุปเสนอ ผอ.']]; };
-App.myStudents = function () { return this.db.students.filter(s => s.school === this.session.school); };
+App.teacherNav = function () { return [['teacher-home', 'รายชื่อนักเรียน', ['teacher-student', 'teacher-transfer']], ['teacher-report', 'ใบสรุปเสนอ ผอ.']]; };
+/* ปีที่ย้าย: ครูโรงเรียนเดิมยังดูแล (home_school) */
+App.myStudents = function () { return this.db.students.filter(s => this.careSchool(s) === this.session.school); };
 const docsComplete = s => docsFor(s).every(([code, , , opt]) => opt || ((s.docFiles || {})[code] || []).length);
 
 App.views['teacher-entry'] = function (p) {
@@ -75,6 +76,7 @@ App.views['teacher-home'] = function (p) {
     <section class="card"><div class="card-head"><div><b>ครูผู้ดูแลทุน: ${esc(t ? t.name : '-')}</b>
       <div class="small muted">โทร. <span class="num">${esc(t ? t.phone : '-')}</span> · อีเมล ${esc(t ? t.email : '-')}</div></div></div>
       <p class="small muted">บัญชีผู้ดูแลทุนของโรงเรียน — โรงเรียนนี้ใช้ Username เดียวสำหรับตรวจสอบนักเรียนและส่งเอกสารมายังมูลนิธิฯ</p></section>
+    ${tpTeacherSection.call(this)}
     <div class="stats">${['draft', 'returned', 'waiting', 'sent'].map(k =>
       `<button class="stat" data-go="teacher-home" data-filter="${k}" aria-pressed="${k === f}"><span>${groups[k][0]}</span><b>${all.filter(groups[k][1]).length}</b></button>`).join('')}</div>
     <div class="filters" id="tfilters">

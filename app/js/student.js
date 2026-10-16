@@ -819,7 +819,7 @@ function transferDeadlineText(s) {
 }
 
 /* ---------- หน้า 5: ส่งเรียบร้อย / สถานะ ---------- */
-App.views['student-status'] = function () {
+App.views['student-status'] = function (p = {}) {
   const s = this.me();
   const bachelor = s.group === 'bachelor';
   /* ขั้นตอนที่นักเรียนเห็น: กรอก → ครูตรวจ → ส่งมูลนิธิฯ สำเร็จ (ขั้นของมูลนิธิฯ ไม่แสดง) */
@@ -828,7 +828,7 @@ App.views['student-status'] = function () {
   const pos = sent ? flow.length : s.status === 'waiting_teacher' ? 1 : 0;
   const nowLabel = {returned_to_student: 'เปิดสิทธิ์ให้แก้ไข', waiting_teacher: 'รอครูดำเนินการ'}[s.status] || '';
   const editable = ['draft', 'returned_to_student'].includes(s.status);
-  const t = this.teacherOf(s.school);
+  const t = this.teacherOf(this.careSchool(s));
   const d = s.decision;
   const docs = docsFor(s);
   const files = s.docFiles || {};
@@ -842,10 +842,7 @@ App.views['student-status'] = function () {
     ${d && d.result === 'ineligible' ? `<div class="note bad"><b>ไม่เข้าเกณฑ์การพิจารณาทุน</b>${d.reason ? ' — ' + esc(d.reason) : ''}</div>` : ''}
     <div class="split">
       <div class="stack">
-        ${s.school_next === 'transfer' ? `<section class="card" style="outline:2px solid var(--bad)"><h3>⚠ อย่าลืมส่งหลักฐานยืนยันการย้ายสถานศึกษา</h3>
-          <p>คุณแจ้งว่าจะ <b>ย้ายสถานศึกษาใหม่</b>${s.next_school_text ? ` ไปที่ <b>${esc(s.next_school_text)}</b>` : ''} ในปีการศึกษา ${this.db.cycle.year}</p>
-          <div class="note bad">ต้องส่งหลักฐานยืนยันการย้ายสถานศึกษาให้มูลนิธิฯ — <b>${transferDeadlineText.call(this, s)}</b><br>หากไม่ส่งภายใน ${thDate(transferDeadline.call(this, s))} ถือว่าสละสิทธิ์</div>
-          <p class="small muted">หลักฐาน เช่น หนังสือรับรองสถานภาพนักเรียนจากสถานศึกษาใหม่ หรือหลักฐานการมอบตัว</p></section>` : ''}
+        ${s.school_next === 'transfer' ? tpCard.call(this, s, 'student', p) : ''}
         ${!editable && !bachelor && s.status === 'waiting_teacher' ? `<section class="card"><h3>ขั้นตอนต่อไป กรุณาติดต่อครูผู้ดูแลทุนของสถานศึกษา</h3>
           <p>เพื่อแจ้งว่ากรอกข้อมูลเรียบร้อยแล้ว และนำเอกสารประกอบการสมัครไปส่งให้ครู</p>
           <div class="subcard"><span class="label">เอกสารที่นักเรียนควรเตรียมส่งให้ครู</span><ul class="small" style="margin:0;padding-left:20px">${docs.map(x => `<li>${x[1]}</li>`).join('')}</ul></div></section>` : ''}

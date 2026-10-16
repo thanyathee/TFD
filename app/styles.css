@@ -1038,3 +1038,45 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
 .tag-move{display:inline-block;margin-left:4px;padding:1px 8px;border-radius:999px;background:#fff1d6;color:#9a5b00;font-weight:700;font-size:12px;line-height:1.6;vertical-align:1px;white-space:nowrap}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tag-move{background:#4a3410;color:#ffd38a}}
 :root[data-theme="dark"] .tag-move{background:#4a3410;color:#ffd38a}
+
+/* ---------- แจ้งย้ายสถานศึกษา: ส่งหลักฐาน / ตรวจหลักฐาน ---------- */
+.tp-card .card-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tp-card .card-head h3{margin:0}
+.tp-card.tp-todo,.tp-card.tp-rejected{outline:2px solid var(--bad);outline-offset:-2px}
+.tp-card>*+*{margin-top:12px}
+.tp-h{margin:10px 0 0;font-size:15.5px}
+.tp-deadline{font-size:14.5px}
+.tp-none{align-self:start}
+.tp-file{align-items:center;gap:8px;flex-wrap:wrap}
+.tp-file label.btn{cursor:pointer}
+.tp-why{margin:6px 0 4px;padding-left:20px}
+.tp-kv{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.tp-hist summary{cursor:pointer;font-weight:600}
+.timeline li.bad::before{background:var(--bad);border-color:var(--bad)}
+.timeline li.now::before{border-color:var(--brand)}
+.bad-t{display:block;color:var(--bad);font-size:12.5px;font-weight:600}
+.tp-chips{gap:6px;flex-wrap:wrap}
+.tp-chip{background:var(--fill);border-radius:999px;padding:3px 10px;font-size:13px}
+.tp-tlist{display:grid;margin-top:10px;border-top:1px solid var(--line)}
+.tp-trow{display:grid;grid-template-columns:minmax(180px,1.3fr) minmax(160px,1.4fr) minmax(150px,1fr) 110px 120px;gap:12px;align-items:center;text-align:left;
+  padding:12px 4px;border:0;border-bottom:1px solid var(--line);background:none;color:inherit;font:inherit;cursor:pointer}
+.tp-trow:hover{background:var(--fill)}
+.tp-trow .c-name{font-weight:600}
+.tp-trow small{display:block;font-weight:400;color:var(--muted);font-size:12.5px}
+.tp-trow .c-act{text-align:right}
+.tp-trow .c-by{font-size:13.5px;color:var(--ink-2)}
+.tp-checks{display:grid;gap:6px}
+.tp-checks.bad .choice{color:var(--bad)}
+.tp-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tp-btns .btn{justify-content:center}
+.tp-mails{display:grid;gap:8px}
+.tp-mail{display:grid;gap:2px;padding:8px 10px;background:var(--fill);border-radius:10px}
+.tp-remind{align-items:center;gap:12px;flex-wrap:wrap}
+.stat.hot b{color:var(--brand)}
+.tp-stats{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.pv.pv-open .pv-top{margin-bottom:8px}
+@media (max-width:900px){
+  .tp-trow{grid-template-columns:1fr auto;grid-template-areas:"name st" "to to" "by act"}
+  .tp-trow .c-name{grid-area:name}.tp-trow .c-st{grid-area:st;text-align:right}.tp-trow .c-to{grid-area:to;font-size:14px}
+  .tp-trow .c-by{grid-area:by}.tp-trow .c-act{grid-area:act}
+}

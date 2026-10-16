@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v18';
+const STORE_KEY = 'tfd-scholarship-demo-v19';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -109,7 +109,7 @@ const App = {
       this.data = {geo, seed: mock};
       this.subByDistrict = {};
       geo.subdistricts.forEach(x => (this.subByDistrict[x.d] = this.subByDistrict[x.d] || []).push(x));
-      this.db = this.load() || this.fresh();
+      this.db = this.load() || this.seedTransfers(this.fresh());
       this.index();
     } catch (e) {
       document.getElementById('main').innerHTML = '<div class="card"><h2>โหลดข้อมูลไม่สำเร็จ</h2><p class="muted">กรุณารีเฟรชหน้าอีกครั้ง</p></div>';
@@ -139,7 +139,7 @@ const App = {
           if (!t) return x;
           const name = id => (s.schools.find(c => c.id === id) || {}).name || id;
           const where = t.to === x.school ? `เรียนที่เดิม ${name(x.school)}` : `${name(x.school)} → ${name(t.to)}`;
-          return {...x, school: t.to, next_class: t.cls, rate: rateOf(t.cls, /^ปวส/.test(t.cls) ? (x.next_pvs_type || x.pvs_type) : '') || x.rate,
+          return {...x, school: t.to, home_school: t.to !== x.school ? x.school : undefined, next_class: t.cls, rate: rateOf(t.cls, /^ปวส/.test(t.cls) ? (x.next_pvs_type || x.pvs_type) : '') || x.rate,
             history: (x.history || []).concat({at: t.date + 'T10:00', text: `จนท. 01 บันทึกการย้าย: ${where} ชั้น ${t.cls}${t.cls !== x.next_class ? ` (เดิมแจ้งไว้: ${x.next_class})` : ''}`, kind: 'transfer'},
               {at: t.date + 'T10:00', text: 'ได้รับหลักฐานการย้ายสถานศึกษาแล้ว — รอเจ้าหน้าที่ดำเนินการ', kind: 'transfer_proof'})};
         }).map(x => {
@@ -170,6 +170,41 @@ const App = {
       rates: copy(s.rates),
     };
   },
+  /* ข้อมูลตัวอย่างการส่งหลักฐานย้าย: รอตรวจ / ไม่ผ่าน / พิมพ์ชื่อโรงเรียนเอง / ยอดเงินเปลี่ยนรอแอดมิน */
+  seedTransfers(db) {
+    const by = c => db.students.find(x => x.code === c);
+    const sub = (o) => ({n: 1, by: 'student', by_name: '', region: '', province: '', district: '', school_text: '', email: '', file_note: '', ...o});
+    const sch = id => db.schools.find(x => x.id === id) || {};
+    const add = (s, subs, state) => { if (!s) return; s.tp = {state, subs};
+      subs.forEach(x => (s.history = s.history || []).push({at: x.at, text: `${x.by === 'teacher' ? 'ครูโรงเรียนเดิม' : 'นักเรียน'}ส่งหลักฐานการย้ายสถานศึกษา (ครั้งที่ ${x.n}) — รอเจ้าหน้าที่ตรวจ`, kind: 'transfer_submit'})); };
+    const a = by('TF2570-000010');
+    if (a) { const sc = sch('SCH-002');
+      add(a, [sub({at: '2027-05-08T09:30', school: 'SCH-002', region: sc.region, province: sc.province, district: sc.district, cls: 'ม.4', proof: 'cert', file: a.code + '_14_TRANSFER_1.pdf', email: a.email || ''})], 'pending'); }
+    const b = by('TF2570-000069');
+    if (b) { const sc = sch('SCH-022');
+      add(b, [sub({at: '2027-05-02T14:10', school: 'SCH-022', region: sc.region, province: sc.province, district: sc.district, cls: 'ปริญญาตรี ปี 1', proof: 'receipt', file: b.code + '_14_TRANSFER_1.jpg',
+        email: b.email || '', result: 'rejected', reasons: ['ไม่เห็นปีการศึกษาชัดเจน หรือไม่ตรงกับข้อมูล', 'ภาพไม่ชัด / อ่านไม่ออก'], reviewer: 'จนท. 01', reviewed_at: '2027-05-04T10:20', checks: ['name', 'school', 'cls']})], 'rejected');
+      b.history.push({at: '2027-05-04T10:20', text: 'จนท. 01 ตรวจหลักฐานการย้าย: ไม่ผ่าน — ไม่เห็นปีการศึกษาชัดเจน, ภาพไม่ชัด', kind: 'transfer_reject'}); }
+    /* นักเรียนที่แจ้งย้ายและครูส่งแทน โดยพิมพ์ชื่อโรงเรียนใหม่เอง */
+    const c = by('TF2570-000026');
+    if (c && c.status === 'waiting_staff') { const old = sch(c.school);
+      Object.assign(c, {school_next: 'transfer', status: 'waiting_transfer_proof', next_school_text: 'วิทยาลัยการอาชีพเวียงเชียงรุ้ง'});
+      add(c, [sub({at: '2027-05-11T11:00', by: 'teacher', by_name: (db.teachers.find(t => t.school === c.school) || {}).name || '', school: '', school_text: 'วิทยาลัยการอาชีพเวียงเชียงรุ้ง',
+        region: old.region, province: old.province, district: old.district, cls: c.next_class, proof: 'studentcard', file: c.code + '_14_TRANSFER_1.jpg', file_note: 'แปลง HEIC เป็น JPG แล้ว'})], 'pending'); }
+    /* ย้ายผ่านแล้ว แต่ไปโรงเรียนที่ได้อัตราพิเศษ ม.ต้น → ยอดเงินเปลี่ยน รอแอดมินยืนยัน */
+    const d = by('TF2570-000012');
+    if (d) { const amt = k => (db.rates.find(r => r.code === k) || {}).amount || 0;
+      const tr = db.transfers.find(t => t.code === d.code);
+      if (tr) tr.to = 'SCH-003';
+      d.school = 'SCH-003';
+      d.home_school = 'SCH-001';
+      d.amount_check = {state: 'pending', before: amt(d.rate), after: amt('SPECIAL'), at: '2027-05-10T10:00',
+        before_label: 'อัตรา ม.ต้น (ตามที่แจ้งตอนสมัคร)', after_label: 'อัตราพิเศษ ม.ต้น ของโรงเรียนใหม่'};
+      d.history.push({at: '2027-05-10T10:00', text: `ยอดเงินทุนเปลี่ยนจากการย้าย ${amt(d.rate).toLocaleString()} → ${amt('SPECIAL').toLocaleString()} บาท — รอแอดมินยืนยัน`, kind: 'amount_check'}); }
+    db.mails = [];
+    db.cycle.remind_days = [30, 14, 7, 3];
+    return db;
+  },
   load() { try { const v = localStorage.getItem(STORE_KEY); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
   save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(this.db)); } catch (e) { /* ทดลองต่อได้แม้บันทึกในเครื่องไม่ได้ */ }
@@ -177,7 +212,7 @@ const App = {
   },
   reset() {
     try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ไม่มีอะไรต้องลบ */ }
-    this.db = this.fresh();
+    this.db = this.seedTransfers(this.fresh());
     this.index();
     this.toast('ล้างข้อมูลทดลองแล้ว');
     this.go('home');
@@ -277,6 +312,8 @@ const App = {
   rateAmount(code) { return (this.db.rates.find(r => r.code === code) || {}).amount || 0; },
   /* อัตรามาตรฐานของนักเรียน: ม.ต้น ที่โรงเรียนปีหน้าได้อัตราพิเศษ → ใช้อัตราพิเศษ (โรงเรียนปีหน้า = หลังบันทึกย้ายแล้ว) */
   stdRate(s) {
+    /* แอดมินยืนยันใช้ยอดเดิมหลังย้าย */
+    if (s.amount_lock != null) return {amount: s.amount_lock, special: false, base: s.amount_lock, locked: true};
     const base = this.rateAmount(s.rate);
     const special = s.rate === 'M_LOWER' && !!(this.schoolById[s.school] || {}).special_rate;
     return {amount: special ? this.rateAmount('SPECIAL') : base, special, base};

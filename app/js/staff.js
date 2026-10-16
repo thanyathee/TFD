@@ -261,7 +261,8 @@ App.views['staff-cycle'] = function () {
         ${field('c_topen', 'วันเปิดรับหลักฐานย้าย', input('c_topen', c.transfer_open, 'type="date"'))}
         ${field('c_cut', 'วันตัดรอบแรก (เฉพาะ ป.6 / ม.3)', input('c_cut', c.first_cutoff, 'type="date"'), {hint: 'ป.6 / ม.3 ที่ส่งหลักฐานภายในวันนี้ → พิจารณารอบแรก'})}
         ${field('c_tclose', 'วันสุดท้ายรับหลักฐาน (ทุกระดับชั้น)', input('c_tclose', c.transfer_close, 'type="date"'), {hint: 'ส่งหลังวันตัดรอบแรกแต่ไม่เกินวันนี้ → พิจารณารอบที่ 2 (รอบรอฟังผล) · เกินวันนี้ถือว่าสละสิทธิ์'})}
-      </div></section>
+      </div>
+      ${field('c_remind', 'ส่งอีเมลเตือนก่อนหมดเขตส่งหลักฐาน (จำนวนวัน คั่นด้วยจุลภาค)', input('c_remind', (c.remind_days || [30, 14, 7, 3]).join(', '), 'inputmode="numeric"'), {hint: 'ระบบส่งอัตโนมัติถึงครูโรงเรียนเดิม (และนักเรียนที่ให้อีเมล) เฉพาะคนที่ยังไม่ส่งหรือหลักฐานไม่ผ่าน'})}</section>
       <div class="row end"><button class="btn primary" type="submit">บันทึก</button></div>
     </form>`};
 };
@@ -269,7 +270,8 @@ App.on('cycle-save', function (form) {
   const v = formData(form);
   if (v.c_open && v.c_close && v.c_close <= v.c_open) { this.toast('วันปิดรับสมัครต้องอยู่หลังวันเปิดรับสมัคร'); return; }
   Object.assign(this.db.cycle, {year: Number(v.c_year), history_year: Number(v.c_hist), status: v.c_status, open: v.c_open, close: v.c_close,
-    transfer_open: v.c_topen, first_cutoff: v.c_cut, transfer_close: v.c_tclose});
+    transfer_open: v.c_topen, first_cutoff: v.c_cut, transfer_close: v.c_tclose,
+    remind_days: String(v.c_remind || '').split(/[,\s]+/).map(Number).filter(n => n > 0).sort((a, b) => b - a)});
   this.save();
   this.toast('บันทึกการตั้งค่ารอบรับสมัครแล้ว');
   this.go('staff-cycle');
@@ -352,8 +354,8 @@ App.views['staff-app'] = function (p) {
   let panel;
   if (role === 'reviewer') {
     const can = ['waiting_staff', 'need_more_info'].includes(s.status);
-    if (s.status === 'waiting_transfer_proof') panel = `<div class="note warn"><b>รอหลักฐานการย้ายสถานศึกษา</b><br>นักเรียนแจ้งย้ายสถานศึกษา ต้องบันทึกการย้ายก่อน (แม้เรียนต่อที่เดิมก็ต้องบันทึก) จึงจะพิจารณาต่อได้</div>
-      <button class="btn primary block" data-go="staff-transfer" data-code="${s.code}">ไปบันทึกการย้ายสถานศึกษา</button>`;
+    if (s.status === 'waiting_transfer_proof') panel = `<div class="note warn"><b>รอหลักฐานการย้ายสถานศึกษา</b> · ${tpBadge(this.tpState(s))}<br>เขียนความเห็นและส่งต่อผู้จัดการได้หลังหลักฐานการย้าย “ผ่าน” แล้ว</div>
+      <button class="btn primary block" data-go="staff-tp" data-code="${s.code}">${this.tpState(s) === 'pending' ? 'ไปตรวจหลักฐานการย้าย' : 'ดูการแจ้งย้าย'}</button>`;
     else panel = can ? `<form class="stack" data-submit="staff-review" data-code="${s.code}" novalidate>
       ${field('r_comment', 'ความคิดเห็นของเจ้าหน้าที่รีวิว', textarea('r_comment', v.r_comment ?? (sr && sr.comment) ?? '', 'rows="4" placeholder="สรุปข้อเท็จจริง ความจำเป็น ประเด็นสำคัญ หรือเหตุผลที่ไม่เข้าเกณฑ์"'), {err: e.r_comment})}
       ${field('r_result', 'ผลการรีวิว', select('r_result', [['forward', 'ส่งต่อให้ผู้จัดการพิจารณา'], ['ineligible', 'ไม่เข้าเกณฑ์'], ['need_more_info', 'รอข้อมูลเพิ่มเติม']], v.r_result || 'forward'))}
@@ -362,7 +364,8 @@ App.views['staff-app'] = function (p) {
       <button class="btn primary block" type="submit">บันทึกและส่งต่อผู้จัดการ</button></form>`
       : `<p class="small muted">ใบสมัครนี้อยู่สถานะ “${STATUS[s.status].label}” — จนท.รีวิวดำเนินการได้เมื่อสถานะเป็น “รอเจ้าหน้าที่ดำเนินการ”</p>${reviewSummary(s)}`;
   } else if (role === 'manager') {
-    const can = s.status === 'waiting_manager';
+    const amtWait = s.amount_check && s.amount_check.state === 'pending';
+    const can = s.status === 'waiting_manager' && !amtWait;
     const sr0 = this.stdRate(s), std = sr0.amount;
     const pendingMove = s.school_next === 'transfer' && !this.db.transfers.some(t => t.code === s.code);
     const dec = v.m_decision || 'approved';
@@ -383,6 +386,8 @@ App.views['staff-app'] = function (p) {
       </div>
       ${field('m_note', 'หมายเหตุผู้จัดการ', textarea('m_note', v.m_note, 'rows="2" placeholder="เหตุผลหรือหมายเหตุเพิ่มเติม"'))}
       <button class="btn primary block" type="submit">บันทึกผลการพิจารณา</button></form>`
+      : amtWait ? `<div class="note warn"><b>ยอดเงินเปลี่ยนจากการย้าย</b> ${baht(s.amount_check.before)} → ${baht(s.amount_check.after)}<br>รอแอดมินยืนยันว่าใช้ยอดเดิมหรือยอดใหม่ จึงพิจารณาผลได้</div>
+        <button class="btn block" data-go="staff-tp" data-code="${s.code}">ดูรายละเอียดการย้าย</button>`
       : `<p class="small muted">ใบสมัครนี้อยู่สถานะ “${STATUS[s.status].label}” — ผู้จัดการบันทึกผลได้เมื่อสถานะเป็น “รอผู้จัดการพิจารณา”</p>${reviewSummary(s)}`);
   } else {
     panel = `<p class="small muted">ดูข้อมูลทั้งหมดและสถานะทุกขั้นตอน รวมถึง Audit Trail</p>${reviewSummary(s)}`;
@@ -390,8 +395,9 @@ App.views['staff-app'] = function (p) {
   return {nav: this.staffNav(), html: `${this.roleBar()}
     <button class="back" data-go="staff-apps">${icon('back')} รายการใบสมัคร</button>
     <div class="page-head"><div><h1><span class="num">${s.code}</span> — ${esc(fullName(s))}</h1><p class="sub">หน้าพิจารณาแบบเต็ม: ข้อมูลผู้สมัครทุกส่วน + เอกสาร + ความเห็นครู</p></div>
-      <div class="row">${badge(s)}${s.school_next === 'transfer' || this.db.transfers.some(t => t.code === s.code)
-        ? `<button class="btn sm" data-go="staff-transfer" data-code="${s.code}">${this.db.transfers.some(t => t.code === s.code) ? 'ดู / แก้ไขการย้ายสถานศึกษา' : 'บันทึกการย้ายสถานศึกษา'}</button>` : ''}</div></div>
+      <div class="row">${badge(s)}${s.school_next === 'transfer' || this.db.transfers.some(t => t.code === s.code) || s.tp
+        ? `<button class="btn sm" data-go="staff-tp" data-code="${s.code}">แจ้งย้าย: ${TP_STATE[this.tpState(s)][0]}</button>`
+        : role !== 'manager' && s.status !== 'decided' && ['waiting_staff', 'need_more_info', 'waiting_manager'].includes(s.status) ? `<button class="btn sm ghost" data-go="staff-tp" data-code="${s.code}">เปิดสิทธิ์แจ้งย้าย</button>` : ''}</div></div>
     <div class="split">
       <div class="rv-left"><div class="stack" id="rv-info">${applicantSections.call(this, s, {numbered: true})}
         <section class="card"><h3>6. ความคิดเห็นของครูผู้ดูแลทุน</h3>${tr ? `<p>${esc(tr.comment)}</p><p class="small">ผลการเรียน: ${gradeText(tr)}</p><p class="small muted">ส่งเมื่อ ${thDate(tr.sent_at, true)}</p>`
@@ -446,17 +452,21 @@ function pvMock(s, code, name, fname, i) {
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 function pvViewer(s, files) {
-  const docs = docsFor(s);
-  const total = docs.reduce((n, [code]) => n + (files[code] || []).length, 0);
-  return `<div class="pv" id="pv" hidden>
-    <div class="pv-top"><button class="btn sm" type="button" data-action="pv-close">${icon('back')} ปิดตัวดูไฟล์</button>
+  return pvViewerG(docsFor(s).map(([code, name, , opt]) => { const fl = files[code] || [];
+    return {title: `<b>${code.slice(0, 2)}</b> ${esc(name)}`, empty: opt ? 'ไม่มี (ไม่บังคับ)' : 'ยังไม่ได้แนบ',
+      files: fl.map((f, i) => ({k: `${code}:${i}`, f, src: pvMock(s, code, name, f, i), title: code.slice(0, 2) + ' ' + name + (fl.length > 1 ? ` (${i + 1}/${fl.length})` : '')}))}; }));
+}
+/* ตัวดูไฟล์: กลุ่มเอกสาร → รูปย่อ → จิ้มเปิดดู · open = แสดงทันที (ไม่มีปุ่มปิด) */
+function pvViewerG(groups, o = {}) {
+  const total = groups.reduce((n, g) => n + g.files.length, 0);
+  return `<div class="pv${o.open ? ' pv-open' : ''}" id="pv" ${o.open ? '' : 'hidden'}>
+    <div class="pv-top">${o.open ? '<span></span>' : `<button class="btn sm" type="button" data-action="pv-close">${icon('back')} ปิดตัวดูไฟล์</button>`}
       <span class="small muted">ดูแล้ว <b id="pv-seen">0</b> / ${total} ไฟล์</span></div>
     <div class="pv-body">
-      <nav class="pv-list" aria-label="เอกสารแนบ">${docs.map(([code, name, , opt]) => { const fl = files[code] || [];
-        return `<div class="pv-doc${fl.length ? '' : ' missing'}"><div class="pv-dname"><b>${code.slice(0, 2)}</b> ${esc(name)}</div>
-          ${fl.length ? `<div class="pv-thumbs">${fl.map((f, i) => { const src = pvMock(s, code, name, f, i);
-            return `<button type="button" class="pv-th" data-action="pv-pick" data-k="${code}:${i}" data-src="${src}" data-title="${esc(code.slice(0, 2) + ' ' + name + (fl.length > 1 ? ` (${i + 1}/${fl.length})` : ''))}" data-f="${esc(f)}" title="${esc(f)}"><img src="${src}" alt="" loading="lazy"><span class="pv-ok" aria-hidden="true">✓</span></button>`; }).join('')}</div>`
-            : `<div class="small muted">${opt ? 'ไม่มี (ไม่บังคับ)' : 'ยังไม่ได้แนบ'}</div>`}</div>`; }).join('')}</nav>
+      <nav class="pv-list" aria-label="เอกสารแนบ">${groups.map(g => `<div class="pv-doc${g.files.length ? '' : ' missing'}"><div class="pv-dname">${g.title}</div>
+          ${g.files.length ? `<div class="pv-thumbs">${g.files.map(x =>
+            `<button type="button" class="pv-th" data-action="pv-pick" data-k="${esc(x.k)}" data-src="${x.src}" data-title="${esc(x.title)}" data-f="${esc(x.f)}" title="${esc(x.f)}"><img src="${x.src}" alt="" loading="lazy"><span class="pv-ok" aria-hidden="true">✓</span></button>`).join('')}</div>`
+            : `<div class="small muted">${g.empty || ''}</div>`}</div>`).join('')}</nav>
       <div class="pv-main"><button class="btn sm pv-back" type="button" data-action="pv-grid">${icon('back')} ไฟล์ทั้งหมด</button>
         <div class="pv-title"><b id="pv-title"></b><span class="code" id="pv-f"></span></div>
         <div class="pv-stage" id="pv-stage"><img id="pv-img" alt=""></div>
@@ -495,7 +505,7 @@ App.on('pv-pick', function (el) {
   PV.z = 1; PV.r = 0; const img = document.getElementById('pv-img'); img.onload = pvApply; if (img.complete) pvApply();
   document.getElementById('pv-stage').scrollTo(0, 0);
 });
-App.on('pv-grid', function () { const pv = document.getElementById('pv'); pv.classList.remove('pv-one'); pvTop(document.getElementById('docs-card')); });
+App.on('pv-grid', function () { const pv = document.getElementById('pv'); pv.classList.remove('pv-one'); pvTop(document.getElementById('docs-card') || pv); });
 App.on('pv-close', function () {
   document.getElementById('pv').hidden = true; document.getElementById('doc-rows').hidden = false; pvTop(document.getElementById('docs-card'));
 });
@@ -555,6 +565,13 @@ App.on('staff-decide', function (form) {
 
 /* ---------- ย้ายสถานศึกษา ---------- */
 /* รอบพิจารณาของนักเรียนที่ย้าย: ป.6 / ม.3 ที่ส่งหลักฐานภายในวันตัดรอบแรก → รอบ 1, นอกนั้น → รอบ 2 */
+/* วันที่ใช้นับรอบ: บันทึกการย้ายแล้ว → วันที่นั้น · ยังไม่ผ่าน → วันที่ส่งครั้งแรก */
+function trOrSub(s) {
+  const t = App.db.transfers.filter(x => x.code === s.code).slice(-1)[0];
+  if (t && App.tpState(s) === 'done') return t;
+  const first = ((s.tp || {}).subs || [])[0];
+  return first ? {date: first.at.slice(0, 10)} : null;
+}
 function transferRound(s, t) {
   if (!['ป.6', 'ม.3'].includes(s.class)) return {r: 2, why: ''};
   if (!t) return {r: 1, why: '', pending: true};
@@ -562,43 +579,55 @@ function transferRound(s, t) {
 }
 App.views['staff-transfer'] = function (p) {
   if (p.code) return transferForm.call(this, p);
-  const f = p.f || this._trF || {state: 'todo', side: 'from'};
+  const f = p.f || this._trF || {state: 'pending', side: 'from'};
+  const admin = this.session.staffRole === 'admin';
   this._trF = f;
   const th = (a, b) => a.localeCompare(b, 'th');
   const lastTr = code => this.db.transfers.filter(t => t.code === code).slice(-1)[0];
   const q = (f.q || '').toLowerCase();
   /* ตั้งต้นจากนักเรียนที่ติ๊กย้าย + คนที่บันทึกการย้ายไปแล้ว */
-  const base = this.db.students.filter(s => s.school_next === 'transfer' || lastTr(s.code));
+  const base = this.db.students.filter(s => s.school_next === 'transfer' || lastTr(s.code) || s.tp);
+  /* สถานะหลักฐาน + งานของแอดมิน (ยืนยันสถานศึกษาที่พิมพ์เอง / ยอดเงินเปลี่ยน) */
+  const stOf = s => this.tpState(s);
+  const needSchool = s => stOf(s) === 'pending' && !this.tpLast(s).school;
+  const needAmt = s => s.amount_check && s.amount_check.state === 'pending';
+  const stateOk = s => f.state === 'all' || (f.state === 'school' ? needSchool(s) : f.state === 'amount' ? needAmt(s) : stOf(s) === f.state);
   const origin = s => { const t = lastTr(s.code); return this.schoolById[t ? t.from : s.school] || {}; };
-  const dest = s => { const t = lastTr(s.code); return t ? this.schoolById[t.to] || {} : null; };
+  const dest = s => { const t = lastTr(s.code); if (t && stOf(s) === 'done') return this.schoolById[t.to] || {};
+    const sc = this.tpSchoolOf(this.tpLast(s)); return sc ? {...sc, id: sc.typed ? '' : this.tpLast(s).school} : null; };
   const side = f.side === 'to' ? dest : origin;
   /* ภาค → จังหวัด → อำเภอ → สถานศึกษา จากสถานศึกษาเดิมหรือใหม่ (เลือกได้) พร้อมจำนวนคน */
-  const pool = base.filter(s => f.state === 'all' || (f.state === 'done' ? !!lastTr(s.code) : !lastTr(s.code))).filter(s => side(s));
+  const pool = base.filter(stateOk).filter(s => side(s));
   const cnt = (arr, fn) => arr.reduce((m, s) => { const k = fn(s); if (k) m[k] = (m[k] || 0) + 1; return m; }, {});
   const opts = (c, label = k => k) => Object.keys(c).sort((a, b) => th(label(a), label(b))).map(k => [k, `${label(k)} (${c[k]})`]);
   const inRg = pool.filter(s => !f.region || side(s).region === f.region);
   const inPv = inRg.filter(s => !f.province || side(s).province === f.province);
   const inDs = inPv.filter(s => !f.district || side(s).district === f.district);
-  const list = inDs.filter(s => (!f.school || side(s).id === f.school) && (!f.cls || s.class === f.cls) && (!f.round || String(transferRound.call(this, s, lastTr(s.code)).r) === f.round)
+  const list = inDs.filter(s => (!f.school || side(s).id === f.school) && (!f.cls || s.class === f.cls) && (!f.round || String(transferRound.call(this, s, trOrSub(s)).r) === f.round)
     && (!q || (s.code + fullName(s) + (origin(s).name || '') + ((dest(s) || {}).name || '')).toLowerCase().includes(q)))
     .sort((a, b) => th(side(a).province || '', side(b).province || '') || th(side(a).name || '', side(b).name || '') || th(a.code, b.code));
   const classes = Object.values(CLASS_GROUPS).flat().filter(c => base.some(s => s.class === c));
-  const nDone = base.filter(s => lastTr(s.code)).length;
+  const nOf = k => base.filter(s => stOf(s) === k).length;
   const sch = (x, extra = '') => x ? `<b class="sch">${esc(x.name || '-')}</b><small>${esc(x.district || '')} · จ.${esc(x.province || '')}${extra}</small>` : '';
   return {nav: this.staffNav(), html: `${this.roleBar()}
-    <div class="page-head"><div><h1>ย้ายสถานศึกษา</h1><p class="sub">บันทึกว่านักเรียนย้ายไปเรียนที่ไหน หลังเจ้าหน้าที่ตรวจหลักฐานการย้ายภายนอกระบบแล้ว</p></div></div>
-    <div class="stats">${[['todo', 'ยังไม่บันทึกที่เรียนใหม่', base.length - nDone], ['done', 'บันทึกแล้ว', nDone], ['all', 'แจ้งย้ายทั้งหมด', base.length]].map(([k, t, n]) =>
-      `<button class="stat" data-action="transfer-state" data-state="${k}" aria-pressed="${f.state === k}"><span>${t}</span><b>${n}</b></button>`).join('')}</div>
+    <div class="page-head"><div><h1>ย้ายสถานศึกษา</h1><p class="sub">นักเรียน / ครูโรงเรียนเดิมส่งหลักฐานการย้าย → เจ้าหน้าที่ตรวจ 4 จุด (ชื่อ · สถานศึกษา · ระดับชั้น · ปีการศึกษา)</p></div></div>
+    <div class="note ${this.tpOpen() ? 'info' : 'bad'} row between tp-remind"><span>หมดเขตส่งหลักฐาน <b>${thDate(this.db.cycle.transfer_close)}</b>${this.tpOpen() ? ` · เหลืออีก <b>${this.tpDaysLeft()}</b> วัน` : ' · หมดเขตแล้ว ไม่รับเอกสาร'}
+      <br><span class="small">อีเมลเตือนอัตโนมัติ ${(this.db.cycle.remind_days || [30, 14, 7, 3]).join(' · ')} วันก่อนหมดเขต ถึงคนที่ยังไม่ส่ง / ไม่ผ่าน${admin ? ' (ตั้งค่าได้ที่ “รอบรับสมัคร”)' : ''}</span></span>
+      ${this.tpOpen() ? `<button class="btn sm" data-action="tp-remind">ส่งเตือนตอนนี้ (${base.filter(s => ['todo', 'rejected'].includes(stOf(s))).length} คน)</button>` : ''}</div>
+    <div class="stats tp-stats">${[['pending', 'รอตรวจ'], ['rejected', 'ไม่ผ่าน · รอแก้'], ['done', 'ผ่านแล้ว'], ['todo', 'ยังไม่ส่ง']].concat(this.tpOpen() ? [] : [['closed', 'หมดเขต ยังไม่ผ่าน']]).map(([k, t]) => [k, t, nOf(k)])
+      .concat(admin ? [['school', 'รอยืนยันสถานศึกษา', base.filter(needSchool).length], ['amount', 'ยอดเงินเปลี่ยน รอยืนยัน', base.filter(needAmt).length]] : [])
+      .concat([['all', 'ทั้งหมด', base.length]]).map(([k, t, n]) =>
+      `<button class="stat${k === 'pending' && n ? ' hot' : ''}" data-action="transfer-state" data-state="${k}" aria-pressed="${f.state === k}"><span>${t}</span><b>${n}</b></button>`).join('')}</div>
     <section class="card stack">
       <div class="filters tr-filters">
         ${field('tq', 'ค้นหา', input('tq', f.q || '', 'autocomplete="off" placeholder="รหัส / ชื่อ–นามสกุล / ชื่อสถานศึกษา" data-oninput="transfer-search"'))}
-        ${field('t_state', 'การบันทึก', select('t_state', [['todo', 'ยังไม่บันทึก'], ['done', 'บันทึกแล้ว'], ['all', 'ทั้งหมด']], f.state, null, 'data-onchange="transfer-filter"'))}
+        ${field('t_state', 'สถานะหลักฐาน', select('t_state', [['pending', 'รอตรวจ'], ['rejected', 'ไม่ผ่าน'], ['done', 'ผ่านแล้ว'], ['todo', 'ยังไม่ส่ง'], ['closed', 'หมดเขต ยังไม่ผ่าน']].concat(admin ? [['school', 'รอยืนยันสถานศึกษา'], ['amount', 'ยอดเงินเปลี่ยน']] : []).concat([['all', 'ทั้งหมด']]), f.state, null, 'data-onchange="transfer-filter"'))}
         ${field('t_round', 'รอบพิจารณา', select('t_round', [['1', 'รอบ 1'], ['2', 'รอบ 2']], f.round, 'ทุกรอบ', 'data-onchange="transfer-filter"'))}
         ${field('t_cls', 'ชั้นปัจจุบัน', select('t_cls', classes, f.cls, 'ทุกชั้น', 'data-onchange="transfer-filter"'))}
       </div>
       <div class="field"><span class="label">พื้นที่ของ</span><div class="seg tr-side">${[['from', 'สถานศึกษาเดิม'], ['to', 'สถานศึกษาใหม่']].map(([k, t]) =>
         `<button type="button" data-action="transfer-side" data-side="${k}" aria-pressed="${(f.side || 'from') === k}">${t}</button>`).join('')}</div>
-        ${f.side === 'to' && f.state === 'todo' ? '<div class="hint">คนที่ยังไม่บันทึกยังไม่มีสถานศึกษาใหม่ — เลือก “บันทึกแล้ว” หรือ “ทั้งหมด”</div>' : ''}</div>
+        ${f.side === 'to' && f.state === 'todo' ? '<div class="hint">คนที่ยังไม่ส่งยังไม่มีสถานศึกษาใหม่ — เลือกสถานะอื่น</div>' : ''}</div>
       <div class="filters tr-area">
         ${field('t_rg', 'ภาค', select('t_rg', opts(cnt(pool, s => side(s).region), k => this.regionName(k)), f.region, 'ทุกภาค', 'data-onchange="transfer-filter" data-level="rg"'))}
         ${field('t_pv', 'จังหวัด', select('t_pv', opts(cnt(inRg, s => side(s).province)), f.province, 'ทุกจังหวัด', 'data-onchange="transfer-filter" data-level="pv"'))}
@@ -606,22 +635,23 @@ App.views['staff-transfer'] = function (p) {
         ${field('t_sc', 'สถานศึกษา', select('t_sc', opts(cnt(inDs, s => side(s).id), k => this.schoolName(k)), f.school, f.district ? 'ทุกสถานศึกษา' : 'เลือกอำเภอก่อน', `data-onchange="transfer-filter" data-level="sc" ${f.district ? '' : 'disabled'}`))}
       </div>
     </section>
-    <div class="small muted">พบ <b>${list.length}</b> คน · กดที่รายชื่อเพื่อบันทึกหรือแก้ไข · นักเรียนที่ไม่ได้ติ๊กย้ายแต่ย้ายจริง พิมพ์รหัสผู้สมัครในช่องค้นหา</div>
+    <div class="small muted">พบ <b>${list.length}</b> คน · กดที่รายชื่อเพื่อตรวจหลักฐาน · นักเรียนที่แจ้งเรียนที่เดิมแต่ย้ายจริง พิมพ์รหัสผู้สมัครในช่องค้นหา แล้วเปิดสิทธิ์แจ้งย้าย</div>
     <div class="tlist tr-list pf-widepage" role="table" aria-label="นักเรียนแจ้งย้ายสถานศึกษา">
       <div class="tlist-head" role="row"><span class="n">ลำดับ</span><span>ชื่อ–นามสกุล</span><span>สถานศึกษาเดิม</span><span>ชั้นปีนี้</span><span>สถานศึกษาใหม่</span><span>ชั้นปีหน้า</span><span>รอบ</span></div>
-      ${list.length ? list.map((s, i) => { const t = lastTr(s.code), rd = transferRound.call(this, s, t);
-        return `<button class="trow" role="row" data-go="staff-transfer" data-code="${s.code}">
+      ${list.length ? list.map((s, i) => { const st = stOf(s), t = st === 'done' ? lastTr(s.code) : null, rd = transferRound.call(this, s, trOrSub(s)), sub = this.tpLast(s);
+        return `<button class="trow" role="row" data-go="staff-tp" data-code="${s.code}">
           <span class="n">${i + 1}</span>
           <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}</small></span>
-          <span class="c-from">${sch(origin(s))}</span>
+          <span class="c-from">${sch(origin(s))}${this.teacherOf(this.careSchool(s)) ? '' : '<span class="badge t-bad">ไม่มีข้อมูลครูผู้ดูแล</span>'}</span>
           <span class="c-cls"><span class="cls">${esc(s.class || '-')}</span></span>
-          <span class="c-to">${t ? sch(dest(s), ` · แจ้ง ${thDate(t.date)}`)
-            : `<span class="badge t-warn">ยังไม่บันทึก</span>${s.next_school_text ? `<small>นักเรียนแจ้ง: ${esc(s.next_school_text)}</small>` : ''}`}</span>
-          <span class="c-ncls"><span class="cls">${esc((t && t.cls) || s.next_class || '-')}</span>${t ? '' : '<small>นักเรียนแจ้ง</small>'}</span>
+          <span class="c-to">${tpBadge(st)}${needSchool(s) ? ' <span class="badge t-warn">พิมพ์ชื่อเอง</span>' : ''}${needAmt(s) ? ' <span class="badge t-violet">ยอดเงินเปลี่ยน</span>' : ''}
+            ${t ? sch(dest(s)) : sub ? sch(dest(s), ` · ครั้งที่ ${sub.n} · ส่งโดย${TP_BY[sub.by]}`) : s.next_school_text ? `<small>นักเรียนแจ้งตอนสมัคร: ${esc(s.next_school_text)}</small>` : ''}
+            ${st === 'rejected' && sub ? `<small class="bad-t">${esc((sub.reasons || [])[0] || '')}</small>` : ''}</span>
+          <span class="c-ncls"><span class="cls">${esc((t && t.cls) || (sub && sub.cls) || s.next_class || '-')}</span>${t || sub ? '' : '<small>นักเรียนแจ้ง</small>'}</span>
           <span class="c-round"><span class="badge ${rd.r === 1 ? 't-info' : 't-violet'}">รอบ ${rd.r}${rd.pending ? '*' : ''}</span>${rd.why ? `<small>${esc(rd.why)}</small>` : ''}</span></button>`; }).join('')
         : '<div class="empty">ไม่พบนักเรียนตามเงื่อนไขนี้</div>'}
     </div>
-    <p class="tiny muted">* ป.6 / ม.3 ที่ยังไม่บันทึก: ได้รอบ 1 ถ้าส่งหลักฐานภายใน ${thDate(this.db.cycle.first_cutoff)} ถ้าส่งหลังจากนั้นถึง ${thDate(this.db.cycle.transfer_close)} เป็นรอบ 2</p>`,
+    <p class="tiny muted">* ป.6 / ม.3 ที่ยังไม่ส่ง: ได้รอบ 1 ถ้าส่งหลักฐานครั้งแรกภายใน ${thDate(this.db.cycle.first_cutoff)} ถ้าส่งหลังจากนั้นถึง ${thDate(this.db.cycle.transfer_close)} เป็นรอบ 2</p>`,
     after() { const el = document.getElementById('tq'); if (p.focusQ && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }};
 };
 /* ฟอร์มบันทึกการย้ายของนักเรียน 1 คน */
