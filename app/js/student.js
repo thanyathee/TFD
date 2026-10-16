@@ -745,8 +745,9 @@ App.views['student-entry'] = function (p) {
         ${[['draft', 'NEW', 'ป.5'], ['draft', 'CONT'], ['draft', 'NEW', 'ปวช.1'], ['draft', 'NEW', 'ปริญญาตรี ปี 1'], ['returned_to_student'], ['waiting_teacher'], ['waiting_staff'], ['decided']].map(([st, ty, cl]) =>
           this.db.students.find(x => x.demo_note && x.status === st && (!ty || x.type === ty) && (!cl || x.class === cl))).filter(Boolean).map(x =>
           `<button class="btn sample" data-action="student-sample" data-code="${x.code}"><b>${esc(x.class)} ${TYPE[x.type]}</b><span>${esc(STATUS[x.status].label)}</span></button>`).join('')}
-        ${[['todo', 'แจ้งย้าย · รอส่งหลักฐาน'], ['pending', 'แจ้งย้าย · ส่งหลักฐานสำเร็จ']].map(([k, label]) =>
-          [this.db.students.find(x => x.demo_tp === k && this.tpState(x) === k) || this.db.students.find(x => x.school_next === 'transfer' && x.status === 'waiting_transfer_proof' && this.tpState(x) === k), label]).filter(x => x[0]).map(([x, label]) =>
+        ${[['todo', 'แจ้งย้าย · รอส่งหลักฐาน'], ['pending', 'แจ้งย้าย · ส่งหลักฐานสำเร็จ'], ['rejected', 'แจ้งย้าย · หลักฐานไม่ผ่าน']].map(([k, label]) =>
+          [this.db.students.find(x => x.demo_tp === k && this.tpState(x) === k) || this.db.students.find(x => ['ป.6', 'ม.3'].includes(x.class) && x.school_next === 'transfer'
+            && x.status === 'waiting_transfer_proof' && this.tpState(x) === k), label]).filter(x => x[0]).map(([x, label]) =>
           `<button class="btn sample" data-action="student-sample" data-code="${x.code}"><b>${esc(x.class)} ${TYPE[x.type]}</b><span>${label}</span></button>`).join('')}
         <button class="btn" data-action="student-newid">สร้างเลขบัตรใหม่สำหรับทดลอง</button>
         <p class="tiny muted">บันทึกร่างอัตโนมัติทุกครั้งที่กดถัดไป กลับมากรอกต่อได้หากอินเทอร์เน็ตหลุดหรือปิดหน้าเว็บ</p>

@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v21';
+const STORE_KEY = 'tfd-scholarship-demo-v22';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -180,20 +180,24 @@ const App = {
     const a = by('TF2570-000010');
     if (a) { const sc = sch('SCH-002');
       add(a, [sub({at: '2027-05-08T09:30', school: 'SCH-002', region: sc.region, province: sc.province, district: sc.district, cls: 'ม.4', files: [a.code + '_14_TRANSFER_1.pdf'], email: a.email || ''})], 'pending'); }
-    const b = by('TF2570-000069');
-    if (b) { const sc = sch('SCH-022');
-      add(b, [sub({at: '2027-05-02T14:10', school: 'SCH-022', region: sc.region, province: sc.province, district: sc.district, cls: 'ปริญญาตรี ปี 1', files: [b.code + '_14_TRANSFER_1.jpg'],
+    /* ตัวอย่างใช้ ป.6 / ม.3 (ชั้นที่ย้ายสถานศึกษาบ่อย) */
+    const toTransfer = (x, text) => Object.assign(x, {school_next: 'transfer', status: 'waiting_transfer_proof', next_school_text: text});
+    const near = x => db.schools.find(c => c.id !== x.school && c.province === (sch(x.school).province) && c.type === 'school') || sch('SCH-002');
+    const b = by('TF2570-000095');
+    if (b && b.status === 'waiting_staff') { const sc = near(b);
+      toTransfer(b, sc.name);
+      add(b, [sub({at: '2027-05-02T14:10', school: sc.id, region: sc.region, province: sc.province, district: sc.district, cls: 'ม.1', files: [b.code + '_14_TRANSFER_1.jpg'],
         email: b.email || '', result: 'rejected', reasons: ['ไม่เห็นปีการศึกษาชัดเจน หรือไม่ตรงกับข้อมูล', 'ภาพไม่ชัด / อ่านไม่ออก'], reviewer: 'จนท. 01', reviewed_at: '2027-05-04T10:20', checks: ['name', 'school', 'cls']})], 'rejected');
       b.history.push({at: '2027-05-04T10:20', text: 'จนท. 01 ตรวจหลักฐานการย้าย: ไม่ผ่าน — ไม่เห็นปีการศึกษาชัดเจน, ภาพไม่ชัด', kind: 'transfer_reject'}); }
-    /* นักเรียนที่แจ้งย้ายและครูส่งแทน โดยพิมพ์ชื่อโรงเรียนใหม่เอง */
-    const c = by('TF2570-000026');
+    /* ครูส่งแทน โดยพิมพ์ชื่อโรงเรียนใหม่เอง (ไม่มีในระบบ) */
+    const c = by('TF2570-000058');
     if (c && c.status === 'waiting_staff') { const old = sch(c.school);
-      Object.assign(c, {school_next: 'transfer', status: 'waiting_transfer_proof', next_school_text: 'วิทยาลัยการอาชีพเวียงเชียงรุ้ง'});
-      add(c, [sub({at: '2027-05-11T11:00', by: 'teacher', by_name: (db.teachers.find(t => t.school === c.school) || {}).name || '', school: '', school_text: 'วิทยาลัยการอาชีพเวียงเชียงรุ้ง',
+      toTransfer(c, 'โรงเรียนเวียงเชียงรุ้งวิทยาคม');
+      add(c, [sub({at: '2027-05-11T11:00', by: 'teacher', by_name: (db.teachers.find(t => t.school === c.school) || {}).name || '', school: '', school_text: 'โรงเรียนเวียงเชียงรุ้งวิทยาคม',
         region: old.region, province: old.province, district: old.district, cls: c.next_class, files: [c.code + '_14_TRANSFER_1-1.jpg', c.code + '_14_TRANSFER_1-2.jpg'], file_note: 'แปลง HEIC เป็น JPG แล้ว'})], 'pending'); }
-    /* นักเรียนตัวอย่าง: แจ้งย้าย ส่งใบสมัครแล้ว ยังไม่ส่งหลักฐาน */
-    const e = by('TF2570-000037');
-    if (e && e.status === 'waiting_staff') Object.assign(e, {school_next: 'transfer', status: 'waiting_transfer_proof', next_school_text: 'โรงเรียนประจำอำเภอ', demo_tp: 'todo'});
+    /* แจ้งย้าย ส่งใบสมัครแล้ว ยังไม่ส่งหลักฐาน */
+    const e = by('TF2570-000085');
+    if (e && e.status === 'waiting_staff') { toTransfer(e, 'โรงเรียนประจำอำเภอ'); e.demo_tp = 'todo'; }
     if (a) a.demo_tp = 'pending';
     /* ย้ายผ่านแล้ว แต่ไปโรงเรียนที่ได้อัตราพิเศษ ม.ต้น → ยอดเงินเปลี่ยน รอแอดมินยืนยัน */
     const d = by('TF2570-000012');
