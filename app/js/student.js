@@ -551,7 +551,7 @@ function stepMore(s, e) {
     <label class="check ${e.pdpa ? 'invalid' : ''}"><input type="checkbox" name="pdpa" ${s.pdpa_ack ? 'checked' : ''}> <span>ข้าพเจ้าได้อ่านและรับทราบเงื่อนไขในการขอรับทุนตามแบบฟอร์มฉบับนี้ ระเบียบการขอรับทุนเพื่อการศึกษา และประกาศความเป็นส่วนตัว (Privacy Notice) ของมูลนิธิทิสโก้ เพื่อการกุศลแล้ว <span class="req">*</span></span></label>
     ${e.pdpa ? `<div class="err">${e.pdpa}</div>` : ''}
     <a href="${esc(pd.url)}" target="_blank" rel="noopener noreferrer">อ่านประกาศความเป็นส่วนตัว (Privacy Notice) ฉบับ ${esc(pd.version)}</a>
-    <div class="note info small">เมื่อกดส่งแล้ว ข้อมูลจะถูกล็อกไม่ให้แก้ไขเอง หากจำเป็นต้องแก้ไข ให้ครูผู้ดูแลทุนหรือเจ้าหน้าที่เป็นผู้เปิดสิทธิ์ให้แก้ไข</div>
+    <div class="note info small">เมื่อกดส่งแล้ว ข้อมูลจะถูกล็อกไม่ให้แก้ไขเอง หากจำเป็นต้องแก้ไข ให้ครูผู้ดูแลทุนหรือเจ้าหน้าที่เป็นผู้เปิดสิทธิ์ให้แก้ไข${s.school_next === 'transfer' ? '<br><b>หลักฐานการย้ายสถานศึกษา:</b> หากส่งแล้วต้องการแก้ไข ต้องให้เจ้าหน้าที่มูลนิธิฯ เป็นผู้เปิดสิทธิ์เท่านั้น (ครูเปิดสิทธิ์ไม่ได้)' : ''}</div>
   </section>`;
 }
 App.on('count', function (el) {
@@ -856,7 +856,7 @@ App.views['student-status'] = function (p = {}) {
     ${editable ? `<div class="note ${s.status === 'returned_to_student' ? 'warn' : 'info'} row between"><span>${s.status === 'returned_to_student'
       ? '<b>ครูเปิดสิทธิ์ให้แก้ไข:</b> ' + esc(s.return_reason || '') : 'ใบสมัครยังไม่ได้ส่ง กรอกต่อให้ครบแล้วกดส่ง'}</span>
       <button class="btn primary" data-go="student-form" data-step="${s.step || 1}">กรอกใบสมัครต่อ</button></div>`
-      : `<div class="note info"><b>สถานะหลังส่ง:</b> เมื่อผู้สมัครกดส่งแล้ว ข้อมูลจะถูกล็อกไม่ให้แก้ไขเอง หากจำเป็นต้องแก้ไข ให้ครูผู้ดูแลทุนหรือเจ้าหน้าที่เป็นผู้เปิดสิทธิ์ให้แก้ไข</div>`}
+      : `<div class="note info"><b>สถานะหลังส่ง:</b> เมื่อผู้สมัครกดส่งแล้ว ข้อมูลจะถูกล็อกไม่ให้แก้ไขเอง หากจำเป็นต้องแก้ไข ให้ครูผู้ดูแลทุนหรือเจ้าหน้าที่เป็นผู้เปิดสิทธิ์ให้แก้ไข${s.school_next === 'transfer' ? '<br><b>หลักฐานการย้ายสถานศึกษา:</b> หากส่งแล้วต้องการแก้ไข ต้องให้เจ้าหน้าที่มูลนิธิฯ เป็นผู้เปิดสิทธิ์เท่านั้น (ครูเปิดสิทธิ์ไม่ได้)' : ''}</div>`}
     <div class="split">
       <div class="stack">
         ${s.school_next === 'transfer' ? tpCard.call(this, s, 'student', p) : ''}

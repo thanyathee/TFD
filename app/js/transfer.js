@@ -81,7 +81,7 @@ function tpForm(s, who, p) {
       err: {region: e.region, province: e.province, district: e.district, school: e.school}})}</div>
     <label class="choice tp-none"><input type="checkbox" name="tp_none" value="1" ${v.none ? 'checked' : ''} data-onchange="tp-none"> ไม่พบสถานศึกษาในรายชื่อ — พิมพ์ชื่อเอง</label>
     <div id="tp_none_box" ${v.none ? '' : 'hidden'}>${field('tp_text', 'ชื่อเต็มของสถานศึกษาใหม่ (พิมพ์เอง)', input('tp_text', v.text, 'placeholder="เช่น โรงเรียนเวียงเชียงรุ้งวิทยาคม"'),
-      {req: 1, err: e.text, hint: '<b>พิมพ์ชื่อเต็ม ไม่ใช้ตัวย่อ และสะกดให้ถูกต้อง</b> เพราะมีผลต่อการพิจารณา · ต้องเลือกภาค / จังหวัด / อำเภอด้านบนด้วย · เจ้าหน้าที่จะตรวจสอบก่อนเพิ่มเข้าระบบ'})}</div>
+      {req: 1, err: e.text, hint: '<b>พิมพ์ชื่อเต็ม ไม่ใช้ตัวย่อ และสะกดให้ถูกต้อง</b> เพราะมีผลต่อการพิจารณา · ต้องเลือกภาค / จังหวัด / อำเภอด้านบนด้วย'})}</div>
     ${field('tp_cls', 'ระดับชั้นที่เรียนในสถานศึกษาใหม่', select('tp_cls', allClasses, v.cls, 'เลือกระดับชั้น'), {req: 1, err: e.cls, hint: `แจ้งไว้ในใบสมัคร: ${esc(s.next_class || '-')}`})}
     <h4 class="tp-h">2. หลักฐานการย้าย</h4>
     <div class="note info tp-info"><b>เอกสารที่ใช้ยืนยันการย้ายได้ มีเพียง 3 อย่างนี้ (อย่างใดอย่างหนึ่ง)</b>
@@ -118,7 +118,7 @@ function tpCard(s, who, p = {}) {
       <div><dt>ส่งโดย</dt><dd>${TP_BY[sub.by]}${sub.by_name ? ` (${esc(sub.by_name)})` : ''}<div class="small muted">${thDate(sub.at, true)} · ครั้งที่ ${sub.n}</div></dd></div></dl>`; };
   let body;
   if (!sentToFdn) body = `<div class="note info">ส่งหลักฐานการย้ายได้หลังใบสมัครถึงมูลนิธิฯ แล้ว</div>`;
-  else if (st === 'pending') body = `<div class="note info"><b>ส่งหลักฐานแล้ว — รอเจ้าหน้าที่ตรวจ</b><br><span class="small">ระหว่างรอตรวจแก้ไขไม่ได้ · ผลการตรวจจะแจ้งทางอีเมลและแสดงในหน้านี้</span></div>${sum(last)}`;
+  else if (st === 'pending') body = `<div class="note info"><b>ส่งหลักฐานแล้ว — รอเจ้าหน้าที่ตรวจ</b><br><span class="small">ระหว่างรอตรวจแก้ไขไม่ได้ หากต้องการแก้ไข ติดต่อเจ้าหน้าที่มูลนิธิฯ เพื่อเปิดสิทธิ์ · ผลการตรวจจะแจ้งทางอีเมลและแสดงในหน้านี้</span></div>${sum(last)}`;
   else if (st === 'done') body = `<div class="note ok"><b>✓ เจ้าหน้าที่ตรวจหลักฐานแล้ว ถูกต้อง</b>${tr ? `<br><span class="small">ย้ายไป ${esc(this.schoolName(tr.to))} · ชั้น ${esc(tr.cls)}</span>` : ''}</div>
     ${last && s.tp && s.tp.state === 'approved' ? sum(last) : ''}<p class="small muted">หากย้ายสถานศึกษาอีกครั้ง กรุณาโทรแจ้งเจ้าหน้าที่มูลนิธิฯ เพื่อเปิดสิทธิ์แจ้งย้ายใหม่</p>`;
   else if (st === 'closed') body = `<div class="note bad"><b>หมดเขตส่งหลักฐานแล้ว</b> (${thDate(this.db.cycle.transfer_close)}) — ไม่รับเอกสารเพิ่ม</div>${last ? sum(last) : ''}`;
