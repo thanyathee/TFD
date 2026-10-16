@@ -274,7 +274,7 @@ function tpTeacherSection() {
       <div class="tp-round"><b>ทุกระดับชั้น</b> <small>(รวม ป.6 / ม.3 ที่ส่งหลัง ${thDate(c.first_cutoff)})</small><span>ส่งหลักฐานภายใน <b>${thDate(c.transfer_close)}</b></span><span>→ พิจารณา<b>รอบรอฟังผล</b></span><span>→ ประกาศรายชื่อเดือน<b>พฤศจิกายน</b></span></div>
     </div>
     ${bad ? `<div class="note bad small">มีนักเรียน <b>${bad} คน</b> ที่ยืนยันไม่สำเร็จ ต้องอัปโหลดใหม่</div>` : ''}
-    <div class="tp-tlist">${list.map((s, i) => { const st = this.tpState(s), last = this.tpLast(s);
+    <div class="tp-tlist"><div class="tp-thead"><span class="n">ลำดับ</span><span>ชื่อ–นามสกุล</span><span>สถานศึกษาใหม่</span><span>ส่งโดย</span><span>สถานะ</span><span class="c-act">ดำเนินการ</span></div>${list.map((s, i) => { const st = this.tpState(s), last = this.tpLast(s);
       const tr = st === 'done' ? this.db.transfers.filter(t => t.code === s.code).slice(-1)[0] : null;
       const sc = tr ? {name: this.schoolName(tr.to)} : this.tpSchoolOf(last);
       const act = !this.tpCanSend(s) ? 'ดู' : st === 'rejected' ? 'อัปโหลดใหม่' : st === 'pending' ? 'ดู / แก้ไข' : 'อัปโหลดแทน';
@@ -282,8 +282,8 @@ function tpTeacherSection() {
         <span class="n">${i + 1}</span>
         <span class="c-name">${esc(fullName(s))}<small class="num">${s.code} · ${esc(s.class || '-')} → ${esc((last && last.cls) || s.next_class || '-')}</small></span>
         <span class="c-to">${sc ? esc(sc.name) : `<span class="muted">${esc(s.next_school_text || 'ยังไม่ระบุ')}</span>`}</span>
+        <span class="c-by">${last ? `<span class="m-only">ส่งโดย</span>${TP_BY[last.by]}` : '—'}</span>
         <span class="c-st">${tpBadge(st)}${st === 'rejected' && last ? `<small class="bad-t">${esc((last.reasons || [])[0] || '')}</small>` : ''}</span>
-        <span class="c-by">${last ? `ส่งโดย${TP_BY[last.by]}` : '—'}</span>
         <span class="c-act"><span class="btn sm ${act === 'ดู' || act === 'ดู / แก้ไข' ? '' : 'primary'}">${act}</span></span></button>`; }).join('')}</div></section>`;
 }
 App.views['teacher-transfer'] = function (p) {

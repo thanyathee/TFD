@@ -1125,3 +1125,13 @@ body:has(.pf-widepage) .topbar-in,body:has(.pf-widepage) .tabs{max-width:1440px}
 .tp-sec-n{background:#fff;color:var(--orange)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tp-sec-head{background:#c2410c}}
 :root[data-theme="dark"] .tp-sec-head{background:#c2410c}
+/* หัวตารางนักเรียนแจ้งย้าย (หน้าครู) */
+.tp-trow,.tp-thead{grid-template-columns:44px minmax(180px,1.3fr) minmax(170px,1.4fr) 100px minmax(150px,1fr) 120px}
+.tp-thead{display:grid;gap:12px;padding:10px 4px;font-size:13px;font-weight:600;color:var(--muted);background:var(--fill);border-radius:10px 10px 0 0}
+.tp-thead .n{text-align:center}.tp-thead .c-act{text-align:right}
+.tp-trow .m-only{display:none}
+@media (max-width:900px){
+  .tp-thead{display:none}
+  .tp-trow{grid-template-columns:28px 1fr auto}
+  .tp-trow .m-only{display:inline}
+}
