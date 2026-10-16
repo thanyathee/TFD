@@ -79,7 +79,7 @@ function tpForm(s, who, p) {
   const last = this.tpLast(s);
   const ls = last && last.school ? this.schoolById[last.school] : null;
   const v = p.tpv || (last ? {region: ls ? ls.region : last.region, province: ls ? ls.province : last.province, district: ls ? ls.district : last.district,
-    school: last.school || '', none: !last.school, text: last.school_text || '', cls: last.cls, email: last.email}
+    school: last.school || (last.school_text ? '__other' : ''), text: last.school_text || '', cls: last.cls, email: last.email}
     : {cls: s.next_class, email: who === 'student' ? s.email : s.email || ''});
   const edit = this.tpState(s) === 'pending';
   /* แก้ไขระหว่างรอตรวจ: เริ่มจากไฟล์ที่ส่งไว้ */
@@ -90,11 +90,11 @@ function tpForm(s, who, p) {
   const allClasses = Object.values(CLASS_GROUPS).flat();
   return `${errNote(e)}<form class="stack tp-form" data-submit="tp-submit" data-code="${s.code}" data-who="${who}" novalidate>
     <h4 class="tp-h">1. สถานศึกษาใหม่</h4>
-    <div class="grid-2" data-area='{"school":true,"required":true,"schoolLabel":"ชื่อสถานศึกษาใหม่"}'>${this.areaPicker('tp', v, {school: true, required: true, schoolLabel: 'ชื่อสถานศึกษาใหม่',
-      err: {region: e.region, province: e.province, district: e.district, school: e.school}})}</div>
-    <label class="choice tp-none"><input type="checkbox" name="tp_none" value="1" ${v.none ? 'checked' : ''} data-onchange="tp-none"> ไม่พบสถานศึกษาในรายชื่อ — พิมพ์ชื่อเอง</label>
-    <div id="tp_none_box" ${v.none ? '' : 'hidden'}>${field('tp_text', 'ชื่อเต็มของสถานศึกษาใหม่ (พิมพ์เอง)', input('tp_text', v.text, 'placeholder="เช่น โรงเรียนเวียงเชียงรุ้งวิทยาคม"'),
-      {req: 1, err: e.text, hint: '<b>พิมพ์ชื่อเต็ม ไม่ใช้ตัวย่อ และสะกดให้ถูกต้อง</b> เพราะมีผลต่อการพิจารณา · ต้องเลือกภาค / จังหวัด / อำเภอด้านบนด้วย'})}</div>
+    <div class="grid-2" data-after="tp-school" data-area='{"school":true,"required":true,"schoolLabel":"ชื่อสถานศึกษาใหม่","otherLabel":"── ไม่พบในรายชื่อ (ระบุเอง) ──"}'>${this.areaPicker('tp', v, {school: true, required: true,
+      schoolLabel: 'ชื่อสถานศึกษาใหม่', otherLabel: '── ไม่พบในรายชื่อ (ระบุเอง) ──', err: {region: e.region, province: e.province, district: e.district, school: e.school}})}</div>
+    <p class="small muted tp-step">เลือกภาค → จังหวัด → อำเภอ → สถานศึกษา · ถ้าไม่พบ เลือก “ไม่พบในรายชื่อ (ระบุเอง)” ท้ายรายการ แล้วพิมพ์ชื่อเต็ม</p>
+    <div id="tp_none_box" ${v.school === '__other' ? '' : 'hidden'}>${field('tp_text', 'ชื่อเต็มของสถานศึกษาใหม่ (พิมพ์เอง)', input('tp_text', v.text, 'placeholder="เช่น โรงเรียนเวียงเชียงรุ้งวิทยาคม"'),
+      {req: 1, err: e.text, hint: '<b>พิมพ์ชื่อเต็ม ไม่ใช้ตัวย่อ และสะกดให้ถูกต้อง</b> เพราะมีผลต่อการพิจารณา'})}</div>
     ${field('tp_cls', 'ระดับชั้นที่เรียนในสถานศึกษาใหม่', select('tp_cls', allClasses, v.cls, 'เลือกระดับชั้น'), {req: 1, err: e.cls, hint: `แจ้งไว้ในใบสมัคร: ${esc(s.next_class || '-')}`})}
     <h4 class="tp-h">2. หลักฐานการย้าย</h4>
     <div class="note info tp-info"><b>เอกสารที่ใช้ยืนยันการย้ายได้ มีเพียง 3 อย่างนี้ (อย่างใดอย่างหนึ่ง)</b>
@@ -149,17 +149,19 @@ function tpCard(s, who, p = {}) {
   return `<section class="card tp-card tp-${st}" id="tp-card"><div class="card-head"><h3>แจ้งย้ายสถานศึกษา</h3>${tpBadge(st)}</div>${body}${hist}</section>`;
 }
 
-App.on('tp-none', function (el) {
+/* เลือก “ไม่พบในรายชื่อ (ระบุเอง)” → แสดงช่องพิมพ์ชื่อเต็ม */
+App.on('tp-school', function () {
+  const other = (document.getElementById('tp-school') || {}).value === '__other';
   const box = document.getElementById('tp_none_box');
-  if (box) box.hidden = !el.checked;
-  if (el.checked) { const t = document.getElementById('tp_text'); if (t) t.focus(); }
+  if (box) box.hidden = !other;
+  if (other) { const t = document.getElementById('tp_text'); if (t) t.focus(); }
 });
 /* ไฟล์ (สูงสุด 5): จำกัดขนาด · HEIC → JPG · ย่อรูปใหญ่ (ต้นแบบ: เปลี่ยนชื่อ/แจ้งผล ไม่ได้แปลงจริง) */
 function tpKeepForm() {
   /* เก็บค่าที่กรอกไว้ก่อนวาดใหม่ */
   const form = document.querySelector('.tp-form'); if (!form) return {};
   const v = formData(form), a = App.readArea('tp');
-  return {...a, none: !!v.tp_none, text: v.tp_text, cls: v.tp_cls, ack: !!v.tp_ack, email: v.tp_email};
+  return {...a, text: v.tp_text, cls: v.tp_cls, ack: !!v.tp_ack, email: v.tp_email};
 }
 function tpFilesOf(code) {
   if (!App._tpFiles || App._tpFiles.code !== code) App._tpFiles = {code, list: []};
@@ -203,7 +205,7 @@ App.on('tp-submit', function (form) {
   if (!this.tpCanSend(s)) { this.toast('ส่งหลักฐานไม่ได้ในสถานะนี้'); return; }
   const v = formData(form);
   const a = this.readArea('tp');
-  const none = !!v.tp_none;
+  const none = a.school === '__other';
   const files = tpFilesOf(s.code);
   const e = {};
   if (none) {
@@ -212,13 +214,18 @@ App.on('tp-submit', function (form) {
     if (!a.province) e.province = 'กรุณาเลือกจังหวัด';
     if (!a.district) e.district = 'กรุณาเลือกอำเภอ / เขต';
   }
-  else if (!a.school) e.school = 'กรุณาเลือกสถานศึกษาใหม่ หรือติ๊ก “ไม่พบสถานศึกษาในรายชื่อ”';
+  else {
+    if (!a.region) e.region = 'กรุณาเลือกภาค';
+    else if (!a.province) e.province = 'กรุณาเลือกจังหวัด';
+    else if (!a.district) e.district = 'กรุณาเลือกอำเภอ / เขต';
+    if (!a.school) e.school = 'กรุณาเลือกสถานศึกษาใหม่ ถ้าไม่พบ เลือก “ไม่พบในรายชื่อ (ระบุเอง)”';
+  }
   if (!v.tp_cls) e.cls = 'กรุณาเลือกระดับชั้น';
   if (!v.tp_ack) e.ack = 'กรุณาติ๊กรับทราบเงื่อนไขเอกสาร';
   if (!files.length) e.file = 'กรุณาแนบไฟล์หลักฐานอย่างน้อย 1 ไฟล์';
   if (v.tp_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.tp_email)) e.email = 'รูปแบบอีเมลไม่ถูกต้อง';
   if (Object.keys(e).length) {
-    this.go(this.view.name, {...this.view.params, tpe: e, tpv: {...a, none, text: v.tp_text, cls: v.tp_cls, ack: !!v.tp_ack, email: v.tp_email}});
+    this.go(this.view.name, {...this.view.params, tpe: e, tpv: {...a, text: v.tp_text, cls: v.tp_cls, ack: !!v.tp_ack, email: v.tp_email}});
     setTimeout(() => { const c = document.getElementById('tp-card'); if (c) c.scrollIntoView({block: 'start'}); }, 0);
     return;
   }

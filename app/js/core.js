@@ -351,8 +351,9 @@ const App = {
     if (o.sub) html += sel('sub', 'ตำบล / แขวง', subs, ph[3], !v.district);
     if (o.school) {
       const none = v.district && !schools.length;
-      html += sel('school', o.schoolLabel || 'ชื่อสถานศึกษา', schools.map(s => [s.id, s.name]),
-        none ? '— ยังไม่มีสถานศึกษาในระบบสำหรับพื้นที่นี้ —' : ph[4], !schools.length);
+      /* otherLabel: เพิ่มตัวเลือก “ไม่พบในรายชื่อ (ระบุเอง)” ท้ายรายการ (ใช้เฉพาะฟอร์มแจ้งย้าย) */
+      html += sel('school', o.schoolLabel || 'ชื่อสถานศึกษา', schools.map(s => [s.id, s.name]).concat(o.otherLabel && v.district ? [['__other', o.otherLabel]] : []),
+        none && !o.otherLabel ? '— ยังไม่มีสถานศึกษาในระบบสำหรับพื้นที่นี้ —' : ph[4], o.otherLabel ? !v.district : !schools.length);
     }
     return html;
   },
