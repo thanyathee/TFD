@@ -118,9 +118,9 @@ function tpCard(s, who, p = {}) {
       <div><dt>ส่งโดย</dt><dd>${TP_BY[sub.by]}${sub.by_name ? ` (${esc(sub.by_name)})` : ''}<div class="small muted">${thDate(sub.at, true)} · ครั้งที่ ${sub.n}</div></dd></div></dl>`; };
   let body;
   if (!sentToFdn) body = `<div class="note info">ส่งหลักฐานการย้ายได้หลังใบสมัครถึงมูลนิธิฯ แล้ว</div>`;
-  else if (st === 'pending') body = `<div class="note info"><b>ส่งหลักฐานแล้ว — รอเจ้าหน้าที่ตรวจ</b><br><span class="small">ระหว่างรอตรวจแก้ไขไม่ได้ หากต้องการแก้ไข ติดต่อเจ้าหน้าที่มูลนิธิฯ เพื่อเปิดสิทธิ์ · ผลการตรวจจะแจ้งทางอีเมลและแสดงในหน้านี้</span></div>${sum(last)}`;
+  else if (st === 'pending') body = `<div class="note info"><b>ส่งหลักฐานแล้ว — รอเจ้าหน้าที่ตรวจ</b><br><span class="small">ระหว่างรอตรวจแก้ไขไม่ได้ หากต้องการแก้ไข ${who === 'teacher' ? 'ติดต่อเจ้าหน้าที่มูลนิธิฯ เพื่อเปิดสิทธิ์' : 'ติดต่อครูผู้ดูแลทุน'} · ผลการตรวจจะแจ้งทางอีเมลและแสดงในหน้านี้</span></div>${sum(last)}`;
   else if (st === 'done') body = `<div class="note ok"><b>✓ เจ้าหน้าที่ตรวจหลักฐานแล้ว ถูกต้อง</b>${tr ? `<br><span class="small">ย้ายไป ${esc(this.schoolName(tr.to))} · ชั้น ${esc(tr.cls)}</span>` : ''}</div>
-    ${last && s.tp && s.tp.state === 'approved' ? sum(last) : ''}<p class="small muted">หากย้ายสถานศึกษาอีกครั้ง กรุณาโทรแจ้งเจ้าหน้าที่มูลนิธิฯ เพื่อเปิดสิทธิ์แจ้งย้ายใหม่</p>`;
+    ${last && s.tp && s.tp.state === 'approved' ? sum(last) : ''}<p class="small muted">หากย้ายสถานศึกษาอีกครั้ง ${who === 'teacher' ? 'กรุณาโทรแจ้งเจ้าหน้าที่มูลนิธิฯ เพื่อเปิดสิทธิ์แจ้งย้ายใหม่' : 'กรุณาติดต่อครูผู้ดูแลทุน'}</p>`;
   else if (st === 'closed') body = `<div class="note bad"><b>หมดเขตส่งหลักฐานแล้ว</b> (${thDate(this.db.cycle.transfer_close)}) — ไม่รับเอกสารเพิ่ม</div>${last ? sum(last) : ''}`;
   else if (st === 'rejected') body = `<div class="note bad"><b>หลักฐานไม่ผ่าน — กรุณาอัปโหลดใหม่</b><ul class="tp-why">${(last.reasons || []).map(r => `<li>${esc(r)}</li>`).join('')}</ul>
 </div>${dl}${tpForm.call(this, s, who, p)}`;
