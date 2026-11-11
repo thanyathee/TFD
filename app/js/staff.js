@@ -36,6 +36,12 @@ function loanKind(s) {
   if (s.loan !== 'yes') return 'no';
   return (s.loans || []).some(x => x.who === 'self') ? 'self' : 'sibling';
 }
+/* เกณฑ์เกรดเฉลี่ย 1.50 (ส่งได้ แต่ติดป้ายให้ จนท. เห็น) · ใช้เกรดที่ครูกรอก เฉพาะแบบ GPA */
+const GPA_MIN = 1.5;
+function lowGrade(s) {
+  const t = s.teacher_review;
+  return t && t.grade_type === 'gpa' && t.grade_value !== '' && Number(t.grade_value) < GPA_MIN ? Number(t.grade_value).toFixed(2) : '';
+}
 function loanLabel(s) {
   const k = loanKind(s);
   if (k === 'no') return '';
@@ -341,7 +347,7 @@ App.views['staff-apps'] = function (p) {
       ${rows.length ? rows.map((s, i) => { const sc = this.schoolById[s.school] || {};
         return `<button class="trow" role="row" data-go="staff-app" data-code="${s.code}">
           <span class="n">${i + 1}</span>
-          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}${loanLabel(s)}${s.school_next === 'transfer' ? ' <span class="tag-move">ย้ายสถานศึกษา</span>' : ''}<span class="m-only"> · ${esc(shortCls(s.class) || '-')} · ${TYPE[s.type]}${s.round ? ' · รอบ ' + s.round : ''}</span></small></span>
+          <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}${loanLabel(s)}${lowGrade(s) ? ' <span class="tag-low">เกรดต่ำกว่า 1.50</span>' : ''}${s.school_next === 'transfer' ? ' <span class="tag-move">ย้ายสถานศึกษา</span>' : ''}<span class="m-only"> · ${esc(shortCls(s.class) || '-')} · ${TYPE[s.type]}${s.round ? ' · รอบ ' + s.round : ''}</span></small></span>
           <span class="c-school">${esc(sc.name || '-')}<small>จ.${esc(sc.province || '')} · ${esc(this.regionName(sc.region))}</small></span>
           <span class="c-class">${esc(shortCls(s.class) || '-')}</span><span class="c-type">${TYPE[s.type]}</span>
           <span class="c-status">${badge(s)}</span><span class="c-round">${s.round ? s.round : '—'}</span></button>`; }).join('')
@@ -407,7 +413,7 @@ App.views['staff-app'] = function (p) {
   return {nav: this.staffNav(), html: `${this.roleBar()}
     <button class="back" data-go="staff-apps">${icon('back')} รายการใบสมัคร</button>
     <div class="page-head"><div><h1><span class="num">${s.code}</span> — ${esc(fullName(s))}</h1><p class="sub">หน้าพิจารณาแบบเต็ม: ข้อมูลผู้สมัครทุกส่วน + เอกสาร + ความเห็นครู</p></div>
-      <div class="row">${badge(s)}${s.school_next === 'transfer' || this.db.transfers.some(t => t.code === s.code) || s.tp
+      <div class="row">${lowGrade(s) ? `<span class="badge t-bad">ไม่เข้าเกณฑ์: เกรดเฉลี่ย ${lowGrade(s)} (ต่ำกว่า 1.50)</span>` : ''}${badge(s)}${s.school_next === 'transfer' || this.db.transfers.some(t => t.code === s.code) || s.tp
         ? `<button class="btn sm" data-go="staff-tp" data-code="${s.code}">แจ้งย้าย: ${TP_STATE[this.tpState(s)][0]}</button>`
         : role !== 'manager' && s.status !== 'decided' && ['waiting_staff', 'need_more_info', 'waiting_manager'].includes(s.status) ? `<button class="btn sm ghost" data-go="staff-tp" data-code="${s.code}">เปิดสิทธิ์แจ้งย้าย</button>` : ''}</div></div>
     <div class="split">
@@ -598,7 +604,8 @@ App.views['staff-transfer'] = function (p) {
   const lastTr = code => this.db.transfers.filter(t => t.code === code).slice(-1)[0];
   const q = (f.q || '').toLowerCase();
   /* ตั้งต้นจากนักเรียนที่ติ๊กย้าย + คนที่บันทึกการย้ายไปแล้ว */
-  const base = this.db.students.filter(s => s.school_next === 'transfer' || lastTr(s.code) || s.tp);
+  /* เฉพาะใบสมัครที่ถึงมูลนิธิฯ แล้ว */
+  const base = this.db.students.filter(s => (s.school_next === 'transfer' || lastTr(s.code) || s.tp) && SENT.includes(s.status));
   /* สถานะหลักฐาน + งานของแอดมิน (ยืนยันสถานศึกษาที่พิมพ์เอง / ยอดเงินเปลี่ยน) */
   const stOf = s => this.tpState(s);
   const needSchool = s => stOf(s) === 'pending' && !this.tpLast(s).school;
@@ -656,7 +663,7 @@ App.views['staff-transfer'] = function (p) {
           <span class="c-name">${esc(fullName(s))}<small class="num">${s.code}</small></span>
           <span class="c-from">${sch(origin(s))}${this.teacherOf(this.careSchool(s)) ? '' : '<span class="badge t-bad">ไม่มีข้อมูลครูผู้ดูแล</span>'}</span>
           <span class="c-cls"><span class="cls">${esc(s.class || '-')}</span></span>
-          <span class="c-to">${tpBadge(st)}${needSchool(s) ? ' <span class="badge t-warn">พิมพ์ชื่อเอง</span>' : ''}${needAmt(s) ? ' <span class="badge t-violet">ยอดเงินเปลี่ยน</span>' : ''}
+          <span class="c-to">${tpBadge(st)}${needSchool(s) ? ' <span class="badge t-warn">พิมพ์ชื่อเอง</span>' : ''}${needAmt(s) ? ' <span class="badge t-violet">ยอดเงินเปลี่ยน</span>' : ''}${s.tp && s.tp.edited_unseen && st === 'pending' ? ' <span class="badge t-warn">แก้ไขใหม่</span>' : ''}
             ${t ? sch(dest(s)) : sub ? sch(dest(s), ` · ครั้งที่ ${sub.n} · ส่งโดย${TP_BY[sub.by]}`) : s.next_school_text ? `<small>นักเรียนแจ้งตอนสมัคร: ${esc(s.next_school_text)}</small>` : ''}
             ${st === 'rejected' && sub ? `<small class="bad-t">${esc((sub.reasons || [])[0] || '')}</small>` : ''}</span>
           <span class="c-ncls"><span class="cls">${esc((t && t.cls) || (sub && sub.cls) || s.next_class || '-')}</span>${t || sub ? '' : '<small>นักเรียนแจ้ง</small>'}</span>

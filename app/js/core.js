@@ -2,7 +2,7 @@
    เงื่อนไขทั้งหมดยึดตามต้นแบบ prototypes/…v28.html (นักเรียน/ครู) และ …Admin_HTML_Demo_v14.html (เจ้าหน้าที่) */
 'use strict';
 
-const STORE_KEY = 'tfd-scholarship-demo-v26';
+const STORE_KEY = 'tfd-scholarship-demo-v27';
 
 /* สถานะการดำเนินงาน (ชุดเดียวกับ db/schema.sql) */
 const STATUS = {
@@ -252,6 +252,9 @@ const App = {
     });
     /* สถานะหลักฐานการย้ายของนักเรียนที่เพิ่ม */
     const day = (d, h) => `2027-05-${String(d).padStart(2, '0')}T${h}`;
+    /* ตัวอย่างเกรดต่ำกว่าเกณฑ์ 1.50 */
+    const lg = db.students.find(x => x.code === `TF${db.cycle.year}-000105`);
+    if (lg && lg.teacher_review) Object.assign(lg.teacher_review, {grade_type: 'gpa', grade_value: 1.32});
     db.students.filter(x => x.seed_tp).forEach((x, i) => {
       const to = other[(i + 1) % other.length] || sch('SCH-002');
       const base = {by: 'student', by_name: '', school: to.id, school_text: '', region: to.region, province: to.province, district: to.district, cls: x.next_class, email: x.email, file_note: ''};

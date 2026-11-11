@@ -242,6 +242,8 @@ App.on('tp-submit', function (form) {
   this._tpFiles = null;
   const whoTxt = who === 'teacher' ? 'ครูโรงเรียนเดิม' : 'นักเรียน';
   if (editing) {
+    /* แจ้ง จนท.: ป้าย “แก้ไขใหม่” ในรายการ และข้อความในหน้าตรวจ จนกว่า จนท. จะเปิดดู */
+    s.tp.edited_unseen = {at: nowIso(), by: whoTxt};
     addHistory(s, `${whoTxt}แก้ไขหลักฐานการย้ายสถานศึกษา (ครั้งที่ ${n}) — รอเจ้าหน้าที่ตรวจ`, 'transfer_edit');
     this.save();
     this.toast('บันทึกการแก้ไขแล้ว');
@@ -319,6 +321,8 @@ App.views['staff-tp'] = function (p) {
       files: fl.map((f, i) => ({k: `tp${x.n}-${i}`, f, title: `ครั้งที่ ${x.n} — ไฟล์ ${i + 1}/${fl.length}`, src: pvMock(s, 'TP', 'หลักฐานการย้ายสถานศึกษา', f, i)}))}; });
   const mails = (this.db.mails || []).filter(m => m.code === s.code).slice().reverse();
   const ac = s.amount_check;
+  const edited = tp.edited_unseen && st === 'pending' ? tp.edited_unseen : null;
+  if (tp.edited_unseen) { delete tp.edited_unseen; this.save(); }
   /* แผงขวา */
   let panel = '';
   if (s.school_next !== 'transfer') {
@@ -367,6 +371,7 @@ App.views['staff-tp'] = function (p) {
     <button class="back" data-go="staff-transfer">${icon('back')} รายชื่อนักเรียนแจ้งย้าย</button>
     <div class="page-head"><div><h1><span class="num">${s.code}</span> — ${esc(fullName(s))}</h1><p class="sub">ตรวจหลักฐานการย้ายสถานศึกษา</p></div>
       <div class="row">${tpBadge(st)}${badge(s)}<button class="btn sm" data-go="staff-app" data-code="${s.code}">เปิดใบสมัคร</button></div></div>
+    ${edited ? `<div class="note warn"><b>มีการแก้ไขหลักฐาน</b> โดย${esc(edited.by)} เมื่อ ${thDate(edited.at, true)} — กรุณาตรวจไฟล์ล่าสุด</div>` : ''}
     <div class="split">
       <div class="rv-left"><div class="stack">
         <section class="card"><dl class="kv tp-kv">
